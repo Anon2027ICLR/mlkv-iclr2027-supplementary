@@ -4,7 +4,9 @@ Experiment harness for the ICML 2027 project: measuring per-language damage of
 KV-cache compression (quantization, eviction) and weight PTQ in LLMs, with
 tokenizer fertility as the mechanism covariate.
 
-Design doc: `../literature_review/notes/topics/experiment-design.md`.
+- **Design doc** (preregistered predictions, matrix, stats plan, gates):
+  `../literature_review/notes/topics/experiment-design.md`
+- **Pilot runbook** (rent GPU → run → Gate-1 analysis): `docs/pilot-runbook.md`
 
 ## Setup
 
