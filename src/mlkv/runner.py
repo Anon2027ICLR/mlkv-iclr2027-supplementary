@@ -76,28 +76,35 @@ def build_prompt(tokenizer, user_text: str, enable_thinking: bool) -> str:
 
 @torch.inference_mode()
 def generate_one(model, tokenizer, prompt_text: str, config: CompressionConfig,
-                 device: str, max_new_tokens: int) -> tuple[str, int]:
+                 device: str, max_new_tokens: int) -> tuple[str, int, int]:
     inputs = tokenizer(prompt_text, return_tensors="pt").to(device)
+    n_prompt_tokens = inputs["input_ids"].shape[1]
     gen_kwargs = dict(
         max_new_tokens=max_new_tokens,
         do_sample=False,
         pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
         **config.generate_kwargs(),
     )
-    press = config.press()
+    press = config.press(prefill_len=n_prompt_tokens)
     if press is not None:
         with press(model):
             out = model.generate(**inputs, **gen_kwargs)
     else:
         out = model.generate(**inputs, **gen_kwargs)
-    new_tokens = out[0][inputs["input_ids"].shape[1]:]
+    new_tokens = out[0][n_prompt_tokens:]
     text = tokenizer.decode(new_tokens, skip_special_tokens=True)
-    return text, len(new_tokens)
+    return text, len(new_tokens), n_prompt_tokens
+
+
+def default_score(output: str, item: dict) -> tuple[bool, dict]:
+    """Numeric exact-match scoring (MGSM-style)."""
+    return is_correct(output, item["gold"]), {}
 
 
 def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[dict]],
                configs: list[CompressionConfig], db_path: str,
-               max_new_tokens: int = 512, enable_thinking: bool = False) -> dict:
+               max_new_tokens: int = 512, enable_thinking: bool = False,
+               score_fn=default_score) -> dict:
     device = pick_device()
     conn = store.connect(db_path)
     stack_id = store.register_stack(
@@ -119,7 +126,7 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
                 prompt_text = build_prompt(tokenizer, item["prompt"], enable_thinking)
                 start = time.perf_counter()
                 try:
-                    output, n_tokens = generate_one(
+                    output, n_tokens, n_prompt = generate_one(
                         model, tokenizer, prompt_text, config, device, max_new_tokens
                     )
                 except Exception:
@@ -127,14 +134,26 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
                     counts["failed"] += 1
                     continue
                 latency = time.perf_counter() - start
+                correct, meta = score_fn(output, item)
+                # Per-generation covariates for the RQ2 fertility×budget
+                # regression: content size in tokens (templated prompt, what
+                # eviction acts on) and bytes (the fertility-free axis), plus
+                # the eviction ratio actually applied (budget configs vary it
+                # per item).
+                meta.update({
+                    "n_prompt_tokens": n_prompt,
+                    "prompt_bytes": len(item["prompt"].encode("utf-8")),
+                    "kv_ratio": config.effective_ratio(n_prompt),
+                })
                 store.save(
                     conn, key,
                     model=model_name, task=task_name, lang=lang, config=config.name,
                     item_id=item["item_id"], stack_id=stack_id, output=output,
                     n_output_tokens=n_tokens, answer_gold=item["gold"],
-                    correct=is_correct(output, item["gold"]),
+                    correct=correct,
                     drift=drift_score(output, language),
                     latency_s=latency,
+                    meta=meta,
                 )
                 counts["done"] += 1
                 if counts["done"] % 10 == 0:

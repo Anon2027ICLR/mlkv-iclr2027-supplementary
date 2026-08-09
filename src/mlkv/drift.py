@@ -77,7 +77,10 @@ def drift_score(text: str, expected: Language) -> float | None:
 
     Returns None when undecidable (script fallback + same-script languages).
     """
-    text = text.strip()
+    # Canonicalize to NFC: the NFD experiment arm (and models echoing NFD
+    # input) would otherwise break the Vietnamese-diacritic fallback, which
+    # tests for precomposed characters.
+    text = unicodedata.normalize("NFC", text).strip()
     if not text:
         return None
 

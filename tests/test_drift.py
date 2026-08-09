@@ -59,3 +59,12 @@ class TestFallbackDrift:
     @_no_glotlid
     def test_empty(self, _mock=None):
         assert drift_score("", LANGUAGES["vi"]) is None
+
+    @_no_glotlid
+    def test_nfd_vietnamese_not_flagged_as_drift(self, _mock=None):
+        # The NFD experiment arm decomposes diacritics; drift_score must
+        # canonicalize before the precomposed-character heuristic runs.
+        import unicodedata
+        nfd_text = unicodedata.normalize("NFD", VI_TEXT)
+        score = drift_score(nfd_text, LANGUAGES["vi"])
+        assert score is not None and score < 0.1
