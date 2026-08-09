@@ -31,9 +31,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+# Verified against kvpress 0.5.4 on the CUDA box (2026-08-09).
 PRESS_NAMES = {
     "snapkv": "SnapKVPress",
-    "h2o": "KnormPress",          # placeholder mapping; finalize on CUDA box
+    "h2o": "ObservedAttentionPress",  # H2O-style; requires attn_implementation="eager"
     "streamingllm": "StreamingLLMPress",
     "tova": "TOVAPress",
     "expected": "ExpectedAttentionPress",
