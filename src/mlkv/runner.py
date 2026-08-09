@@ -46,9 +46,9 @@ def stack_description(model_name: str, device: str, dtype: str) -> dict:
     if device == "cuda":
         desc["gpu"] = torch.cuda.get_device_name(0)
     try:
-        import kvpress
-        desc["kvpress"] = kvpress.__version__
-    except ImportError:
+        from importlib.metadata import version
+        desc["kvpress"] = version("kvpress")
+    except Exception:  # not installed (Mac dev box) or metadata missing
         pass
     return desc
 
