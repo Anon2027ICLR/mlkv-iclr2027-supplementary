@@ -64,9 +64,20 @@ class TestPress:
         assert parse("baseline").press() is None
         assert parse("kv4").press(prefill_len=100) is None
 
-    def test_budget_mode_requires_prefill_len(self):
+    def test_press_requires_prefill_len(self):
         with pytest.raises(ValueError):
             parse("snapkv@b2048").press()
+        with pytest.raises(ValueError):
+            parse("snapkv@r0.75").press()
+
+    def test_short_prompt_below_snapkv_window_is_noop(self):
+        # SnapKV cannot compress prompts shorter than its observation window
+        # (64); such items run uncompressed with kv_ratio recorded as 0.0 —
+        # and the no-op path must work without kvpress installed.
+        cfg = parse("snapkv@r0.75")
+        assert cfg.effective_ratio(57) == 0.0
+        assert cfg.press(prefill_len=57) is None
+        assert cfg.effective_ratio(65) == 0.75
 
     def test_budget_satisfied_is_noop_without_kvpress(self):
         # ratio == 0 short-circuits BEFORE the kvpress import, so the no-op

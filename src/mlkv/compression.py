@@ -44,6 +44,12 @@ _PRESS_RE = re.compile(r"^(?P<name>[a-z0-9]+)@r(?P<ratio>0\.\d+)$")
 _BUDGET_RE = re.compile(r"^(?P<name>[a-z0-9]+)@b(?P<budget>[1-9]\d*)$")
 
 
+# Presses with an observation window cannot compress prompts shorter than it
+# (kvpress asserts). Below the minimum the config runs uncompressed and the
+# recorded kv_ratio covariate is 0.0 — same semantics as a satisfied budget.
+PRESS_MIN_PREFILL = {"snapkv": 65}  # SnapKVPress default window_size=64
+
+
 def budget_ratio(budget: int, prefill_len: int) -> float:
     """Fraction of the prefill cache to remove so <= budget entries survive."""
     if prefill_len <= budget:
@@ -71,6 +77,8 @@ class CompressionConfig:
         config does not evict). Recorded per generation for the RQ2 regression."""
         if self.kind != "press":
             return None
+        if prefill_len < PRESS_MIN_PREFILL.get(self.params["press"], 0):
+            return 0.0
         if "budget" in self.params:
             return budget_ratio(self.params["budget"], prefill_len)
         return self.params["ratio"]
@@ -78,20 +86,17 @@ class CompressionConfig:
     def press(self, prefill_len: int | None = None):
         """Instantiate the kvpress press object, or None.
 
-        Budget-mode configs need prefill_len; they return None (no press)
-        when the prompt already fits the budget — checked before the kvpress
-        import so the no-op path also works without the CUDA extras.
+        Needs prefill_len: prompts under the press's observation window, or
+        already within a budget, run uncompressed (None) — decided before the
+        kvpress import so no-op paths also work without the CUDA extras.
         """
         if self.kind != "press":
             return None
-        if "budget" in self.params:
-            if prefill_len is None:
-                raise ValueError(f"budget config {self.name!r} needs prefill_len")
-            ratio = budget_ratio(self.params["budget"], prefill_len)
-            if ratio == 0.0:
-                return None
-        else:
-            ratio = self.params["ratio"]
+        if prefill_len is None:
+            raise ValueError(f"press config {self.name!r} needs prefill_len")
+        ratio = self.effective_ratio(prefill_len)
+        if ratio == 0.0:
+            return None
         import kvpress  # CUDA box extra
 
         cls = getattr(kvpress, PRESS_NAMES[self.params["press"]])
