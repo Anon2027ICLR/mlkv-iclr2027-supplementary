@@ -22,6 +22,99 @@ logger = logging.getLogger(__name__)
 MGSM_DATASET = "juletxara/mgsm"
 VI_DATASET = "namfam/gsm8k-vietnamese"
 
+# Translation fixes from the three-layer QC audit of MGSM-VI (records:
+# docs/mgsm-vi-qc.md, docs/mgsm-vi-screen.md, docs/mgsm-vi-llm-audit.md).
+# All wordings approved by a native VI speaker on 2026-08-09 and
+# applied BEFORE any pilot runs, so no PROMPT_VERSION bump; adding patches
+# after results exist REQUIRES bumping PROMPT_VERSION.
+# Within one item, patches apply IN ORDER; occurrence counts are asserted on
+# the progressively patched text. vi-40 was reviewed and ruled fine as-is.
+
+# Items whose upstream `problem` field embeds the worked solution (leaks the
+# answer): truncate at the marker, keep everything before it.
+VI_TRUNCATE_AT: dict[int, str] = {
+    18: "Để giải quyết",
+}
+
+# {GSM8K/MGSM index: [(old substring, approved replacement, expected count)]}
+VI_PATCHES: dict[int, list[tuple[str, str, int]]] = {
+    # --- layer 1: 30-item human audit ---
+    163: [("bộ sưu tập hành động", "mô hình động", 3)],
+    62: [("được quyền được 5%", "được hưởng 5%", 1)],
+    35: [("anh ta ghi được 25% điểm số nhiều hơn", "anh ấy ghi nhiều hơn 25% điểm", 1)],
+    188: [("bao lúa", "bao lúa mì", 4)],
+    139: [("xanh lá cây", "xanh nước biển", 2)],
+    151: [("xe đạp đơn", "xe đạp một bánh", 1)],
+    # --- layer 2: chrF round-trip screen ---
+    182: [("Jean năm nay là bao nhiêu tuổi?",
+           "Jean hơn Mark 2 tuổi. Hai năm trước, Mark hơn một nửa tuổi của Jan "
+           "5 tuổi. Nếu Jan năm nay 30 tuổi, Jean năm nay là bao nhiêu tuổi?", 1)],
+    # --- layer 3, answer-affecting (wrong question semantics / numerals) ---
+    53: [("Tổng doanh thu của thợ máy trong ngày có doanh thu cao hơn là bao nhiêu?",
+          "Trong ngày có doanh thu cao hơn, thợ máy thu được nhiều hơn ngày "
+          "còn lại bao nhiêu tiền?", 1)],
+    184: [("Tỷ lệ xảy ra số lớn hơn 3 (được biểu thị dưới dạng phần trăm) so "
+           "với việc tung hai số chẵn liên tiếp là bao nhiêu?",
+           "Khả năng tung được số lớn hơn 3 cao hơn khả năng tung được hai số "
+           "chẵn liên tiếp bao nhiêu phần trăm (điểm phần trăm)?", 1)],
+    209: [("Mười hai chục cốc (240 cốc)", "Hai mươi tá cốc (240 cốc)", 1)],
+    232: [("tìm thấy một nửa số con côn trùng so với số kiến",
+           "tìm thấy số con bọ bằng một nửa số con kiến", 1)],
+    # --- layer 3, ambiguity fixes ruled by the author ---
+    133: [("đi bộ nhiều hơn 6 lần số dặm", "đi bộ nhiều gấp 6 lần số dặm", 1)],
+    226: [("xác suất (làm tròn", "xác suất phần trăm (làm tròn", 1)],
+    86: [("nó reo trong ba lần so với lần đầu tiên",
+          "nó reo lâu gấp 3 lần so với lần đầu tiên", 1)],
+    193: [("Vào lúc 12 giờ trưa Chủ nhật, có bao nhiêu con chim hồng nhựa hơn "
+           "con chim hồng nhựa đã được sơn màu trắng?",
+           "Vào lúc 12 giờ trưa Chủ nhật, có bao nhiêu con hồng hạc nhựa màu "
+           "hồng nhiều hơn số hồng hạc nhựa màu trắng?", 1),
+          ("chim hồng", "hồng hạc", 4)],
+    # --- layer 3, benign concrete-noun fixes ---
+    39: [("nhảy với tốc độ", "nhảy chân sáo với tốc độ", 2)],
+    44: [("sáp ong và dây nhợ", "sáp ong và bấc nến", 1)],
+    74: [("hoa cúc", "hoa dạ yến thảo", 3)],
+    110: [("lát trái cây", "kẹo cuộn trái cây", 6), ("lát", "cuộn", 4)],
+    111: [("Bờ biển", "Bờ hồ", 1)],
+    132: [("đi trượt tuyết lướt 2 lần", "đi xe trượt luge 2 lần", 1)],
+    150: [("đi trượt tuyết của mình", "đi ván trượt của mình", 1)],
+    156: [("cho tất cả các con khỉ ăn", "cho tất cả các loài khỉ ăn", 1),
+          ("các con khỉ lớn", "các con khỉ đột", 1)],
+    159: [("ếch nhỏ", "nòng nọc", 2)],
+    186: [("chuột nhắt", "chuột hamster", 1),
+          ("mỗi con chuột được cho 5", "mỗi con chuột hamster được cho 5", 1)],
+    203: [("ăn bánh mì trứng phô mai", "ăn trứng ốp la phô mai", 1)],
+    222: [("hoa đỗ quyên", "hoa phong lữ", 2)],
+    239: [("trong một phòng học", "trong một hội trường", 1),
+          ("Phòng học có 3 lối vào", "Hội trường có 3 lối vào", 1)],
+}
+
+
+def _apply_patch_list(index: int, question: str,
+                      patches: list[tuple[str, str, int]]) -> str:
+    for old, new, count in patches:
+        found = question.count(old)
+        if found != count:
+            raise RuntimeError(
+                f"VI patch mismatch at index {index}: expected {count}×{old!r}, "
+                f"found {found} — dataset revision changed since the QC audit?"
+            )
+        question = question.replace(old, new)
+    return question
+
+
+def _apply_vi_patches(index: int, question: str) -> str:
+    """Apply author-approved translation fixes; fail loudly if the dataset
+    revision no longer matches the audited text."""
+    marker = VI_TRUNCATE_AT.get(index)
+    if marker is not None:
+        if question.count(marker) != 1:
+            raise RuntimeError(
+                f"VI truncation marker mismatch at index {index}: {marker!r}"
+            )
+        question = question[:question.index(marker)].rstrip()
+    return _apply_patch_list(index, question, VI_PATCHES.get(index, []))
+
 
 def _mgsm_split(lang: str):
     return load_dataset(MGSM_DATASET, lang, split="test")
@@ -90,7 +183,7 @@ def _load_vietnamese(instruction: str) -> list[dict]:
         if vi_gold is None or abs(vi_gold - en_gold) > 1e-6:
             dropped += 1
             continue
-        question = vi_row[q_field]
+        question = _apply_vi_patches(i, vi_row[q_field])
         items.append(
             {
                 "item_id": f"mgsm-vi-{i}",
