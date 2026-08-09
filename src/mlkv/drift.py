@@ -72,6 +72,17 @@ def _glotlid_model():
         return None
 
 
+def _predict_label(model, text: str) -> str:
+    """Predict one language label. fasttext's Python wrapper breaks under
+    NumPy 2 (np.array(..., copy=False)); call the underlying binding directly
+    and fall back to the wrapper for other fasttext builds."""
+    try:
+        pred = model.f.predict(text, 1, 0.0, "strict")  # [(prob, label), ...]
+        return pred[0][1] if pred else ""
+    except AttributeError:
+        return model.predict(text)[0][0]
+
+
 def drift_score(text: str, expected: Language) -> float | None:
     """Fraction of letter mass written in a language other than `expected`.
 
@@ -94,7 +105,7 @@ def drift_score(text: str, expected: Language) -> float | None:
             weight = sum(1 for ch in seg if ch.isalpha())
             if weight == 0:
                 continue
-            label = model.predict(seg.replace("\n", " "))[0][0]
+            label = _predict_label(model, seg.replace("\n", " "))
             label = label.removeprefix("__label__")
             total += weight
             if label != expected.glotlid:

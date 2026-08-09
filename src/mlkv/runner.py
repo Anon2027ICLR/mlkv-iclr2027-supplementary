@@ -134,6 +134,13 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
                     counts["failed"] += 1
                     continue
                 latency = time.perf_counter() - start
+                # A failure in the secondary drift metric must never discard a
+                # completed (expensive) generation.
+                try:
+                    drift = drift_score(output, language)
+                except Exception:
+                    logger.exception("drift_score failed: %s", item["item_id"])
+                    drift = None
                 correct, meta = score_fn(output, item)
                 # Per-generation covariates for the RQ2 fertility×budget
                 # regression: content size in tokens (templated prompt, what
@@ -151,7 +158,7 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
                     item_id=item["item_id"], stack_id=stack_id, output=output,
                     n_output_tokens=n_tokens, answer_gold=item["gold"],
                     correct=correct,
-                    drift=drift_score(output, language),
+                    drift=drift,
                     latency_s=latency,
                     meta=meta,
                 )

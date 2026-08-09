@@ -1,7 +1,41 @@
 from unittest.mock import patch
 
-from mlkv.drift import drift_score, script_profile
+from mlkv.drift import _predict_label, drift_score, script_profile
 from mlkv.languages import LANGUAGES
+
+
+class TestPredictLabel:
+    """fasttext's Python predict() breaks under NumPy 2 — we call the binding."""
+
+    def test_uses_low_level_binding_when_present(self):
+        class Binding:
+            def predict(self, text, k, threshold, on_unicode_error):
+                return [(0.99, "__label__vie_Latn")]
+
+        class Model:
+            f = Binding()
+
+            def predict(self, text):  # the NumPy-2-broken path
+                raise ValueError("copy=False")
+
+        assert _predict_label(Model(), "xin chào") == "__label__vie_Latn"
+
+    def test_falls_back_to_wrapper_without_binding(self):
+        class Model:
+            def predict(self, text):
+                return (("__label__eng_Latn",), [0.9])
+
+        assert _predict_label(Model(), "hello") == "__label__eng_Latn"
+
+    def test_empty_prediction(self):
+        class Binding:
+            def predict(self, text, k, threshold, on_unicode_error):
+                return []
+
+        class Model:
+            f = Binding()
+
+        assert _predict_label(Model(), "") == ""
 
 VI_TEXT = "Hãy giải bài toán từng bước. Tổng cộng có ba mươi quả táo."
 EN_TEXT = "Let us solve the problem step by step. There are thirty apples."
