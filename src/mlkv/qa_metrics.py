@@ -32,11 +32,24 @@ ARTICLES: dict[str, set[str]] = {
 }
 
 
+# Models echo the instruction's placeholder verbatim ("#### <exact answer
+# span>308####"). Angle-bracketed segments are placeholder debris — gold spans
+# in XQuAD/MLQA/TyDiQA never contain '<...>'.
+_PLACEHOLDER_RE = re.compile(r"<[^>]*>")
+
+
 def extract_span(text: str) -> str:
-    """Predicted answer region: after the last '####' marker, else full text."""
+    """Predicted answer region: after the last '####' marker that still has
+    content (models emit trailing/multiple markers), else full text.
+    Placeholder echoes in angle brackets are stripped before scoring."""
     positions = [m.end() for m in MARKER_RE.finditer(text)]
-    region = text[positions[-1]:] if positions else text
-    return region.strip()
+    candidates = [text[p:] for p in reversed(positions)] + [text]
+    for region in candidates:
+        region = _PLACEHOLDER_RE.sub(" ", region)
+        region = re.sub(r"[#\s]+$", "", region).strip()
+        if re.search(r"\w", region):  # needs actual content, not marker debris
+            return region
+    return ""
 
 
 def normalize(text: str, lang: str) -> str:

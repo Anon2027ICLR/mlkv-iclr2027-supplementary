@@ -11,6 +11,17 @@ class TestExtractSpan:
     def test_no_marker_full_text(self):
         assert extract_span("  the answer  ") == "the answer"
 
+    def test_placeholder_echo_stripped(self):
+        # observed Qwen3 outputs on mRAG (would score 0 without stripping)
+        assert extract_span("The defense gave up 308. \n\n#### <exact answer span>308####") == "308"
+        assert extract_span("Luke led (118). \n\n#### <exact answer span>118</exact answer span>") == "118"
+
+    def test_trailing_marker_falls_back_to_previous(self):
+        assert extract_span("led the NFL with 24. \n\n#### 24#### <exact answer span>") == "24"
+
+    def test_all_markers_empty_falls_back_to_text(self):
+        assert extract_span("the answer is here ####  #### <span>") == "the answer is here"
+
 
 class TestNormalize:
     def test_case_and_punctuation(self):
