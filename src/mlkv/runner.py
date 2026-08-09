@@ -104,7 +104,9 @@ def default_score(output: str, item: dict) -> tuple[bool, dict]:
 def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[dict]],
                configs: list[CompressionConfig], db_path: str,
                max_new_tokens: int = 512, enable_thinking: bool = False,
-               score_fn=default_score) -> dict:
+               score_fn=default_score, cooldown_s: float = 0.0) -> dict:
+    """cooldown_s: sleep after each generation — thermal duty-cycle control for
+    laptop runs; wall-clock only, outputs are unaffected (greedy decoding)."""
     device = pick_device()
     conn = store.connect(db_path)
     stack_id = store.register_stack(
@@ -165,4 +167,6 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
                 counts["done"] += 1
                 if counts["done"] % 10 == 0:
                     logger.info("progress: %s", counts)
+                if cooldown_s > 0:
+                    time.sleep(cooldown_s)
     return counts

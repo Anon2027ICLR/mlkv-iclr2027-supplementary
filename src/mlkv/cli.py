@@ -153,6 +153,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         max_new_tokens=args.max_new_tokens,
         enable_thinking=args.thinking,
         score_fn=score_fn,
+        cooldown_s=args.cooldown,
     )
     print(f"finished: {counts}")
 
@@ -206,6 +207,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--nfd", action="store_true",
                        help="NFD-decompose prompts (within-model fertility probe; "
                             "task stored as <task>-nfd)")
+    p_run.add_argument("--cooldown", type=float, default=0.0,
+                       help="seconds to sleep after each generation (thermal "
+                            "relief on laptops; does not affect outputs)")
     p_run.add_argument("--langs", default="en")
     p_run.add_argument("--configs", default="baseline", help="e.g. baseline,kv4,snapkv@r0.75")
     p_run.add_argument("--max-items", type=int, default=None)
