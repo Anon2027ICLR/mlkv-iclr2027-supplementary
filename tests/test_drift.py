@@ -1,10 +1,65 @@
 from unittest.mock import patch
 
-from mlkv.drift import _predict_label, drift_score, script_profile
+from mlkv.drift import _lid_text, _predict, drift_score, script_profile
 from mlkv.languages import LANGUAGES
 
 
-class TestPredictLabel:
+class TestLidText:
+    """LaTeX/markdown/math must be stripped before language ID — otherwise
+    reasoning-model output manufactures fake drift."""
+
+    def test_latex_stripped_words_kept(self):
+        seg = r"$ 3 \text{ eggs/omelet} \times 1 \text{ omelet/day} $"
+        assert _lid_text(seg) == "eggs omelet omelet day"
+
+    def test_markdown_stripped(self):
+        assert _lid_text("**Eggs per day**: 12") == "Eggs per day :"
+
+    def test_vietnamese_prose_untouched(self):
+        assert _lid_text("Hãy giải bài toán, từng bước.") == "Hãy giải bài toán, từng bước."
+
+    def test_pure_math_line_empty(self):
+        assert _lid_text("$ 21 \\times 4 = 84 $") == ""
+
+
+class TestGlotlidMathFiltering:
+    def test_latex_heavy_english_not_drift(self):
+        class Binding:
+            def __init__(self):
+                self.seen = []
+
+            def predict(self, text, k, threshold, on_unicode_error):
+                self.seen.append(text)
+                return [(0.9, "__label__eng_Latn")]
+
+        class Model:
+            f = Binding()
+
+        text = ("Let's solve the problem step by step carefully.\n"
+                "$ 3 \\text{ eggs} \\times 7 = 21 $\n"
+                "$ 21 \\times 4 = 84 $\n"
+                "So she eats eighty-four eggs in four weeks total.")
+        with patch("mlkv.drift._glotlid_model", return_value=Model()):
+            score = drift_score(text, LANGUAGES["en"])
+        assert score == 0.0
+        # the pure-math lines must never reach the classifier
+        assert len(Model.f.seen) == 2
+        assert all("\\" not in s and "$" not in s for s in Model.f.seen)
+
+    def test_low_confidence_segments_skipped(self):
+        class Binding:
+            def predict(self, text, k, threshold, on_unicode_error):
+                return [(0.3, "__label__deu_Latn")]  # confident in nothing
+
+        class Model:
+            f = Binding()
+
+        text = "This is a long enough English sentence for classification."
+        with patch("mlkv.drift._glotlid_model", return_value=Model()):
+            assert drift_score(text, LANGUAGES["en"]) is None
+
+
+class TestPredict:
     """fasttext's Python predict() breaks under NumPy 2 — we call the binding."""
 
     def test_uses_low_level_binding_when_present(self):
@@ -18,14 +73,14 @@ class TestPredictLabel:
             def predict(self, text):  # the NumPy-2-broken path
                 raise ValueError("copy=False")
 
-        assert _predict_label(Model(), "xin chào") == "__label__vie_Latn"
+        assert _predict(Model(), "xin chào") == ("__label__vie_Latn", 0.99)
 
     def test_falls_back_to_wrapper_without_binding(self):
         class Model:
             def predict(self, text):
                 return (("__label__eng_Latn",), [0.9])
 
-        assert _predict_label(Model(), "hello") == "__label__eng_Latn"
+        assert _predict(Model(), "hello") == ("__label__eng_Latn", 0.9)
 
     def test_empty_prediction(self):
         class Binding:
@@ -35,7 +90,7 @@ class TestPredictLabel:
         class Model:
             f = Binding()
 
-        assert _predict_label(Model(), "") == ""
+        assert _predict(Model(), "") == ("", 0.0)
 
 VI_TEXT = "Hãy giải bài toán từng bước. Tổng cộng có ba mươi quả táo."
 EN_TEXT = "Let us solve the problem step by step. There are thirty apples."

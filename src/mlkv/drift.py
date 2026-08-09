@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import re
 import unicodedata
 
 from mlkv.languages import LANGUAGES, VIETNAMESE_MARKS, Language
@@ -72,15 +73,39 @@ def _glotlid_model():
         return None
 
 
-def _predict_label(model, text: str) -> str:
-    """Predict one language label. fasttext's Python wrapper breaks under
+# Markup and math that confuse line-level LID: LaTeX commands, markdown
+# emphasis/heading/code chars, operators, digits. Reasoning models emit a lot
+# of this; classifying it as-is manufactures fake drift (observed: 0.44 "drift"
+# on perfectly English Qwen3 CoT full of \text{...} lines).
+_MARKUP_RE = re.compile(r"\\[a-zA-Z]+|[\\${}^_*#`|~=+\-×÷/<>()\[\]]|\d")
+
+
+def _lid_text(segment: str) -> str:
+    """Strip markup/math before language ID; keeps letters and spacing."""
+    return " ".join(_MARKUP_RE.sub(" ", segment).split())
+
+
+# Line-level LID thresholds, tuned on the 2026-08-09 Mac mini-pilot outputs
+# (150 generations, sweep in docs/pilot-results.md): GlotLID is unreliable on
+# short header/label fragments ("Final Answer:", "Total bolts" → random Latin
+# languages). Requiring >=30 alphabetic chars and >=0.7 confidence drops
+# English false drift from 0.171 to 0.025 while VI (incl. the NFD arm) goes
+# to 0.000. Cost: genuinely code-switched SHORT fragments are not counted —
+# acceptable, P3b claims are about sustained language sliding.
+MIN_SEGMENT_ALPHA = 30
+MIN_LID_CONFIDENCE = 0.7
+
+
+def _predict(model, text: str) -> tuple[str, float]:
+    """Predict (label, confidence). fasttext's Python wrapper breaks under
     NumPy 2 (np.array(..., copy=False)); call the underlying binding directly
     and fall back to the wrapper for other fasttext builds."""
     try:
         pred = model.f.predict(text, 1, 0.0, "strict")  # [(prob, label), ...]
-        return pred[0][1] if pred else ""
+        return (pred[0][1], pred[0][0]) if pred else ("", 0.0)
     except AttributeError:
-        return model.predict(text)[0][0]
+        labels, probs = model.predict(text)
+        return (labels[0], float(probs[0])) if labels else ("", 0.0)
 
 
 def drift_score(text: str, expected: Language) -> float | None:
@@ -97,15 +122,18 @@ def drift_score(text: str, expected: Language) -> float | None:
 
     model = _glotlid_model()
     if model is not None:
-        segments = [s.strip() for s in text.splitlines() if len(s.strip()) >= 8]
+        segments = [s.strip() for s in text.splitlines() if s.strip()]
         if not segments:
             segments = [text]
         drifted = total = 0
         for seg in segments:
-            weight = sum(1 for ch in seg if ch.isalpha())
-            if weight == 0:
+            cleaned = _lid_text(seg)
+            weight = sum(1 for ch in cleaned if ch.isalpha())
+            if weight < MIN_SEGMENT_ALPHA:
+                continue  # headers/math fragments — LID unreliable
+            label, confidence = _predict(model, cleaned.replace("\n", " "))
+            if confidence < MIN_LID_CONFIDENCE:
                 continue
-            label = _predict_label(model, seg.replace("\n", " "))
             label = label.removeprefix("__label__")
             total += weight
             if label != expected.glotlid:
