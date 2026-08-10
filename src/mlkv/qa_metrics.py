@@ -33,19 +33,33 @@ ARTICLES: dict[str, set[str]] = {
 
 
 # Models echo the instruction's placeholder verbatim ("#### <exact answer
-# span>308####"). Angle-bracketed segments are placeholder debris — gold spans
-# in XQuAD/MLQA/TyDiQA never contain '<...>'.
-_PLACEHOLDER_RE = re.compile(r"<[^>]*>")
+# span>308####") — and sometimes wrap their REAL answer in the same angle
+# brackets ("#### <308>", mimicking the template). So: delete only the known
+# placeholder phrases (they are constants from our own qa_instructions), and
+# otherwise keep bracket CONTENT while dropping the brackets themselves.
+_PLACEHOLDER_PHRASES = [
+    "exact answer span", "fragmento exacto de la respuesta",
+    "extrait exact de la réponse", "exakte Antwortpassage",
+    "точный фрагмент ответа", "原文中的答案片段", "本文中の正確な答え",
+    "ข้อความคำตอบตรงตามต้นฉบับ", "kifungu halisi cha jibu", "সঠিক উত্তরাংশ",
+    "ఖచ్చితమైన సమాధాన భాగం", "cụm từ trả lời chính xác",
+]
+_PLACEHOLDER_RE = re.compile(  # matches "<phrase>" and "</phrase>" echoes
+    "<\\s*/?\\s*(?:" + "|".join(re.escape(p) for p in _PLACEHOLDER_PHRASES) + ")\\s*>"
+)
+_BRACKET_RE = re.compile(r"[<>]")
 
 
 def extract_span(text: str) -> str:
     """Predicted answer region: after the last '####' marker that still has
     content (models emit trailing/multiple markers), else full text.
-    Placeholder echoes in angle brackets are stripped before scoring."""
+    Known placeholder echoes are deleted; other angle brackets are dropped
+    but their content survives ("<308>" -> "308")."""
     positions = [m.end() for m in MARKER_RE.finditer(text)]
     candidates = [text[p:] for p in reversed(positions)] + [text]
     for region in candidates:
         region = _PLACEHOLDER_RE.sub(" ", region)
+        region = _BRACKET_RE.sub(" ", region)
         region = re.sub(r"[#\s]+$", "", region).strip()
         if re.search(r"\w", region):  # needs actual content, not marker debris
             return region
@@ -88,8 +102,32 @@ def _f1_single(pred_tokens: list[str], gold_tokens: list[str]) -> float:
 
 
 def exact_match(pred: str, golds: list[str], lang: str) -> bool:
+    """Strict span equality after normalization."""
     pred_norm = normalize(pred, lang)
     return any(pred_norm == normalize(g, lang) for g in golds)
+
+
+def containment_match(pred: str, golds: list[str], lang: str) -> bool:
+    """Normalized substring containment (Benchmark Illusion, 2606.17609):
+    correct if the gold span appears verbatim inside the prediction after
+    normalization. Robust to sentence-wrapped answers ("The defense gave up
+    308 points"), whose rate of occurrence differs BY LANGUAGE — strict EM
+    would convert that format-compliance difference into fake per-language
+    damage. Token-boundary guard for whitespace languages so gold "24" does
+    not match inside "245"."""
+    pred_norm = normalize(pred, lang)
+    if not pred_norm:
+        return False
+    for g in golds:
+        g_norm = normalize(g, lang)
+        if not g_norm:
+            continue
+        if lang in CHAR_TOKEN_LANGS:
+            if g_norm.replace(" ", "") in pred_norm.replace(" ", ""):
+                return True
+        elif re.search(rf"(?<![^\W_]){re.escape(g_norm)}(?![^\W_])", pred_norm):
+            return True
+    return False
 
 
 def f1(pred: str, golds: list[str], lang: str) -> float:
@@ -98,9 +136,14 @@ def f1(pred: str, golds: list[str], lang: str) -> float:
 
 
 def span_scores(output: str, golds: list[str], lang: str) -> dict:
-    """Score a raw model output against gold answer spans."""
+    """Score a raw model output against gold answer spans.
+
+    `correct` (headline) = containment match — strict EM measures format
+    compliance, which varies by language and would manufacture fake gaps.
+    Strict EM and F1 are reported alongside."""
     span = extract_span(output)
     return {
-        "em": exact_match(span, golds, lang),
+        "em": containment_match(span, golds, lang),
+        "em_strict": exact_match(span, golds, lang),
         "f1": f1(span, golds, lang),
     }

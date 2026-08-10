@@ -20,7 +20,13 @@ class TestExtractSpan:
         assert extract_span("led the NFL with 24. \n\n#### 24#### <exact answer span>") == "24"
 
     def test_all_markers_empty_falls_back_to_text(self):
-        assert extract_span("the answer is here ####  #### <span>") == "the answer is here"
+        # a bare echoed KNOWN placeholder leaves no content -> fall back to text
+        assert extract_span("the answer is here ####  #### <exact answer span>") == "the answer is here"
+
+    def test_unknown_bracket_content_is_kept(self):
+        # unknown bracket content counts as content (can't enumerate all echoes);
+        # scoring against gold decides its fate
+        assert extract_span("#### <42>") == "42"
 
 
 class TestNormalize:
@@ -88,7 +94,27 @@ class TestSpanScores:
         assert scores["em"] is True
         assert scores["f1"] == pytest.approx(1.0)
 
-    def test_unmarked_verbose_answer_gets_partial_f1(self):
+    def test_verbose_answer_counts_via_containment(self):
+        # sentence-wrapped correct answer: containment True, strict EM False
         scores = span_scores("It lost 308 points", ["308"], "en")
-        assert scores["em"] is False
+        assert scores["em"] is True and scores["em_strict"] is False
         assert 0 < scores["f1"] < 1
+
+    def test_answer_inside_angle_brackets_survives(self):
+        # observed: model mimics the template -> "#### <308>"
+        scores = span_scores("Đội thủ chỉ thua 308 điểm. \n\n#### <308>", ["308"], "vi")
+        assert scores["em"] is True and scores["em_strict"] is True
+
+    def test_zh_sentence_plus_empty_placeholder(self):
+        # observed: correct zh sentence, then a bare echoed placeholder
+        out = "黑豹队的防守只丢了308分。\n\n#### <原文中的答案片段>"
+        scores = span_scores(out, ["308"], "zh")
+        assert scores["em"] is True and scores["em_strict"] is False
+
+    def test_containment_respects_token_boundaries(self):
+        assert span_scores("the answer is 245", ["24"], "en")["em"] is False
+
+    def test_containment_wrong_answer_stays_wrong(self):
+        # genuinely wrong retrieval must not be rescued
+        out = "贾里德在职业生涯中有24次擒杀。#### <原文中的答案片段>"
+        assert span_scores(out, ["136 次"], "zh")["em"] is False
