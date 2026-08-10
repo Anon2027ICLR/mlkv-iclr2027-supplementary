@@ -68,7 +68,8 @@ class CompressionConfig:
         if self.kind == "kvquant":
             return {
                 "cache_implementation": "quantized",
-                "cache_config": {"backend": "quanto", "nbits": self.params["nbits"]},
+                "cache_config": {"backend": self.params.get("backend", "quanto"),
+                                 "nbits": self.params["nbits"]},
             }
         return {}
 
@@ -108,6 +109,9 @@ def parse(config: str) -> CompressionConfig:
         return CompressionConfig(config, "baseline")
     if config in ("kv2", "kv4", "kv8"):
         return CompressionConfig(config, "kvquant", {"nbits": int(config[2:])})
+    if config in ("kv2h", "kv4h"):  # HQQ backend — naive quanto 2-bit cliffs
+        return CompressionConfig(config, "kvquant",
+                                 {"nbits": int(config[2]), "backend": "HQQ"})
     if config in ("gptq4", "awq4", "int8"):
         return CompressionConfig(config, "weight")
     m = _PRESS_RE.match(config)

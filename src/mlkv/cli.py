@@ -154,6 +154,7 @@ def cmd_run(args: argparse.Namespace) -> None:
         enable_thinking=args.thinking,
         score_fn=score_fn,
         cooldown_s=args.cooldown,
+        batch_size=args.batch_size,
     )
     print(f"finished: {counts}")
 
@@ -207,6 +208,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--nfd", action="store_true",
                        help="NFD-decompose prompts (within-model fertility probe; "
                             "task stored as <task>-nfd)")
+    p_run.add_argument("--batch-size", type=int, default=1,
+                       help="batched generation for non-press configs "
+                            "(press cells always run single-stream)")
     p_run.add_argument("--cooldown", type=float, default=0.0,
                        help="seconds to sleep after each generation (thermal "
                             "relief on laptops; does not affect outputs)")
