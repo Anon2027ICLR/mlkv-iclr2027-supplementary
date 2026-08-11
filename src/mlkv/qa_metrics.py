@@ -135,6 +135,39 @@ def f1(pred: str, golds: list[str], lang: str) -> float:
     return max(_f1_single(pred_tokens, tokenize(g, lang)) for g in golds)
 
 
+_SENTENCE_END_RE = re.compile(r"([.!?。！？؟])[\s​]")
+
+
+def first_sentence(text: str) -> str:
+    """First sentence of the prose BEFORE the answer marker.
+
+    Models frequently state the answer in prose and then emit a reformatted
+    token after '####' ("four" -> "#### 4"), which marker-only scoring marks
+    wrong (docs/mrag-scoring-issue.md). The first sentence is where the answer
+    is stated; later sentences quote the passage, which is what makes
+    whole-output containment over-credit. Thai output rarely carries sentence
+    punctuation, so fall back to the first line, capped at 160 chars."""
+    m = MARKER_RE.search(text)
+    prose = (text[: m.start()] if m else text).strip()
+    sm = _SENTENCE_END_RE.search(prose)
+    if sm:
+        return prose[: sm.end(1)]
+    return prose.splitlines()[0][:160] if prose else ""
+
+
+def containment_match_lenient(output: str, golds: list[str], lang: str) -> bool:
+    """Containment against the marker span OR the first prose sentence.
+
+    The offline re-scoring rule ("R2") chosen for the mRAG marker-only bug:
+    it recovers prose-stated answers while still rejecting outputs whose only
+    match is a gold string echoed inside quoted passage text. NOT used by the
+    live runner — mid-run scoring stays frozen so every stored row is scored
+    by one rule; apply this at analysis time from raw outputs."""
+    return containment_match(extract_span(output), golds, lang) or containment_match(
+        first_sentence(output), golds, lang
+    )
+
+
 def span_scores(output: str, golds: list[str], lang: str) -> dict:
     """Score a raw model output against gold answer spans.
 

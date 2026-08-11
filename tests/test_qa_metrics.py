@@ -1,6 +1,14 @@
 import pytest
 
-from mlkv.qa_metrics import exact_match, extract_span, f1, normalize, span_scores
+from mlkv.qa_metrics import (
+    containment_match_lenient,
+    exact_match,
+    extract_span,
+    f1,
+    first_sentence,
+    normalize,
+    span_scores,
+)
 
 
 class TestExtractSpan:
@@ -118,3 +126,44 @@ class TestSpanScores:
         # genuinely wrong retrieval must not be rescued
         out = "贾里德在职业生涯中有24次擒杀。#### <原文中的答案片段>"
         assert span_scores(out, ["136 次"], "zh")["em"] is False
+
+
+class TestContainmentLenient:
+    """Offline re-scoring rule for the marker-only bug (docs/mrag-scoring-issue.md).
+    All example outputs below are real Main A generations, lightly truncated."""
+
+    def test_prose_answer_with_reformatted_marker(self):
+        # observed: answer stated in prose, digit after the marker
+        out = "Josh Norman intercepted four passes.   #### <exact answer span>4####"
+        assert containment_match_lenient(out, ["four"], "en") is True
+
+    def test_entity_answer_with_numeric_marker(self):
+        out = "Kawann Short led the Panthers in sacks with 11.  #### 11"
+        assert containment_match_lenient(out, ["Kawann Short"], "en") is True
+
+    def test_gold_echoed_in_quoted_passage_not_credited(self):
+        # observed FALSE POSITIVE under whole-output containment: the model's
+        # answer (Seahawks) is wrong; the gold only appears in explanation
+        out = (
+            "The Super Bowl XLIX was won by the Seattle Seahawks. The passage "
+            "mentions that the defending Super Bowl XLIX champion New England "
+            "Patriots were beaten by the Broncos in the AFC Championship. "
+            "#### Seattle Seahawks"
+        )
+        assert containment_match_lenient(out, ["New England Patriots"], "en") is False
+
+    def test_marker_span_alone_still_works(self):
+        assert containment_match_lenient("#### 308", ["308"], "en") is True
+
+    def test_thai_without_sentence_punctuation(self):
+        # th output usually has no sentence-ending marks: first-line fallback
+        out = "แคโรไลนาเสียแต้มไป 308 แต้ม\n\n#### 999"
+        assert containment_match_lenient(out, ["308"], "th") is True
+
+    def test_wrong_answer_stays_wrong(self):
+        out = "The Panthers gave up 400 points. #### 400"
+        assert containment_match_lenient(out, ["308"], "en") is False
+
+    def test_first_sentence_stops_at_marker(self):
+        assert first_sentence("#### 42") == ""
+        assert first_sentence("The answer is 42. More text. #### 42") == "The answer is 42."
