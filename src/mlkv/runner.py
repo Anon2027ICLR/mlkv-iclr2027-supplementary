@@ -57,6 +57,10 @@ def load_model(model_name: str, device: str, dtype: torch.dtype = torch.bfloat16
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if tokenizer.pad_token is None:
+        # Llama tokenizers ship without a pad token; batched generation pads
+        # on the left, so EOS is safe (attention mask covers the pad columns).
+        tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=dtype)
     model.to(device)
     model.eval()
