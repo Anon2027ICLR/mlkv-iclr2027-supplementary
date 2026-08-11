@@ -111,7 +111,7 @@ def parse(config: str) -> CompressionConfig:
         return CompressionConfig(config, "kvquant", {"nbits": int(config[2:])})
     if config in ("kv2h", "kv4h"):  # HQQ backend — naive quanto 2-bit cliffs
         return CompressionConfig(config, "kvquant",
-                                 {"nbits": int(config[2]), "backend": "HQQ"})
+                                 {"nbits": int(config[2]), "backend": "hqq"})
     if config in ("gptq4", "awq4", "int8"):
         return CompressionConfig(config, "weight")
     m = _PRESS_RE.match(config)
