@@ -24,6 +24,7 @@ dependencies = [
 # these by hand or a later sync will silently strip them (bitten once).
 [project.optional-dependencies]
 cuda = [
+    "hqq>=0.2",           # HQQ cache backend for kv2h/kv4h
     "kvpress>=0.5.4",
     "optimum-quanto>=0.2",
 ]
