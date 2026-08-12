@@ -38,6 +38,11 @@ PRESS_NAMES = {
     "streamingllm": "StreamingLLMPress",
     "tova": "TOVAPress",
     "expected": "ExpectedAttentionPress",
+    # Constant-free scorers — negative controls for the press-generality sweep:
+    # if these show the same per-language ordering as the windowed presses, the
+    # ordering is language difficulty, not a token-denominated constant.
+    "knorm": "KnormPress",
+    "random": "RandomPress",
 }
 
 # Optional ":w<int>" overrides the press's observation window (E2, see

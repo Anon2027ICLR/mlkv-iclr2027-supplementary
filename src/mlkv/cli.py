@@ -136,10 +136,25 @@ def cmd_run(args: argparse.Namespace) -> None:
             lang.code: mrag.build(
                 lang.code, tokenizer, budgets, max_items=args.max_items,
                 layout=args.mrag_layout,
+                instr_pad_tokens=args.mrag_instr_pad,
             )
             for lang in resolve(args.langs)
         }
         score_fn = mrag.score
+    elif args.task == "mgsm-stuffed":
+        from transformers import AutoTokenizer
+
+        from mlkv.tasks import mgsm_stuffed
+
+        tokenizer = AutoTokenizer.from_pretrained(args.model)
+        budgets = _parse_ctx(args.ctx)
+        items_by_lang = {
+            lang.code: mgsm_stuffed.build(
+                lang.code, tokenizer, budgets, max_items=args.max_items
+            )
+            for lang in resolve(args.langs)
+        }
+        # numeric exact match — the default scorer
     elif args.task == "mrag-bp":
         from mlkv.tasks import mrag, mrag_bp
 
@@ -220,10 +235,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_run = sub.add_parser("run", help="run a generation matrix cell")
     p_run.add_argument("--model", required=True)
     p_run.add_argument("--task", default="mgsm",
-                       choices=["mgsm", "mgsm-canary", "mrag", "mrag-bp"])
+                       choices=["mgsm", "mgsm-canary", "mrag", "mrag-bp",
+                                "mgsm-stuffed"])
     p_run.add_argument("--byte-ctx", default="12k",
                        help="mrag-bp canonical ENGLISH byte budget per prompt "
                             "(KiB suffix), e.g. 12k = 12288 bytes")
+    p_run.add_argument("--mrag-instr-pad", type=int, default=None,
+                       help="pad the mrag instruction to N tokens with neutral "
+                            "filler (same-language window dose-response)")
     p_run.add_argument("--mrag-layout", default="instr-last",
                        choices=["instr-last", "instr-first"],
                        help="mrag prompt order; instr-first is the E1 "

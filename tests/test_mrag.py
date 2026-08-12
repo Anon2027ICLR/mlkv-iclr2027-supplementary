@@ -173,3 +173,28 @@ class TestLayoutIntervention:
         assert b[0]["item_id"].startswith("mragIF-en-")
         assert b[0]["meta"]["layout"] == "instr-first"
         assert a[0]["meta"]["layout"] == "instr-last"
+
+
+class TestInstructionPadding:
+    """Padded-instruction dose-response (same-language window causal test)."""
+
+    def test_padding_reaches_target_and_keeps_marker_spec_last(self):
+        from mlkv.languages import LANGUAGES
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        items = mrag.build("en", tok, [512], pool=pool, instr_pad_tokens=64)
+        instr = LANGUAGES["en"].qa_instruction
+        for it in items:
+            assert it["prompt"].endswith(instr)  # original spec stays last
+            tail = it["prompt"][it["prompt"].index("Remember to read"):]
+            assert len(tok.encode(tail)) >= 64
+            assert it["item_id"].startswith("mragPAD64-en-")
+            assert it["meta"]["instr_pad_tokens"] == 64
+
+    def test_unpadded_items_unchanged(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        a = mrag.build("en", tok, [512], pool=pool)
+        b = mrag.build("en", tok, [512], pool=pool, instr_pad_tokens=None)
+        assert [x["prompt"] for x in a] == [x["prompt"] for x in b]
+        assert a[0]["item_id"].startswith("mrag-en-")

@@ -85,15 +85,40 @@ def load_pool(lang: str) -> tuple[list[dict], list[str]]:
     return questions, sorted(passages)
 
 
+# Neutral filler for the padded-instruction dose-response (same-language causal
+# test: does ENGLISH break once its instruction tail outgrows the observation
+# window?). Content-free by design; repeated and truncated to hit a token target.
+_PAD_SENTENCE = {
+    "en": "Remember to read every passage carefully and check your answer "
+          "against the text before responding.",
+}
+
+
+def _pad_instruction(instruction: str, lang: str, tokenizer,
+                     target_tokens: int) -> str:
+    """Extend the instruction with neutral filler until it reaches
+    target_tokens (measured with the run tokenizer). The original instruction
+    text stays intact and last-most; filler goes in front of it so the format
+    spec (the '####' marker sentence) remains adjacent to generation."""
+    filler_unit = _PAD_SENTENCE[lang]
+    padded = instruction
+    while len(tokenizer.encode(padded, add_special_tokens=False)) < target_tokens:
+        padded = filler_unit + " " + padded
+    return padded
+
+
 def assemble(question_item: dict, distractors: list[str], tokenizer,
              ctx_tokens: int, position: str, rng: random.Random,
-             lang: str, layout: str = "instr-last") -> tuple[str, dict]:
+             lang: str, layout: str = "instr-last",
+             instr_pad_tokens: int | None = None) -> tuple[str, dict]:
     """One prompt. layout "instr-last" (frozen Main A order): passages +
     question + instruction. layout "instr-first" (E1 intervention, see
     docs/mrag-mechanism-pivot.md): instruction + passages + question, so the
     question is always inside a press's observation window. Token accounting
     and distractor selection are layout-invariant: same seed, same passages."""
     instruction = LANGUAGES[lang].qa_instruction
+    if instr_pad_tokens:
+        instruction = _pad_instruction(instruction, lang, tokenizer, instr_pad_tokens)
     gold_passage = question_item["context"]
     joiner = "\n\n"
     used = (
@@ -137,7 +162,8 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
 def build(lang: str, tokenizer, ctx_tokens_list: list[int],
           max_items: int | None = None, n_questions: int = DEFAULT_N_QUESTIONS,
           pool: tuple[list[dict], list[str]] | None = None,
-          layout: str = "instr-last") -> list[dict]:
+          layout: str = "instr-last",
+          instr_pad_tokens: int | None = None) -> list[dict]:
     """Items for all budgets; `pool` injectable for tests (else loaded)."""
     questions, distractors = pool if pool is not None else load_pool(lang)
     if len(questions) < n_questions:
@@ -156,13 +182,17 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
             rng = random.Random(f"{SEED}:{lang}:{ctx_tokens}:{i}")
             prompt, meta = assemble(
                 q, distractors, tokenizer, ctx_tokens, position, rng, lang,
-                layout=layout,
+                layout=layout, instr_pad_tokens=instr_pad_tokens,
             )
             meta["ctx_tokens"] = ctx_tokens
             meta["layout"] = layout
-            # Distinct id prefix per layout: run_keys must never collide with
-            # the frozen instr-last rows.
+            if instr_pad_tokens:
+                meta["instr_pad_tokens"] = instr_pad_tokens
+            # Distinct id prefix per layout/padding: run_keys must never
+            # collide with the frozen rows.
             prefix = "mragIF" if layout == "instr-first" else "mrag"
+            if instr_pad_tokens:
+                prefix = f"mragPAD{instr_pad_tokens}"
             items.append({
                 "item_id": f"{prefix}-{lang}-{ctx_tokens // 1024}k-{i}",
                 "prompt": prompt,
