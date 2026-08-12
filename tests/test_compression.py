@@ -88,3 +88,33 @@ class TestPress:
         kvpress = pytest.importorskip("kvpress")
         press = parse("snapkv@b2048").press(prefill_len=4096)
         assert press.compression_ratio == pytest.approx(0.5)
+
+
+def test_press_window_override_parses():
+    cfg = parse("snapkv@r0.75:w128")
+    assert cfg.kind == "press"
+    assert cfg.params == {"press": "snapkv", "ratio": 0.75, "window": 128}
+    # window+1 floor replaces the default PRESS_MIN_PREFILL
+    assert cfg.effective_ratio(128) == 0.0
+    assert cfg.effective_ratio(129) == 0.75
+
+
+def test_press_window_override_reaches_kvpress_kwargs():
+    cfg = parse("snapkv@r0.75:w256")
+    kvpress = pytest.importorskip("kvpress")
+    press = cfg.press(prefill_len=4096)
+    assert press.window_size == 256
+    assert press.compression_ratio == 0.75
+
+
+def test_press_without_window_unchanged():
+    cfg = parse("snapkv@r0.75")
+    assert "window" not in cfg.params
+    assert cfg.effective_ratio(64) == 0.0   # default snapkv floor 65
+    assert cfg.effective_ratio(65) == 0.75
+
+
+def test_malformed_window_rejected():
+    for bad in ("snapkv@r0.75:w0", "snapkv@r0.75:w", "snapkv@r0.75w128"):
+        with pytest.raises(ValueError):
+            parse(bad)

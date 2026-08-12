@@ -128,7 +128,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         budgets = _parse_ctx(args.ctx)
         items_by_lang = {
             lang.code: mrag.build(
-                lang.code, tokenizer, budgets, max_items=args.max_items
+                lang.code, tokenizer, budgets, max_items=args.max_items,
+                layout=args.mrag_layout,
             )
             for lang in resolve(args.langs)
         }
@@ -203,6 +204,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--model", required=True)
     p_run.add_argument("--task", default="mgsm",
                        choices=["mgsm", "mgsm-canary", "mrag"])
+    p_run.add_argument("--mrag-layout", default="instr-last",
+                       choices=["instr-last", "instr-first"],
+                       help="mrag prompt order; instr-first is the E1 "
+                            "window-visibility intervention")
     p_run.add_argument("--ctx", default="8k,16k,32k",
                        help="mrag context budgets, e.g. 8k,16k,32k")
     p_run.add_argument("--nfd", action="store_true",

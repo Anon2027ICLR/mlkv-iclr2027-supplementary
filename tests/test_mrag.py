@@ -141,3 +141,35 @@ class TestScore:
         correct, meta = mrag.score("#### 309", self._item())
         assert correct is False
         assert meta["f1"] == 0.0
+
+
+class TestLayoutIntervention:
+    """E1 (docs/mrag-mechanism-pivot.md): instr-first puts the question last so
+    it is always inside a press's observation window."""
+
+    def test_instr_first_reorders_but_keeps_passages(self):
+        from mlkv.languages import LANGUAGES
+        tok = FakeTokenizer()
+        questions, distractors = make_pool(n_questions=1)
+        q = questions[0]
+        last, m1 = mrag.assemble(q, distractors, tok, 512, "middle",
+                                 random.Random("s"), "en", layout="instr-last")
+        first, m2 = mrag.assemble(q, distractors, tok, 512, "middle",
+                                  random.Random("s"), "en", layout="instr-first")
+        instr = LANGUAGES["en"].qa_instruction
+        assert last.endswith(instr) and not first.endswith(instr)
+        assert first.startswith(instr)
+        assert first.endswith(q["question"])
+        # same seed -> identical passage selection, layout-invariant
+        assert m1["n_passages"] == m2["n_passages"]
+        assert sorted(last.split("\n\n")) == sorted(first.split("\n\n"))
+
+    def test_instr_first_item_ids_cannot_collide(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        a = mrag.build("en", tok, [512], pool=pool)
+        b = mrag.build("en", tok, [512], pool=pool, layout="instr-first")
+        assert a[0]["item_id"].startswith("mrag-en-")
+        assert b[0]["item_id"].startswith("mragIF-en-")
+        assert b[0]["meta"]["layout"] == "instr-first"
+        assert a[0]["meta"]["layout"] == "instr-last"

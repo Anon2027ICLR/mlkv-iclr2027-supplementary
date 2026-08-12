@@ -40,7 +40,12 @@ PRESS_NAMES = {
     "expected": "ExpectedAttentionPress",
 }
 
-_PRESS_RE = re.compile(r"^(?P<name>[a-z0-9]+)@r(?P<ratio>0\.\d+)$")
+# Optional ":w<int>" overrides the press's observation window (E2, see
+# docs/mrag-mechanism-pivot.md): a fixed token window is itself a
+# token-denominated constant, so it is exposed as a treatment variable.
+_PRESS_RE = re.compile(
+    r"^(?P<name>[a-z0-9]+)@r(?P<ratio>0\.\d+)(?::w(?P<window>[1-9]\d*))?$"
+)
 _BUDGET_RE = re.compile(r"^(?P<name>[a-z0-9]+)@b(?P<budget>[1-9]\d*)$")
 
 
@@ -73,12 +78,19 @@ class CompressionConfig:
             }
         return {}
 
+    def _min_prefill(self) -> int:
+        """Prompts shorter than the observation window cannot be compressed;
+        a custom window moves that floor with it."""
+        if "window" in self.params:
+            return self.params["window"] + 1
+        return PRESS_MIN_PREFILL.get(self.params["press"], 0)
+
     def effective_ratio(self, prefill_len: int) -> float | None:
         """Actual eviction ratio applied for this prompt length (None if the
         config does not evict). Recorded per generation for the RQ2 regression."""
         if self.kind != "press":
             return None
-        if prefill_len < PRESS_MIN_PREFILL.get(self.params["press"], 0):
+        if prefill_len < self._min_prefill():
             return 0.0
         if "budget" in self.params:
             return budget_ratio(self.params["budget"], prefill_len)
@@ -101,6 +113,8 @@ class CompressionConfig:
         import kvpress  # CUDA box extra
 
         cls = getattr(kvpress, PRESS_NAMES[self.params["press"]])
+        if "window" in self.params:
+            return cls(compression_ratio=ratio, window_size=self.params["window"])
         return cls(compression_ratio=ratio)
 
 
@@ -116,10 +130,10 @@ def parse(config: str) -> CompressionConfig:
         return CompressionConfig(config, "weight")
     m = _PRESS_RE.match(config)
     if m and m.group("name") in PRESS_NAMES:
-        return CompressionConfig(
-            config, "press",
-            {"press": m.group("name"), "ratio": float(m.group("ratio"))},
-        )
+        params = {"press": m.group("name"), "ratio": float(m.group("ratio"))}
+        if m.group("window"):
+            params["window"] = int(m.group("window"))
+        return CompressionConfig(config, "press", params)
     m = _BUDGET_RE.match(config)
     if m and m.group("name") in PRESS_NAMES:
         return CompressionConfig(

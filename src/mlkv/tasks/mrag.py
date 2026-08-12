@@ -87,8 +87,12 @@ def load_pool(lang: str) -> tuple[list[dict], list[str]]:
 
 def assemble(question_item: dict, distractors: list[str], tokenizer,
              ctx_tokens: int, position: str, rng: random.Random,
-             lang: str) -> tuple[str, dict]:
-    """One prompt: passages (gold at `position`) + question + instruction."""
+             lang: str, layout: str = "instr-last") -> tuple[str, dict]:
+    """One prompt. layout "instr-last" (frozen Main A order): passages +
+    question + instruction. layout "instr-first" (E1 intervention, see
+    docs/mrag-mechanism-pivot.md): instruction + passages + question, so the
+    question is always inside a press's observation window. Token accounting
+    and distractor selection are layout-invariant: same seed, same passages."""
     instruction = LANGUAGES[lang].qa_instruction
     gold_passage = question_item["context"]
     joiner = "\n\n"
@@ -116,9 +120,11 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
 
     gold_index = {"front": 0, "middle": len(chosen) // 2, "back": len(chosen)}[position]
     passages = chosen[:gold_index] + [gold_passage] + chosen[gold_index:]
-    prompt = joiner.join([
-        joiner.join(passages), question_item["question"], instruction
-    ])
+    if layout == "instr-first":
+        parts = [instruction, joiner.join(passages), question_item["question"]]
+    else:
+        parts = [joiner.join(passages), question_item["question"], instruction]
+    prompt = joiner.join(parts)
     meta = {
         "position": position,
         "n_passages": len(passages),
@@ -130,7 +136,8 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
 
 def build(lang: str, tokenizer, ctx_tokens_list: list[int],
           max_items: int | None = None, n_questions: int = DEFAULT_N_QUESTIONS,
-          pool: tuple[list[dict], list[str]] | None = None) -> list[dict]:
+          pool: tuple[list[dict], list[str]] | None = None,
+          layout: str = "instr-last") -> list[dict]:
     """Items for all budgets; `pool` injectable for tests (else loaded)."""
     questions, distractors = pool if pool is not None else load_pool(lang)
     if len(questions) < n_questions:
@@ -148,11 +155,16 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
             position = POSITIONS[i % len(POSITIONS)]
             rng = random.Random(f"{SEED}:{lang}:{ctx_tokens}:{i}")
             prompt, meta = assemble(
-                q, distractors, tokenizer, ctx_tokens, position, rng, lang
+                q, distractors, tokenizer, ctx_tokens, position, rng, lang,
+                layout=layout,
             )
             meta["ctx_tokens"] = ctx_tokens
+            meta["layout"] = layout
+            # Distinct id prefix per layout: run_keys must never collide with
+            # the frozen instr-last rows.
+            prefix = "mragIF" if layout == "instr-first" else "mrag"
             items.append({
-                "item_id": f"mrag-{lang}-{ctx_tokens // 1024}k-{i}",
+                "item_id": f"{prefix}-{lang}-{ctx_tokens // 1024}k-{i}",
                 "prompt": prompt,
                 "gold": q["answers"],
                 "lang": lang,
