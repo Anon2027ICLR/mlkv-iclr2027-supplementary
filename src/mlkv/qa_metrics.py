@@ -42,6 +42,11 @@ _PLACEHOLDER_PHRASES = [
     "extrait exact de la réponse", "exakte Antwortpassage",
     "точный фрагмент ответа", "原文中的答案片段", "本文中の正確な答え",
     "ข้อความคำตอบตรงตามต้นฉบับ", "kifungu halisi cha jibu", "সঠিক উত্তরাংশ",
+    # Bengali models paraphrase the placeholder instead of echoing it; the
+    # 2026-08-13 audit found the missing variants misread 46/200 rows in the
+    # instr-first treatment arm (vs 1/200 in control) — biased AGAINST the
+    # treatment. Longer phrases must precede their prefixes in this list.
+    "সঠিক সংশ্লিষ্ট উত্তর", "সঠিক উত্তর", "সঠিক উপাংশ",
     "ఖచ్చితమైన సమాధాన భాగం", "cụm từ trả lời chính xác",
 ]
 _PLACEHOLDER_RE = re.compile(  # matches "<phrase>" and "</phrase>" echoes
@@ -135,7 +140,7 @@ def f1(pred: str, golds: list[str], lang: str) -> float:
     return max(_f1_single(pred_tokens, tokenize(g, lang)) for g in golds)
 
 
-_SENTENCE_END_RE = re.compile(r"([.!?。！？؟])[\s​]")
+_SENTENCE_END_RE = re.compile(r"([.!?。！？؟।॥])[\s​]")  # । / ॥ = Bengali/Hindi danda
 
 
 def first_sentence(text: str) -> str:

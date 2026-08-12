@@ -22,18 +22,6 @@ if ! uv run pytest -q tests/test_mrag.py tests/test_mgsm_stuffed.py 2>&1 | tail 
 fi
 say TESTS_OK
 
-# G1: decode-cap sweep — instance 3 measured as a dose-response curve.
-# One db PER CAP (run_keys do not include the cap; sharing a db would make
-# resume silently skip). Cap-128 points already exist in maina-a.db.
-uv run mlkv run --model $M --task mrag --langs en,th,bn --ctx 8k,16k \
-  --configs baseline,snapkv@r0.75 \
-  --max-items 100 --max-new-tokens 256 --db results/e7_c256.db 2>&1 | tail -1 >> "$LOG"
-say G1_C256_DONE
-uv run mlkv run --model $M --task mrag --langs en,th,bn --ctx 8k,16k \
-  --configs baseline,snapkv@r0.75 \
-  --max-items 100 --max-new-tokens 512 --db results/e7_c512.db 2>&1 | tail -1 >> "$LOG"
-say G1_DONE
-
 # G2: padded-instruction dose response in ENGLISH — same language, same
 # items, only the instruction's token length moves across the 64-token
 # window. Distinct item ids (mragPAD<N>-) make one shared db safe.
@@ -47,6 +35,18 @@ uv run mlkv run --model $M --task mrag --langs en --ctx 8k \
   --configs snapkv@r0.75:w128 --mrag-instr-pad 96 \
   --max-items 100 --max-new-tokens 128 --db results/pad.db 2>&1 | tail -1 >> "$LOG"
 say G2_DONE
+
+# G1: decode-cap sweep — instance 3 measured as a dose-response curve.
+# One db PER CAP (run_keys do not include the cap; sharing a db would make
+# resume silently skip). Cap-128 points already exist in maina-a.db.
+uv run mlkv run --model $M --task mrag --langs en,th,bn --ctx 8k,16k \
+  --configs baseline,snapkv@r0.75 \
+  --max-items 100 --max-new-tokens 256 --db results/e7_c256.db 2>&1 | tail -1 >> "$LOG"
+say G1_C256_DONE
+uv run mlkv run --model $M --task mrag --langs en,th,bn --ctx 8k,16k \
+  --configs baseline,snapkv@r0.75 \
+  --max-items 100 --max-new-tokens 512 --db results/e7_c512.db 2>&1 | tail -1 >> "$LOG"
+say G1_DONE
 
 # G3: task generality — MGSM problem buried before the instruction tail,
 # numeric EM metric. Cap 768 for CoT (matches the MGSM quant arm).

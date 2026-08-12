@@ -1,5 +1,5 @@
 #!/bin/bash
-# Day-3 chain, pod A: decode-cap fixes, press generality, adaptive window.
+# Day-3 chain, pod A: decode-cap fixes and press generality (F3 deferred).
 # Specs and registered predictions: docs/day3-runbook.md §1.
 # Launch:  setsid bash /workspace/mlkv/scripts/e_day3a.sh &
 # Re-arm self-stop with marker ALL_DAY3A_DONE before launching.
@@ -62,25 +62,14 @@ for press in streamingllm tova expected knorm random; do
 done
 say F2_DONE
 
-# F3: adaptive window remedy, w = instruction_tokens + 64 per language.
-# Cap 128 to stay paired with the w64/w128/w256 cells in e2.db/maina-a.db.
-uv run mlkv run --model $M --task mrag --langs en --ctx 8k,16k \
-  --configs snapkv@r0.75:w84,snapkv@r0.9375:w84 \
-  --max-items 100 --max-new-tokens 128 --db results/adaptive.db 2>&1 | tail -1 >> "$LOG"
-uv run mlkv run --model $M --task mrag --langs th --ctx 8k,16k \
-  --configs snapkv@r0.75:w104,snapkv@r0.9375:w104 \
-  --max-items 100 --max-new-tokens 128 --db results/adaptive.db 2>&1 | tail -1 >> "$LOG"
-uv run mlkv run --model $M --task mrag --langs sw --ctx 8k,16k \
-  --configs snapkv@r0.75:w106,snapkv@r0.9375:w106 \
-  --max-items 100 --max-new-tokens 128 --db results/adaptive.db 2>&1 | tail -1 >> "$LOG"
-uv run mlkv run --model $M --task mrag --langs bn --ctx 8k,16k \
-  --configs snapkv@r0.75:w166,snapkv@r0.9375:w166 \
-  --max-items 100 --max-new-tokens 128 --db results/adaptive.db 2>&1 | tail -1 >> "$LOG"
-say F3_DONE
+# F3 (adaptive window remedy) is DEFERRED — see docs/day3-runbook.md.
+# Two reasons: the mechanism is not yet identified (G2 decides), and the
+# original window constants came from stale instruction lengths (bn is 73
+# Qwen tokens, not 102; adaptive w should be 83/97/98/137, not 84/104/106/166).
 
 # Redundant snapshot (self_stop.sh makes the authoritative -final ones).
 # VACUUM INTO refuses to overwrite, so clear the target first.
-for db in e1 e3_384 mrag384 pressgen adaptive; do
+for db in e1 e3_384 mrag384 pressgen; do
   rm -f "results/$db-snapshot.db"
   python3 -c "
 import sqlite3
