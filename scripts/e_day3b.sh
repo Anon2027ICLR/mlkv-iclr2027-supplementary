@@ -55,10 +55,12 @@ uv run mlkv run --model $M --task mgsm-stuffed --langs en,th,bn --ctx 8k \
   --max-items 100 --max-new-tokens 768 --db results/stuffed.db 2>&1 | tail -1 >> "$LOG"
 say G3_DONE
 
-# G4: Telugu — bn-class fertility, but its instruction (40 tokens) FITS the
-# window. Prediction: capacity-language behaviour, not bn behaviour.
+# G4: Telugu — measured instruction is 105 Qwen tokens (NOT the 40 the
+# original spec assumed), so it EXCEEDS the 64-token window like Bengali.
+# This makes G4 an out-of-sample REPLICATION of the window mechanism on a
+# fresh language: predicted to break at r0.75 w64 and heal at w192 (>105).
 uv run mlkv run --model $M --task mrag --langs te --ctx 8k,16k \
-  --configs baseline,snapkv@r0.75,snapkv@b512 \
+  --configs baseline,snapkv@r0.75,snapkv@r0.75:w192,snapkv@b512 \
   --max-items 100 --max-new-tokens 384 --db results/mrag384_te.db 2>&1 | tail -1 >> "$LOG"
 say G4_DONE
 
