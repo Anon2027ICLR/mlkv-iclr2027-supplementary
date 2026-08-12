@@ -122,7 +122,8 @@ def generate_one(model, tokenizer, prompt_text: str, config: CompressionConfig,
         pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
         **config.generate_kwargs(),
     )
-    press = config.press(prefill_len=n_prompt_tokens)
+    press = config.press(prefill_len=n_prompt_tokens,
+                         prompt_bytes=len(prompt_text.encode("utf-8")))
     if press is not None:
         with press(model):
             out = model.generate(**inputs, **gen_kwargs)
@@ -205,7 +206,11 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
         meta.update({
             "n_prompt_tokens": n_prompt,
             "prompt_bytes": len(item["prompt"].encode("utf-8")),
-            "kv_ratio": config.effective_ratio(n_prompt),
+            # Raw item bytes, not templated-prompt bytes: ~0.3% smaller. For
+            # bb configs the press used templated bytes; the covariate drift
+            # is negligible and documented here.
+            "kv_ratio": config.effective_ratio(
+                n_prompt, prompt_bytes=len(item["prompt"].encode("utf-8"))),
         })
         store.save(
             conn, key,

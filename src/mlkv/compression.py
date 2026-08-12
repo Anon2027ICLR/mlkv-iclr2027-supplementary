@@ -47,6 +47,10 @@ _PRESS_RE = re.compile(
     r"^(?P<name>[a-z0-9]+)@r(?P<ratio>0\.\d+)(?::w(?P<window>[1-9]\d*))?$"
 )
 _BUDGET_RE = re.compile(r"^(?P<name>[a-z0-9]+)@b(?P<budget>[1-9]\d*)$")
+# Byte-denominated cache budget (E3 fix arm): keep the token-equivalent of
+# <bytes> of this prompt's text, i.e. ratio = 1 - bytes/prompt_bytes. Content
+# kept is language-invariant by construction — the remedy the paper proposes.
+_BYTEBUDGET_RE = re.compile(r"^(?P<name>[a-z0-9]+)@bb(?P<bytes>[1-9]\d*)$")
 
 
 # Presses with an observation window cannot compress prompts shorter than it
@@ -85,29 +89,39 @@ class CompressionConfig:
             return self.params["window"] + 1
         return PRESS_MIN_PREFILL.get(self.params["press"], 0)
 
-    def effective_ratio(self, prefill_len: int) -> float | None:
-        """Actual eviction ratio applied for this prompt length (None if the
-        config does not evict). Recorded per generation for the RQ2 regression."""
+    def effective_ratio(self, prefill_len: int,
+                        prompt_bytes: int | None = None) -> float | None:
+        """Actual eviction ratio applied for this prompt (None if the config
+        does not evict). Recorded per generation for the RQ2 regression.
+        Byte-budget configs need prompt_bytes; token configs ignore it."""
         if self.kind != "press":
             return None
         if prefill_len < self._min_prefill():
             return 0.0
+        if "bytes" in self.params:
+            if prompt_bytes is None:
+                raise ValueError(f"{self.name!r} needs prompt_bytes")
+            if prompt_bytes <= self.params["bytes"]:
+                return 0.0
+            return 1.0 - self.params["bytes"] / prompt_bytes
         if "budget" in self.params:
             return budget_ratio(self.params["budget"], prefill_len)
         return self.params["ratio"]
 
-    def press(self, prefill_len: int | None = None):
+    def press(self, prefill_len: int | None = None,
+              prompt_bytes: int | None = None):
         """Instantiate the kvpress press object, or None.
 
         Needs prefill_len: prompts under the press's observation window, or
         already within a budget, run uncompressed (None) — decided before the
         kvpress import so no-op paths also work without the CUDA extras.
+        Byte-budget configs additionally need prompt_bytes.
         """
         if self.kind != "press":
             return None
         if prefill_len is None:
             raise ValueError(f"press config {self.name!r} needs prefill_len")
-        ratio = self.effective_ratio(prefill_len)
+        ratio = self.effective_ratio(prefill_len, prompt_bytes=prompt_bytes)
         if ratio == 0.0:
             return None
         import kvpress  # CUDA box extra
@@ -134,6 +148,12 @@ def parse(config: str) -> CompressionConfig:
         if m.group("window"):
             params["window"] = int(m.group("window"))
         return CompressionConfig(config, "press", params)
+    m = _BYTEBUDGET_RE.match(config)
+    if m and m.group("name") in PRESS_NAMES:
+        return CompressionConfig(
+            config, "press",
+            {"press": m.group("name"), "bytes": int(m.group("bytes"))},
+        )
     m = _BUDGET_RE.match(config)
     if m and m.group("name") in PRESS_NAMES:
         return CompressionConfig(

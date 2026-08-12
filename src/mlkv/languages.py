@@ -63,6 +63,16 @@ LANGUAGES: dict[str, Language] = {
         Language("vi", "Vietnamese", "Latin", False, "vie_Latn",
                  "Hãy giải bài toán từng bước. Kết thúc câu trả lời bằng '#### <đáp số>'.",
                  "Chỉ dựa vào các đoạn văn ở trên để trả lời câu hỏi. Kết thúc câu trả lời bằng '#### <cụm từ trả lời chính xác>'."),
+        # el/hi added 2026-08-12 for the byte-parallel E3 arm (XQuAD coverage;
+        # both ~x4.2-4.3 Qwen fertility). New codes create new run_keys, so
+        # PROMPT_VERSION stays v1. Instructions follow the frozen template;
+        # PENDING native-speaker QC like the vi set received.
+        Language("el", "Greek", "Greek", False, "ell_Grek",
+                 "Λύσε το πρόβλημα βήμα προς βήμα. Τελείωσε την απάντησή σου με '#### <τελική αριθμητική απάντηση>'.",
+                 "Απάντησε στην ερώτηση χρησιμοποιώντας μόνο τα παραπάνω αποσπάσματα. Τελείωσε την απάντησή σου με '#### <ακριβές απόσπασμα της απάντησης>'."),
+        Language("hi", "Hindi", "Devanagari", False, "hin_Deva",
+                 "समस्या को चरण दर चरण हल करें। अपने उत्तर के अंत में '#### <अंतिम संख्यात्मक उत्तर>' लिखें।",
+                 "केवल ऊपर दिए गए अनुच्छेदों का उपयोग करके प्रश्न का उत्तर दें। अपने उत्तर के अंत में '#### <उत्तर का सटीक अंश>' लिखें।"),
     ]
 }
 

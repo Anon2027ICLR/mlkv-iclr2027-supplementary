@@ -96,6 +96,12 @@ def cmd_audit_vi(args: argparse.Namespace) -> None:
         print(f"  mgsm-vi-{r.index}")
 
 
+def _parse_byte_ctx(spec: str) -> int:
+    """'12k' -> 12288 bytes; bare integers are taken as bytes."""
+    part = spec.strip().lower()
+    return int(part[:-1]) * 1024 if part.endswith("k") else int(part)
+
+
 def _parse_ctx(spec: str) -> list[int]:
     """'8k,32k' -> [8192, 32768]; bare integers are taken as tokens."""
     budgets = []
@@ -130,6 +136,17 @@ def cmd_run(args: argparse.Namespace) -> None:
             lang.code: mrag.build(
                 lang.code, tokenizer, budgets, max_items=args.max_items,
                 layout=args.mrag_layout,
+            )
+            for lang in resolve(args.langs)
+        }
+        score_fn = mrag.score
+    elif args.task == "mrag-bp":
+        from mlkv.tasks import mrag, mrag_bp
+
+        byte_budget = _parse_byte_ctx(args.byte_ctx)
+        items_by_lang = {
+            lang.code: mrag_bp.build(
+                lang.code, byte_budget, max_items=args.max_items
             )
             for lang in resolve(args.langs)
         }
@@ -203,7 +220,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_run = sub.add_parser("run", help="run a generation matrix cell")
     p_run.add_argument("--model", required=True)
     p_run.add_argument("--task", default="mgsm",
-                       choices=["mgsm", "mgsm-canary", "mrag"])
+                       choices=["mgsm", "mgsm-canary", "mrag", "mrag-bp"])
+    p_run.add_argument("--byte-ctx", default="12k",
+                       help="mrag-bp canonical ENGLISH byte budget per prompt "
+                            "(KiB suffix), e.g. 12k = 12288 bytes")
     p_run.add_argument("--mrag-layout", default="instr-last",
                        choices=["instr-last", "instr-first"],
                        help="mrag prompt order; instr-first is the E1 "
