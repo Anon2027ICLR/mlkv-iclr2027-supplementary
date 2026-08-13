@@ -20,7 +20,11 @@
 #
 # Fresh dbs — run_keys do not include the decode cap.
 # Self-stop markers: ALL_DAY3C_W32_DONE / ALL_DAY3C_PAD_DONE
-export HF_HOME=/workspace/hf PATH=$HOME/.local/bin:$PATH
+# UV_NO_SYNC is not optional: pod C2 runs a hand-pinned torch 2.11.0+cu128
+# because its driver is CUDA 12.8, and an implicit `uv sync` would install the
+# lockfile's cu130 build over it and break model loading. Harmless on the other
+# pods, so it is set unconditionally rather than remembered per-pod.
+export HF_HOME=/workspace/hf PATH=$HOME/.local/bin:$PATH UV_NO_SYNC=1
 cd /workspace/mlkv
 BLOCK=${1:?usage: e_day3c.sh w32|pad}
 LOG=/workspace/day3c_$BLOCK.log
