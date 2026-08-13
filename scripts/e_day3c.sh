@@ -17,7 +17,7 @@
 #
 # Fresh db — run_keys do not include the decode cap.
 # Launch:  setsid bash /workspace/mlkv/scripts/e_day3c.sh &
-# Self-stop marker: ALL_DAY3C_DONE, db: pad384
+# Self-stop marker: ALL_DAY3C_DONE, dbs: pad384,w32
 export HF_HOME=/workspace/hf PATH=$HOME/.local/bin:$PATH
 cd /workspace/mlkv
 LOG=/workspace/day3c.log
@@ -51,11 +51,27 @@ uv run mlkv run --model $M --task mrag --langs en --ctx 8k \
   --max-items 100 --max-new-tokens 384 --db results/pad384.db 2>&1 | tail -1 >> "$LOG"
 say G2B_HEAL_DONE
 
-rm -f results/pad384-snapshot.db
-python3 -c "
+# W32 — the constant operators actually get. TensorRT-LLM's RocketKV backend
+# ships _get_snapkv_indices with q_obs = q[:, :, -window_size:] and a default
+# window_size of 32 (docs/positioning-2026-08-13.md). That is HALF the kvpress
+# default we have been testing, and against measured instruction lengths on the
+# Qwen3 tokenizer (en 19, th 33, sw 34, bn 73, te 105) it is exceeded by every
+# language except English. Registered prediction: at w32 the threshold moves
+# down, so th and sw — which are safe at w64 — now take damage, while English
+# (19 tokens, still fits) stays flat. If th/sw do NOT break at w32, the
+# threshold account is wrong and must be reported.
+uv run mlkv run --model $M --task mrag --langs en,th,sw,bn --ctx 8k \
+  --configs baseline,snapkv@r0.75:w32,snapkv@r0.75 \
+  --max-items 100 --max-new-tokens 384 --db results/w32.db 2>&1 | tail -1 >> "$LOG"
+say W32_DONE
+
+for db in pad384 w32; do
+  rm -f "results/$db-snapshot.db"
+  python3 -c "
 import sqlite3
-c = sqlite3.connect('results/pad384.db')
-c.execute(\"VACUUM INTO 'results/pad384-snapshot.db'\")
-print('pad384', c.execute('SELECT COUNT(*) FROM generations').fetchone()[0], 'rows')
+c = sqlite3.connect('results/$db.db')
+c.execute(\"VACUUM INTO 'results/$db-snapshot.db'\")
+print('$db', c.execute('SELECT COUNT(*) FROM generations').fetchone()[0], 'rows')
 " >> "$LOG" 2>&1
+done
 say ALL_DAY3C_DONE
