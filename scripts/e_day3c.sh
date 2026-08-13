@@ -60,10 +60,22 @@ say G2B_HEAL_DONE
 # down, so th and sw — which are safe at w64 — now take damage, while English
 # (19 tokens, still fits) stays flat. If th/sw do NOT break at w32, the
 # threshold account is wrong and must be reported.
-uv run mlkv run --model $M --task mrag --langs en,th,sw,bn --ctx 8k \
+uv run mlkv run --model $M --task mrag --langs en,th,sw,bn --ctx 8k,16k \
   --configs baseline,snapkv@r0.75:w32,snapkv@r0.75 \
   --max-items 100 --max-new-tokens 384 --db results/w32.db 2>&1 | tail -1 >> "$LOG"
 say W32_DONE
+
+# PAD48 — localize the cliff. G2 has instruction 19 (safe) and 64 (broken)
+# with a 45-token evidence gap between them, leaving room for the alternative
+# reading "prepended filler itself hurts under compression". A 48-token padded
+# instruction still fits the 64-token window, so the registered prediction is
+# NO damage. pad48 safe + pad64 broken localizes the cliff to [48, 64] — right
+# where the constant sits. If pad48 breaks too, the padding-per-se account
+# wins and the window story weakens: report either way.
+uv run mlkv run --model $M --task mrag --langs en --ctx 8k \
+  --configs baseline,snapkv@r0.75 --mrag-instr-pad 48 \
+  --max-items 100 --max-new-tokens 384 --db results/pad384.db 2>&1 | tail -1 >> "$LOG"
+say PAD48_DONE
 
 for db in pad384 w32; do
   rm -f "results/$db-snapshot.db"
