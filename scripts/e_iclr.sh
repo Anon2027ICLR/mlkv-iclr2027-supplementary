@@ -67,6 +67,11 @@ print('$1', c.execute('SELECT COUNT(*) FROM generations').fetchone()[0], 'rows')
 " >> "$LOG" 2>&1
 }
 
+run_mlkv() {
+  # Full stdout+stderr into the block log (old `| tail -1` hid build progress).
+  UV_NO_SYNC=1 uv run mlkv run "$@" 2>&1 | tee -a "$LOG"
+}
+
 aw() {
   # AutoWindow w for one language from measure_c.py (tokenizer, not a table).
   # Must use the project venv — system python has no transformers.
@@ -78,10 +83,10 @@ aw() {
 run_cliff_en() {
   say "=== cliff_en start"
   for pad in 48 64 96 128; do
-    UV_NO_SYNC=1 uv run mlkv run --model $QWEN --task mrag --langs en --ctx 8k \
+    run_mlkv --model $QWEN --task mrag --langs en --ctx 8k \
       --configs snapkv@r0.75:w32,snapkv@r0.75:w56,snapkv@r0.75:w80,snapkv@r0.75:w104,snapkv@r0.75:w144 \
       --mrag-instr-pad $pad --max-items $N --max-new-tokens $CAP \
-      --db results/cliff_en.db 2>&1 | tail -1 >> "$LOG"
+      --db results/cliff_en.db
     say "CLIFF_EN_PAD${pad}_DONE"
   done
   snap cliff_en
@@ -90,11 +95,11 @@ run_cliff_en() {
 
 run_cliff_multi() {
   say "=== cliff_multi start"
-  UV_NO_SYNC=1 uv run mlkv run --model $QWEN --task mrag \
+  run_mlkv --model $QWEN --task mrag \
     --langs en,th,sw,bn,te --ctx 8k \
     --configs baseline,snapkv@r0.75:w32,snapkv@r0.75:w56,snapkv@r0.75:w88,snapkv@r0.75:w120,snapkv@r0.75:w176 \
     --max-items $N --max-new-tokens $CAP \
-    --db results/cliff_multi.db 2>&1 | tail -1 >> "$LOG"
+    --db results/cliff_multi.db
   snap cliff_multi
   say ALL_ICLR_CLIFF_MULTI_DONE
 }
@@ -107,10 +112,10 @@ run_autowin() {
     w=$(aw $QWEN $lang)
     [ -n "$w" ] || { say "FATAL: no autowin w for $lang"; exit 1; }
     say "autowin $lang w=$w"
-    UV_NO_SYNC=1 uv run mlkv run --model $QWEN --task mrag --langs $lang --ctx 8k \
+    run_mlkv --model $QWEN --task mrag --langs $lang --ctx 8k \
       --configs baseline,snapkv@r0.75,snapkv@r0.75:w${w} \
       --max-items $N --max-new-tokens $CAP \
-      --db results/autowin.db 2>&1 | tail -1 >> "$LOG"
+      --db results/autowin.db
     say "AUTOWIN_${lang}_DONE"
   done
   snap autowin
@@ -120,10 +125,10 @@ run_autowin() {
 run_gemma() {
   say "=== gemma start"
   UV_NO_SYNC=1 uv run python scripts/measure_c.py --models $GEMMA --langs en,bn,te >> "$LOG"
-  UV_NO_SYNC=1 uv run mlkv run --model $GEMMA --task mrag --langs en,bn,te --ctx 8k \
+  run_mlkv --model $GEMMA --task mrag --langs en,bn,te --ctx 8k \
     --configs baseline,snapkv@r0.75:w16,snapkv@r0.75:w24,snapkv@r0.75:w32,snapkv@r0.75:w48,snapkv@r0.75:w64 \
     --max-items $N --max-new-tokens $CAP \
-    --db results/cliff_gemma.db 2>&1 | tail -1 >> "$LOG"
+    --db results/cliff_gemma.db
   snap cliff_gemma
   say ALL_ICLR_GEMMA_DONE
 }
@@ -134,11 +139,11 @@ run_schema() {
   [ -n "$w" ] || { say "FATAL: no autowin w for en"; exit 1; }
   say "schema AutoWindow w=$w"
   for pad in 60 120 200; do
-    UV_NO_SYNC=1 uv run mlkv run --model $QWEN --task mrag --langs en --ctx 8k \
+    run_mlkv --model $QWEN --task mrag --langs en --ctx 8k \
       --configs baseline,snapkv@r0.75,snapkv@r0.75:w${w} \
       --mrag-instr-pad $pad --mrag-tail json \
       --max-items $N --max-new-tokens $CAP \
-      --db results/schema.db 2>&1 | tail -1 >> "$LOG"
+      --db results/schema.db
     say "SCHEMA_PAD${pad}_DONE"
   done
   snap schema

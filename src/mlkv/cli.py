@@ -132,15 +132,15 @@ def cmd_run(args: argparse.Namespace) -> None:
 
         tokenizer = AutoTokenizer.from_pretrained(args.model)
         budgets = _parse_ctx(args.ctx)
-        items_by_lang = {
-            lang.code: mrag.build(
+        items_by_lang = {}
+        for lang in resolve(args.langs):
+            logging.getLogger("mlkv").info("building mrag items lang=%s", lang.code)
+            items_by_lang[lang.code] = mrag.build(
                 lang.code, tokenizer, budgets, max_items=args.max_items,
                 layout=args.mrag_layout,
                 instr_pad_tokens=args.mrag_instr_pad,
                 tail=args.mrag_tail,
             )
-            for lang in resolve(args.langs)
-        }
         score_fn = mrag.score
     elif args.task == "mgsm-stuffed":
         from transformers import AutoTokenizer

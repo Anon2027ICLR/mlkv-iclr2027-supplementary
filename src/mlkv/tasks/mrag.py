@@ -47,6 +47,7 @@ def load_pool(lang: str) -> tuple[list[dict], list[str]]:
     """
     from datasets import load_dataset
 
+    logger.info("mrag[%s]: loading passage pool", lang)
     if lang in XQUAD_LANGS:
         rows = list(load_dataset("google/xquad", f"xquad.{lang}", split="validation"))
     elif lang in TYDIQA_LANGS:
@@ -82,6 +83,8 @@ def load_pool(lang: str) -> tuple[list[dict], list[str]]:
             split="train",
         )
         passages |= {r["context"] for r in mlqa}
+    logger.info("mrag[%s]: pool ready (%d questions, %d passages)",
+                lang, len(questions), len(passages))
     return questions, sorted(passages)
 
 
@@ -201,6 +204,8 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
     if max_items:
         questions = questions[:max_items]
 
+    logger.info("mrag[%s]: building %d questions × %s tokens (layout=%s pad=%s tail=%s)",
+                lang, len(questions), ctx_tokens_list, layout, instr_pad_tokens, tail)
     items = []
     for ctx_tokens in ctx_tokens_list:
         for i, q in enumerate(questions):
@@ -227,6 +232,7 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
                 "lang": lang,
                 "meta": meta,
             })
+    logger.info("mrag[%s]: built %d items", lang, len(items))
     return items
 
 
