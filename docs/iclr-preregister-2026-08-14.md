@@ -11,6 +11,14 @@ Scoring for every mRAG number: `containment_match_lenient` (R2). Stored
 template, not copied from a table. AutoWindow uses language-level
 `w = c_lang + 16`, not a per-item `w_i`.
 
+Locked 2026-08-14 on this machine (Qwen3-4B: fallback *I*+5-token
+suffix; Gemma-3-4b-it: after-question):
+
+| | en | zh | es | vi | th | sw | bn | te |
+|---|---|---|---|---|---|---|---|---|
+| Qwen *I* / *c* / *w* | 20/25/41 | 24/29/45 | 30/35/51 | 34/39/55 | 40/45/61 | 42/47/63 | 102/107/123 | 162/167/183 |
+| Gemma *I* / *c* / *w* | 21/27/43 | — | — | — | — | — | **26/32/48** | 38/44/60 |
+
 ---
 
 ## Arms
