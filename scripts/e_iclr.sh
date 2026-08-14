@@ -69,8 +69,9 @@ print('$1', c.execute('SELECT COUNT(*) FROM generations').fetchone()[0], 'rows')
 
 aw() {
   # AutoWindow w for one language from measure_c.py (tokenizer, not a table).
+  # Must use the project venv — system python has no transformers.
   local model=$1 lang=$2
-  UV_NO_SYNC=1 python3 scripts/measure_c.py --models "$model" --langs "$lang" \
+  UV_NO_SYNC=1 uv run python scripts/measure_c.py --models "$model" --langs "$lang" \
     | awk -v L="$lang" '$2==L {print $6; exit}'
 }
 
@@ -100,7 +101,7 @@ run_cliff_multi() {
 
 run_autowin() {
   say "=== autowin start (c from tokenizer)"
-  UV_NO_SYNC=1 python3 scripts/measure_c.py --models $QWEN \
+  UV_NO_SYNC=1 uv run python scripts/measure_c.py --models $QWEN \
     --langs en,zh,es,vi,th,sw,bn,te >> "$LOG"
   for lang in en zh es vi th sw bn te; do
     w=$(aw $QWEN $lang)
@@ -118,7 +119,7 @@ run_autowin() {
 
 run_gemma() {
   say "=== gemma start"
-  UV_NO_SYNC=1 python3 scripts/measure_c.py --models $GEMMA --langs en,bn,te >> "$LOG"
+  UV_NO_SYNC=1 uv run python scripts/measure_c.py --models $GEMMA --langs en,bn,te >> "$LOG"
   UV_NO_SYNC=1 uv run mlkv run --model $GEMMA --task mrag --langs en,bn,te --ctx 8k \
     --configs baseline,snapkv@r0.75:w16,snapkv@r0.75:w24,snapkv@r0.75:w32,snapkv@r0.75:w48,snapkv@r0.75:w64 \
     --max-items $N --max-new-tokens $CAP \
