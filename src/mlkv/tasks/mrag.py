@@ -93,14 +93,36 @@ _PAD_SENTENCE = {
           "against the text before responding.",
 }
 
+# Frozen English tails for the fate-changer arm. Same prepend mechanic as
+# prose filler so the #### spec stays last.
+_JSON_SCHEMA = (
+    "Respond only as JSON matching this schema : "
+    "{ answer : string , span : string , confidence : number , "
+    "citations : [ { passage_id : integer , quote : string } ] } . "
+    "Do not write any text outside the JSON object ."
+)
+_TOOL_BLOCK = (
+    "Available tools : search_passages ( query : string , k : integer ) "
+    "returns a list of id and text ; submit_answer ( span : string , "
+    "passage_id : integer ) returns none . Call a tool by emitting "
+    "{ name : string , arguments : object } before the final answer ."
+)
+TAIL_FILLERS = {
+    "prose": _PAD_SENTENCE["en"],
+    "json": _JSON_SCHEMA,
+    "tools": _TOOL_BLOCK,
+}
+TAIL_PREFIX = {"prose": "mragPAD", "json": "mragJSON", "tools": "mragTOOL"}
+
 
 def _pad_instruction(instruction: str, lang: str, tokenizer,
-                     target_tokens: int) -> str:
-    """Extend the instruction with neutral filler until it reaches
-    target_tokens (measured with the run tokenizer). The original instruction
-    text stays intact and last-most; filler goes in front of it so the format
-    spec (the '####' marker sentence) remains adjacent to generation."""
-    filler_unit = _PAD_SENTENCE[lang]
+                     target_tokens: int, tail: str = "prose") -> str:
+    """Extend the instruction with filler until it reaches target_tokens.
+    The original instruction stays last-most so the #### spec is adjacent
+    to generation."""
+    if tail not in TAIL_FILLERS:
+        raise ValueError(f"unknown mrag tail: {tail}")
+    filler_unit = _PAD_SENTENCE[lang] if tail == "prose" else TAIL_FILLERS[tail]
     padded = instruction
     while len(tokenizer.encode(padded, add_special_tokens=False)) < target_tokens:
         padded = filler_unit + " " + padded
@@ -110,7 +132,8 @@ def _pad_instruction(instruction: str, lang: str, tokenizer,
 def assemble(question_item: dict, distractors: list[str], tokenizer,
              ctx_tokens: int, position: str, rng: random.Random,
              lang: str, layout: str = "instr-last",
-             instr_pad_tokens: int | None = None) -> tuple[str, dict]:
+             instr_pad_tokens: int | None = None,
+             tail: str = "prose") -> tuple[str, dict]:
     """One prompt. layout "instr-last" (frozen Main A order): passages +
     question + instruction. layout "instr-first" (E1 intervention, see
     docs/mrag-mechanism-pivot.md): instruction + passages + question, so the
@@ -118,7 +141,9 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
     and distractor selection are layout-invariant: same seed, same passages."""
     instruction = LANGUAGES[lang].qa_instruction
     if instr_pad_tokens:
-        instruction = _pad_instruction(instruction, lang, tokenizer, instr_pad_tokens)
+        instruction = _pad_instruction(
+            instruction, lang, tokenizer, instr_pad_tokens, tail=tail,
+        )
     gold_passage = question_item["context"]
     joiner = "\n\n"
     used = (
@@ -163,7 +188,8 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
           max_items: int | None = None, n_questions: int = DEFAULT_N_QUESTIONS,
           pool: tuple[list[dict], list[str]] | None = None,
           layout: str = "instr-last",
-          instr_pad_tokens: int | None = None) -> list[dict]:
+          instr_pad_tokens: int | None = None,
+          tail: str = "prose") -> list[dict]:
     """Items for all budgets; `pool` injectable for tests (else loaded)."""
     questions, distractors = pool if pool is not None else load_pool(lang)
     if len(questions) < n_questions:
@@ -182,17 +208,18 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
             rng = random.Random(f"{SEED}:{lang}:{ctx_tokens}:{i}")
             prompt, meta = assemble(
                 q, distractors, tokenizer, ctx_tokens, position, rng, lang,
-                layout=layout, instr_pad_tokens=instr_pad_tokens,
+                layout=layout, instr_pad_tokens=instr_pad_tokens, tail=tail,
             )
             meta["ctx_tokens"] = ctx_tokens
             meta["layout"] = layout
             if instr_pad_tokens:
                 meta["instr_pad_tokens"] = instr_pad_tokens
+                meta["tail"] = tail
             # Distinct id prefix per layout/padding: run_keys must never
             # collide with the frozen rows.
             prefix = "mragIF" if layout == "instr-first" else "mrag"
             if instr_pad_tokens:
-                prefix = f"mragPAD{instr_pad_tokens}"
+                prefix = f"{TAIL_PREFIX[tail]}{instr_pad_tokens}"
             items.append({
                 "item_id": f"{prefix}-{lang}-{ctx_tokens // 1024}k-{i}",
                 "prompt": prompt,

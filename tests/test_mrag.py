@@ -198,3 +198,31 @@ class TestInstructionPadding:
         b = mrag.build("en", tok, [512], pool=pool, instr_pad_tokens=None)
         assert [x["prompt"] for x in a] == [x["prompt"] for x in b]
         assert a[0]["item_id"].startswith("mrag-en-")
+
+    def test_json_tail_namespaces_and_keeps_spec_last(self):
+        from mlkv.languages import LANGUAGES
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=1)
+        items = mrag.build(
+            "en", tok, [512], pool=pool, instr_pad_tokens=80, tail="json",
+        )
+        instr = LANGUAGES["en"].qa_instruction
+        it = items[0]
+        assert it["item_id"].startswith("mragJSON80-en-")
+        assert it["meta"]["tail"] == "json"
+        assert it["prompt"].endswith(instr)
+        assert "Respond only as JSON" in it["prompt"]
+        tail = it["prompt"][it["prompt"].index("Respond only as JSON"):]
+        assert len(tok.encode(tail)) >= 80
+
+    def test_tools_tail_does_not_collide_with_prose_ids(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=1)
+        prose = mrag.build("en", tok, [512], pool=pool, instr_pad_tokens=60)
+        tools = mrag.build(
+            "en", tok, [512], pool=pool, instr_pad_tokens=60, tail="tools",
+        )
+        assert prose[0]["item_id"].startswith("mragPAD60-")
+        assert tools[0]["item_id"].startswith("mragTOOL60-")
+        assert prose[0]["item_id"] != tools[0]["item_id"]
+        assert "Available tools" in tools[0]["prompt"]

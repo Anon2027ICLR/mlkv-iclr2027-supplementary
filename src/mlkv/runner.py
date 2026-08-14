@@ -45,6 +45,16 @@ def stack_description(model_name: str, device: str, dtype: str) -> dict:
     }
     if device == "cuda":
         desc["gpu"] = torch.cuda.get_device_name(0)
+        desc["torch_cuda"] = torch.version.cuda
+        try:
+            import subprocess
+            drv = subprocess.check_output(
+                ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+                text=True, timeout=10,
+            ).strip().splitlines()[0]
+            desc["nvidia_driver"] = drv
+        except Exception:
+            pass
     try:
         from importlib.metadata import version
         desc["kvpress"] = version("kvpress")

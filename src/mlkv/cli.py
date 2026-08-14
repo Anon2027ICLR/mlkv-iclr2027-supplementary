@@ -137,6 +137,7 @@ def cmd_run(args: argparse.Namespace) -> None:
                 lang.code, tokenizer, budgets, max_items=args.max_items,
                 layout=args.mrag_layout,
                 instr_pad_tokens=args.mrag_instr_pad,
+                tail=args.mrag_tail,
             )
             for lang in resolve(args.langs)
         }
@@ -243,6 +244,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--mrag-instr-pad", type=int, default=None,
                        help="pad the mrag instruction to N tokens with neutral "
                             "filler (same-language window dose-response)")
+    p_run.add_argument("--mrag-tail", default="prose",
+                       choices=["prose", "json", "tools"],
+                       help="filler family for --mrag-instr-pad "
+                            "(prose=G2; json/tools=fate-changer schema tail)")
     p_run.add_argument("--mrag-layout", default="instr-last",
                        choices=["instr-last", "instr-first"],
                        help="mrag prompt order; instr-first is the E1 "
