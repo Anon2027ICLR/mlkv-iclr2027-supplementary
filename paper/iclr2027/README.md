@@ -19,8 +19,14 @@ compensating cut.
 **Figures** are generated from the result stores, never hand-edited:
 
 ```bash
-uv run python scripts/iclr_fig_triptych.py      # figs/f2_triptych.pdf
+uv run --with matplotlib python scripts/paper_figures.py   # both figures
 ```
+
+The palette and the encoding choices are documented in that script's header
+(emphasis colours for the two languages that break, an ordinal ramp for the
+ordered pad conditions, a distinct marker per series so identity survives
+greyscale). The accent pair was checked with a colour-vision validator, not
+by eye.
 
 **Before submitting**, run the number audit; it recomputes every table cell
 in this paper from the generation stores and fails on any drift:

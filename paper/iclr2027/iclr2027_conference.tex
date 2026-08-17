@@ -7,8 +7,6 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage{tikz}
-\usetikzlibrary{positioning}
 
 \title{When the Window Cannot See the Question:\\
 Token-Denominated Observation Windows Are Not Language-Neutral}
@@ -285,28 +283,15 @@ licenses reading the earlier and later tables as describing one system.
 
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}[x=0.48em,y=0.48em,font=\scriptsize\ttfamily]
-  \def\row#1#2#3#4#5#6{
-    \node[anchor=east] at (0,#1) {#2};
-    \fill[black!25] (1,#1-1.1) rectangle (13,#1+1.1);
-    \fill[orange!70] (13,#1-1.1) rectangle (13+#3,#1+1.1);
-    \fill[purple!50] (13+#3,#1-1.1) rectangle (13+#3+#4,#1+1.1);
-    \fill[black] (13+#3+#4,#1-1.1) rectangle (13+#3+#4+1.2,#1+1.1);
-    \draw[cyan!70!black,very thick] (13+#3+#4+1.2-#5,#1-1.6) rectangle (13+#3+#4+1.2,#1+1.6);
-    \node[anchor=west,font=\scriptsize] at (36,#1) {#6};
-  }
-  \row{10}{en $c{=}25$}{3.2}{4.0}{12.8}{$w{=}64$: $V{\approx}1$}
-  \row{4}{bn $c{=}107$}{3.2}{16.4}{12.8}{$w{=}64$: $V{=}0$}
-  \node[font=\scriptsize] at (7,14.2) {passages};
-  \node[font=\scriptsize] at (14.4,14.2) {$Q$};
-  \node[font=\scriptsize] at (22,14.2) {$I{+}s$};
-\end{tikzpicture}
-\caption{The instruction-last layout, drawn schematically (widths are not
-to token scale). The cyan bracket is the last-$w$ observation window at the
-kvpress default $w{=}64$. With an English trailing block ($c{=}25$) the
-window still covers the question; with the Bengali one ($c{=}107$) it lies
-entirely inside the instruction, and the scorer ranks the passages without
-ever seeing what was asked.}
+\includegraphics[width=\linewidth]{figs/f1_layout.pdf}
+\caption{The instruction-last layout, drawn to token scale. Shaded: the
+last $w{=}64$ tokens, the only part of the prompt a SnapKV-style scorer
+reads. English leaves 25 tokens after the question, so the window covers
+it for all 100 English items (questions of 6--24 tokens); Bengali leaves
+107 and an English prompt carrying a JSON schema leaves 166, and in both
+the scorer ranks the passages having seen none of the question. Question
+widths are item medians; the passages run on leftwards for about 8k
+tokens.}
 \label{fig:schematic}
 \end{figure}
 
@@ -377,7 +362,12 @@ peaks at the first tested window that exceeds that condition's $c$, and at
 no earlier window: at $w{=}80$ for $c{=}57$ and $c{=}73$, and only at
 $w{=}144$ for $c{=}105$ and $c{=}137$. The sharpest case is the 96-token
 pad, where $w{=}104$ --- one token short of its $c{=}105$ --- scores
-$90\%$ and $w{=}144$ scores $93\%$. Nothing about the language, the items,
+$90\%$ and $w{=}144$ scores $93\%$. Plotted against the slack $w-c$ the
+four conditions collapse onto one curve (Figure~\ref{fig:triptych}b):
+across the twenty cells, every window short of its condition's trailing
+block scores at most $90\%$ and every window clearing it at least
+$91\%$. Neighbouring cells sit within the noise of 100 items, so we read
+that separation as a description of the grid, not a test. Nothing about the language, the items,
 or the retained budget changed across these curves; only the number of
 tokens standing between the question and the end of the prompt did. In a
 separate matched run that carries its own uncompressed baselines, a
@@ -403,13 +393,14 @@ the question already has $V{=}1$.
 \centering
 \includegraphics[width=\linewidth]{figs/f2_triptych.pdf}
 \caption{Three sweeps of the same mechanism, each paired against its own
-uncompressed baseline and scored by the same rule. \textbf{(a)} Five
-languages against the window; dotted verticals mark each language's $c$.
-\textbf{(b)} English only, four instruction pads; dotted verticals mark
-each pad's $c$, and accuracy peaks at the first window that clears it.
-\textbf{(c)} Telugu, five windows at fixed offsets above $c$; point labels
-are the median per-item visibility $V$. Panels (a) and (c) share their
-vertical scale.}
+uncompressed baseline. \textbf{(a)}~Five languages against the window;
+ticks below the axis mark each language's $c$, and the two languages
+whose trailing block exceeds most tested windows are drawn in colour.
+\textbf{(b)}~English, four instruction pads, against the slack $w-c$:
+the conditions collapse onto one curve and the rule at $w{=}c$ separates
+every cell at most $90\%$ from every cell at least $91\%$.
+\textbf{(c)}~Telugu, same axis and scale as~(b): English is at its
+ceiling within about ten tokens of slack, Telugu needs eighty.}
 \label{fig:triptych}
 \end{figure}
 
@@ -479,10 +470,9 @@ $c{+}48$ cell, four of which recover once $V$ reaches $1$. We therefore
 claim the window-level dose curve and the within-item trend, not a
 monotone per-item bin profile.
 
-The consequence for any fix is that slack has to be counted in units of
-the question rather than in constant tokens. A slack the size of an
-English question leaves the median Telugu item at $V{=}0.31$, and
-Table~\ref{tab:dose} shows what that buys.
+Slack therefore has to be counted in units of the question rather than in
+constant tokens: a slack the size of an English question leaves the median
+Telugu item at $V{=}0.31$, and Table~\ref{tab:dose} shows what that buys.
 
 % =====================================================================
 \section{AutoWindow: one integer, and where it stops}
@@ -536,9 +526,9 @@ JSON-200 & 213 & 231 & 94 & 89 (${-}5$) & --- & 96 (${+}2$) \\
 \paragraph{The close.}
 Panel~(A) of Table~\ref{tab:aw} is the preregistered test, whose success
 criterion was $|\Delta|\le 3$\,pp against the uncompressed baseline. The
-formula returns $+2$, $-2$ and $0$\,pp for English, Bengali and Telugu,
-and gains $+14$ and $+19$\,pp on Bengali and Telugu against the shipped
-default (16 fixed / 2 broken and 21/2; $p{=}.001$ and $p{<}.001$). The
+formula meets it, and gains $+14$ and $+19$\,pp on Bengali and Telugu
+against the shipped default (16 fixed / 2 broken and 21/2; $p{=}.001$
+and $p{<}.001$). The
 English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
 ($-7$ and $-6$\,pp). Across the full eight-language grid, the languages
@@ -556,10 +546,9 @@ tails but sized the window from the \emph{unpadded} English instruction
 ($w{=}41$), which is smaller than the default it was meant to improve on,
 and at a 120-token schema that cost $23$\,pp. Measuring $c$ with the
 schema in place gives $72$, $166$ and $213$ tokens, hence
-$\hat w = 90$, $184$ and $231$. Panel~(B) shows the same formula then
-returning $+2$, $+1$ and $+2$\,pp against baseline and $+8$, $+7$ and
-$+7$\,pp against the default window, while breaking none of the items the
-default window answered correctly (8/0, 7/0 and 7/0). The 120-token
+$\hat w = 90$, $184$ and $231$. Panel~(B) shows the same formula closing
+all three tails while breaking none of the items the default window
+answered correctly (8/0, 7/0 and 7/0). The 120-token
 schema is worth a second look: its trailing block, $166$ tokens, is within
 one token of Telugu's $167$. The same blindness, produced by a response
 format instead of a script, is removed by the same integer.
