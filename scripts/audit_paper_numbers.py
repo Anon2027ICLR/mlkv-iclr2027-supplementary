@@ -332,6 +332,74 @@ for lang, want_d in [("bn", 13), ("te", 14)]:
     check(f"cross-layout {lang} star", r["star"], True)
 
 # --------------------------------------------------------------------------
+print("## Appendix: rival remedies — tab:rivals")
+AG = load("agnostic.db")
+RA = load("ratio.db")
+# Top block: two query-agnostic scorers at the ratio used throughout, beside
+# the windowed cells they would replace (those come from D and Q, checked
+# above, so only the two new columns are new data).
+TEX_RIVALS_AG = {  # lang: ((expected d, star), (tova d, star))
+    "en": ((-14, True), (-8, True)),
+    "bn": ((-18, True), (-16, True)),
+    "te": ((-20, True), (-18, True)),
+}
+for lang, (ea, tova) in TEX_RIVALS_AG.items():
+    base = AG[lang]["baseline"]
+    for cfg, (d_tex, star_tex) in (("expected@r0.75", ea), ("tova@r0.75", tova)):
+        r = cmp_pair(base, AG[lang][cfg])
+        check(f"rivals {lang} {cfg} delta", r["d"], d_tex)
+        check(f"rivals {lang} {cfg} star", r["star"], star_tex)
+    # the windowed reference columns are the same cells as tab:aw
+    check(f"rivals {lang} baseline matches autowin",
+          round(100 * sum(base.values()) / len(base)), TEX_AWA[lang][0])
+
+# Bottom block: the heavy-ratio sweep.
+W_HAT = {"en": 43, "bn": 183}
+TEX_RIVALS_RA = {  # lang: ((w64 d, star), (w256 d, star), (hat d, star))
+    "en": ((-2, False), (-9, True), (-1, False)),
+    "bn": ((-44, True), (-28, True), (-24, True)),
+}
+for lang, (w64, w256, hat) in TEX_RIVALS_RA.items():
+    base = RA[lang]["baseline"]
+    cells = (
+        ("snapkv@r0.9375", w64),
+        ("snapkv@r0.9375:w256", w256),
+        (f"snapkv@r0.9375:w{W_HAT[lang]}", hat),
+    )
+    for cfg, (d_tex, star_tex) in cells:
+        r = cmp_pair(base, RA[lang][cfg])
+        check(f"rivals {lang} r0.9375 {cfg} delta", r["d"], d_tex)
+        check(f"rivals {lang} r0.9375 {cfg} star", r["star"], star_tex)
+
+# Prose in the same appendix and in the limitations: w=256 against the
+# default window and against w-hat, and the Bengali recovery.
+r = cmp_pair(RA["en"]["snapkv@r0.9375"], RA["en"]["snapkv@r0.9375:w256"])
+check("rivals en w256 vs default delta", r["d"], -7)
+check("rivals en w256 vs default not significant", r["star"], False)
+for lang, want_d in (("en", 8), ("bn", 4)):
+    r = cmp_pair(RA[lang]["snapkv@r0.9375:w256"],
+                 RA[lang][f"snapkv@r0.9375:w{W_HAT[lang]}"])
+    check(f"rivals {lang} hat beats w256 by", r["d"], want_d)
+    check(f"rivals {lang} hat-vs-w256 not significant", r["star"], False)
+r = cmp_pair(RA["bn"]["snapkv@r0.9375"], RA["bn"][f"snapkv@r0.9375:w183"])
+check("rivals bn hat recovery over default", r["d"], 20)
+check("rivals bn hat recovery fixed/broken", r["fb"], (22, 2))
+check("rivals bn hat recovery star", r["star"], True)
+# The limitations quote a range for how much sizing the window recovers over
+# the default across model families. Only cells the default actually blinds
+# count: at Gemma c=32 < 64, so its default window already sees the question.
+# The heavy-ratio Bengali recovery is a different ratio, not a family, and is
+# deliberately outside this range.
+family_recoveries = [
+    cmp_pair(D["bn"]["snapkv@r0.75"], Q["bn"]["snapkv@r0.75:w183"])["d"],
+    cmp_pair(D["te"]["snapkv@r0.75"], Q["te"]["snapkv@r0.75:w247"])["d"],
+    cmp_pair(E["bn"]["snapkv@r0.75"], E["bn"]["snapkv@r0.75:w183"])["d"],
+    cmp_pair(LL["bn"]["snapkv@r0.75"], LL["bn"]["snapkv@r0.75:w212"])["d"],
+]
+check("limitations family recovery range low", min(family_recoveries), 9)
+check("limitations family recovery range high", max(family_recoveries), 19)
+
+# --------------------------------------------------------------------------
 print("## Appendix: interval rows added for the new arms — tab:ci")
 # The CI bounds themselves are owned by closure_cis.py; here we only check the
 # point estimates and discordant counts the table prints beside them.

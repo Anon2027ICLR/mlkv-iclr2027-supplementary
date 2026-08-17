@@ -283,7 +283,7 @@ CUDA, torch, kvpress); cells from different stacks, models or tokenizers
 are never pooled, even when they carry the same configuration name. The
 follow-up runs reported in Sections~\ref{sec:dose}
 and~\ref{sec:autowindow} re-ran cells that earlier stores already
-contained; across those 1{,}500 shared generations the new text is
+contained; across all 3{,}243 such generations the new text is
 byte-identical to the old (Appendix~\ref{app:provenance}), which is what
 licenses reading the earlier and later tables as describing one system.
 
@@ -437,12 +437,11 @@ was re-measured on the run tokenizer.
 Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp, which
 is what the same items lose at the shipped $w{=}64$, where they see none
 of the question at all. The curve then rises with the slack and reaches
-the baseline only at $c{+}80$. The sweep's Bengali cells tell the same
-story from the other grid: $c{+}13$ of slack still loses $8$\,pp and
-only $c{+}69$ is back within $3$ (Table~\ref{tab:cliff}). Running the
-ladder on Bengali reproduces the curve rung for rung --- $-17$, $-7$,
-$-3$, $-5$ and $-2$\,pp from $c{+}4$ up to $c{+}Q_{90}$ --- including a
-$c{+}4$ rung as useless there as here (Appendix~\ref{app:dose}).
+the baseline only at $c{+}80$. The same ladder on Bengali, a language
+with a different $c$ and its own baseline, reproduces it rung for rung
+--- $-17$, $-7$, $-3$, $-5$ and $-2$\,pp from $c{+}4$ up to $c{+}Q_{90}$
+--- including a $c{+}4$ rung as useless there as here
+(Appendix~\ref{app:dose}).
 
 \paragraph{Visibility as the dose.}
 Question length varies across items (34 to 122 tokens here), so a single
@@ -648,12 +647,15 @@ the dose ladder within a single language (Section~\ref{sec:dose}).
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
 (Bengali $-3$\,pp, ns): the failure needs a question whose content the
-scorer must match against passages, not merely a long prompt. A scorer
-that is designed never to look at the question \citep{devoto2025expected}
-damages Thai more than Bengali, which is a different failure from ours.
+scorer must match against passages, not merely a long prompt. Two scorers
+designed never to look at the question \citep{devoto2025expected,
+oren2024transformers} fail differently, and worse: at the same ratio they
+cost English $14$ and $8$\,pp, where no window we tested costs it
+anything, and Bengali and Telugu at least as much as blindness does
+(Appendix~\ref{app:rivals}).
 Four-bit KV quantization damages languages in an order that is not the
-fertility order. Qwen3-4B and 8B share a tokenizer, so the scale slice is
-a replication rather than an independent sample of items. And a capacity
+fertility order, and Qwen3-4B and 8B share a tokenizer, so the scale
+slice is a replication rather than an independent sample. A capacity
 mechanism does exist, but in a different regime: at aggressive eviction,
 where the retained cache approaches the length of the gold passage, even
 English items with long passages fail, whereas at the ratio used
@@ -679,16 +681,20 @@ $V{=}1$; and because SnapKV also protects the window it scores from, a
 very large $w$ at a very aggressive eviction ratio would begin to tax the
 content budget. At the ratio used here that tax is small relative to the
 gold passage, which is why we did not need to separate scoring from
-protection to meet the gate; at heavier ratios that separation may become
-necessary. Deploying the rule also assumes the prompt family is known:
+protection to meet the gate; at $r{=}0.9375$ we measure it instead of
+predicting it (Appendix~\ref{app:rivals}).
+Deploying the rule also assumes the prompt family is known:
 $\hat w$ is one integer per trailing-block variant, so mixed traffic
 needs either per-family measurement or the maximum over families, and the
 mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
 measurement looks like. For a deployer the guidance splits: sizing
 the window removes the blind mode in every family we ran ($+9$ to
-$+19$\,pp over the default), while the few-point residual is a property
-of eviction at this ratio, addressed by lowering the ratio rather than by
-any window.
+$+19$\,pp over the default), while the residual is a property of eviction
+at that ratio, addressed by lowering the ratio rather than by any window.
+Both hold where eviction is heaviest: at $r{=}0.9375$ the rule buys
+Bengali its largest recovery in this paper and still leaves it $24$\,pp
+down, while a $w{=}256$ constant costs English $9$\,pp where
+$\hat w_{\text{en}}{=}43$ costs one.
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
@@ -742,15 +748,18 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Nine generation stores back the tables:
+corresponding data existed. Fifteen generation stores back the tables:
 \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
 \texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
-\texttt{schema\_fix}, \texttt{gemma\_q90}, \texttt{v\_trace},
-\texttt{llama} and \texttt{instr\_first}. Each table cell is recomputed
-from the raw generations in those stores, and comparisons never cross a
-stack boundary (Appendix~\ref{app:provenance}). The predictions and kill
+\texttt{gemma\_q90}, \texttt{schema}, \texttt{schema\_fix},
+\texttt{v\_trace}, \texttt{v\_trace\_bn}, \texttt{llama},
+\texttt{instr\_first}, \texttt{agnostic} and \texttt{ratio}. Every table
+cell in this paper is recomputed from the raw generations in those stores
+by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
+comparisons never cross a stack boundary
+(Appendix~\ref{app:provenance}). The predictions and kill
 conditions for every arm are files that ship with the code, each written
-before its run; for four of the seven arms the version-history timestamp
+before its run; for six of the nine arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three files entered version control in a later batch. The history
 will be public with the code.
@@ -985,7 +994,7 @@ pad & $c$ & $w{=}32$ & 56 & 80 & 104 & 144 \\
 \section{The dose ladder in full}
 \label{app:dose}
 
-\begin{table}[h]
+\begin{table}[!t]
 \caption{The dose ladder, on both languages. $n{=}100$ per rung, eviction
 ratio $0.75$, paired McNemar against each language's own uncompressed
 baseline. Median $V$ is the median per-item share of the question that falls
@@ -1158,7 +1167,8 @@ Both inputs to the rule are re-measured on the Llama tokenizer, which
 is costlier than Qwen's on both: the trailing blocks are $25/125/190$
 tokens for English, Bengali and Telugu (Qwen: $25/107/167$) and the
 held-out question percentiles are $Q_{90}{=}18/87/94$ (Qwen:
-$18/76/80$), giving $\hat w = 43/212/284$. Baselines are $97/76/51$.
+$18/76/80$), giving $\hat w = 43/212/284$. Baselines are $97/76/51$
+(Table~\ref{tab:llama}).
 
 Bengali reproduces the hole at the default window --- $76 \to 58$,
 $-18$\,pp (2 fixed / 20 broken, $p{=}.0001$), with a 95\% interval of
@@ -1196,6 +1206,73 @@ model's uncompressed baseline and its exact 95\% interval.}
 en & 25 & 43 & 97 & 98 (${+}1$) & \textbf{98} (${+}1$; $[-0.9, +1.0]$) \\
 bn & 125 & 212 & 76 & 58 (${-}18^{*}$) & \textbf{68} (${-}8$; $[-12.7, +0.2]$) \\
 te & 190 & 284 & 51 & 46 (${-}5$) & \textbf{50} (${-}1$; $[-5.6, +4.4]$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Rival remedies at the same ratio}
+\label{app:rivals}
+
+Two remedies compete with sizing the window: switch to a scorer that
+never reads the question, so that nothing can be hidden from it, or ship
+one larger constant and stop measuring. Both were run on the same items,
+at matched ratios, against each store's own uncompressed baseline
+(Table~\ref{tab:rivals}).
+
+\paragraph{Scorers that do not read the question.}
+Expected Attention ranks by an estimate of future attention
+\citep{devoto2025expected} and TOVA by attention already paid
+\citep{oren2024transformers}; neither can be blinded by a trailing block,
+because neither was looking. At $r{=}0.75$ both lose significantly in
+every language --- including English, where the trailing block is 25
+tokens and no window we tested costs anything. Their damage does not
+follow $c$, which is what distinguishes it from the failure this paper
+describes; it is simply the price of ranking a cache without knowing what
+is being asked. Blindness is a property of a window that can be sized;
+query-agnosticism is a property of the method.
+
+One prediction registered for this arm cannot be scored as written: it
+compares Thai against Bengali, and the arm as locked runs English,
+Bengali and Telugu. We flag the drafting error rather than substitute a
+different comparison after the fact. The claim it was meant to test ---
+that this damage does not track $c$ --- is carried by the English column,
+which was written into the same preregistration.
+
+\paragraph{One larger constant.}
+At $r{=}0.9375$ the retained cache is about $512$ tokens on these 8k
+prompts, so a $w{=}256$ window protects half of what survives. It costs
+English $9$\,pp against baseline ($p{=}.049$; against the default window
+the same gap is $-7$ and does not reach significance at $n{=}100$), while
+$\hat w_{\text{en}}{=}43$ costs one. It does not beat $\hat w$ anywhere:
+$-8$\,pp on English ($p{=}.077$) and $-4$\,pp on Bengali (ns), so the
+dominance is carried by English and we do not claim it per language.
+Bengali collapses at the default window here ($-44$\,pp) and $\hat w$
+recovers $+20$\,pp of that (22 fixed / 2 broken, $p{<}10^{-4}$), the
+largest recovery in this paper --- and still finishes $24$\,pp below
+baseline. Sizing the window is what removes the blind mode; it is not
+what makes aggressive eviction free.
+
+\begin{table}[h]
+\caption{Rival remedies, paired $\Delta$pp against each store's own
+uncompressed baseline, $n{=}100$ per cell; star: McNemar $p<.05$. Top:
+two query-agnostic scorers at the ratio used throughout the paper, beside
+the windowed cells they would replace. Bottom: the heavy-ratio sweep,
+where $\hat w$ is $43$ for English and $183$ for Bengali.}
+\label{tab:rivals}
+\centering
+\small
+\begin{tabular}{lrrrr}
+\toprule
+$r{=}0.75$ & Exp.\ Attention & TOVA & SnapKV $w{=}64$ & SnapKV $\hat w$ \\
+\midrule
+en & ${-}14^{*}$ & ${-}8^{*}$ & ${+}0$ & $\mathbf{{+}2}$ \\
+bn & ${-}18^{*}$ & ${-}16^{*}$ & ${-}16^{*}$ & $\mathbf{{-}2}$ \\
+te & ${-}20^{*}$ & ${-}18^{*}$ & ${-}19^{*}$ & $\mathbf{{+}0}$ \\
+\midrule
+$r{=}0.9375$ & $w{=}64$ & $w{=}256$ & $\hat w$ & \\
+\midrule
+en & ${-}2$ & ${-}9^{*}$ & $\mathbf{{-}1}$ & \\
+bn & ${-}44^{*}$ & ${-}28^{*}$ & $\mathbf{{-}24^{*}}$ & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1244,15 +1321,18 @@ across them.
 \paragraph{Determinism, measured.}
 The follow-up runs were executed weeks after the original ones, on new
 machines, and they re-ran cells that the earlier stores already
-contained: the uncompressed and default-window cells of the schema
-conditions, the uncompressed and default-window cells of the Gemma
-languages, and three Telugu cells shared with the AutoWindow stores.
-Across those 1{,}500 shared generations the re-run text is byte-identical
-to the original, which is what allows us to treat the re-measured
-constants and the earlier tables as describing the same system. Three
-hundred of those pairs also cross a naming difference --- one store
-requests the default window implicitly and the other names $w{=}64$
-explicitly --- and agree token for token, as they should.
+contained --- uncompressed baselines, default-window cells, the rungs a
+later ladder shares with an earlier one. We do not count these by hand:
+\texttt{determinism\_ledger.py} keys every generation by model, task,
+language, treatment, item and prompt version, takes the earliest run of
+each key as the original, and compares every later run against it. It
+finds $3{,}243$ generations produced a second time in a later store, and
+all $3{,}243$ reproduce the original text byte for byte. This is what
+allows us to treat the re-measured constants and the earlier tables as
+describing the same system. Three hundred of those pairs also cross a
+naming difference --- one store requests the default window implicitly
+and the other names $w{=}64$ explicitly --- and agree token for token, as
+they should.
 
 \paragraph{Decode cap.}
 Every arm reported in the main text uses a 384-token decode cap. The

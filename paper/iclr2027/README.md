@@ -9,12 +9,19 @@ pdflatex iclr2027_conference && bibtex iclr2027_conference && pdflatex ... x2
 
 **Font caveat — judge the page budget on a Times build.** `tectonic` runs a
 Unicode engine where the style file's `times` package does not resolve, so a
-local build falls back to Latin Modern, which is wider. Measured 2026-08-17:
+local build falls back to Latin Modern, which is wider. Measured 2026-08-18:
 in a Times build (pdflatex, or the `newtxtext` substitution used for testing)
-the main text ends about 72% of the way down page 9 — roughly 8.7 pages
-against the 9-page limit, with a usable margin. The same source in Latin
-Modern spills the conclusion onto page 10. Do not cut content to satisfy the
-Latin Modern build.
+the conclusion's last line lands on the last line of page 9. There is no
+margin left: any addition to the main text has to be paid for by a cut of the
+same size, measured on a Times build. The same source in Latin Modern spills
+the conclusion onto page 10. Do not cut content to satisfy the Latin Modern
+build.
+
+Two things that do *not* work, learned the expensive way: trimming a few words
+(inter-paragraph glue stretches to absorb it, and the page break lands in the
+same place), and building a probe copy in a scratch directory (it picks up a
+stale `.bib`, so citations render short and the layout lies). Cut a whole
+clause or a whole sentence, and build in this directory.
 
 To measure: copy the .tex, swap
 `\usepackage{iclr2027_conference,times}` for
@@ -42,7 +49,7 @@ by eye.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 227 checks
+uv run python scripts/audit_paper_numbers.py    # 328 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
@@ -60,3 +67,16 @@ so their commit time does not precede the run.
 | `iclr-v-trace-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 03:13 | yes |
 | `iclr-llama-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 09:50 | yes |
 | `iclr-instr-first-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
+| `iclr-agnostic-baseline-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
+| `iclr-ratio-sweep-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
+
+The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
+runs against `iclr-v-trace-preregister.md`, already in the table above, and so
+does not add a row.
+
+**Determinism.** The count the provenance appendix quotes is produced by a
+script, not by hand:
+
+```bash
+uv run python scripts/determinism_ledger.py     # 3,243 repeats, all identical
+```
