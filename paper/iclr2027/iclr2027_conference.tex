@@ -346,7 +346,9 @@ English never moves: its trailing block is 25 tokens, so every tested
 window contains the whole question. Bengali is damaged in every blind cell ($-13$ to $-21$\,pp, all
 $p<.01$) and comes back to $-3$\,pp only at $w{=}176$, which is $c{+}69$.
 Telugu is damaged in all five cells, including $w{=}176$ --- for Telugu
-that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$). Thai
+that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$ before multiplicity
+correction; the dose ladder makes the same point at $p{=}.0009$,
+Appendix~\ref{app:r2}). Thai
 and Swahili, whose trailing blocks are 45 and 47 tokens, dip at the one
 tested window below their $c$ and are within noise elsewhere; we do not
 headline Swahili, whose baseline is $56\%$.
@@ -453,7 +455,9 @@ $w$ & slack $w{-}c$ & median $V$ & accuracy & $\Delta$pp & fixed/broken & $p$ \\
 Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp, which
 is what the same items lose at the shipped $w{=}64$, where they see none
 of the question at all. The curve then rises with the slack and reaches
-the baseline only at $c{+}80$. A partial Bengali
+the baseline only at $c{+}80$. The sweep's Bengali cells tell the same
+story from the other grid: $c{+}13$ of slack still loses $8$\,pp and
+only $c{+}69$ is back within $3$ (Table~\ref{tab:cliff}). A partial Bengali
 replication reproduces the first two rungs before its block was cut
 short (Appendix~\ref{app:dose}).
 
@@ -826,6 +830,15 @@ baseline scores 50\% rather than 56\%, $c{+}4$ scores 35\% and
 $c{+}Q_{90}$ scores 47\%, so the hole is $-15$\,pp instead of $-18$\,pp
 and the $c{+}Q_{90}$ cell is $-3$\,pp instead of $0$\,pp. Table~\ref{tab:8brobust}
 repeats the 8B Bengali cells under two further scorers.
+
+Table~\ref{tab:cliff} reports 25 paired tests. Under a Holm correction
+across the grid, five blind cells survive --- Bengali at $w{=}56$ and
+$88$, Telugu at $w{=}32$, $56$ and $88$ --- and the single-window Thai
+and Swahili dips, Bengali at $w{=}32$ ($p{=}.0072$, Holm threshold
+$.0025$), and the Telugu $w{=}120$/$176$ cells do not. No claim in the
+paper rests on an unsurviving cell alone: the Telugu $c{+}\varepsilon$
+point is carried by the dose ladder, whose $c{+}4$ cell stands at
+$p{=}.0009$ in a six-test family.
 
 \begin{table}[h]
 \caption{Robustness of the 8B Bengali cells to the scoring rule. The
