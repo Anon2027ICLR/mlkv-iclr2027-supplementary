@@ -254,6 +254,75 @@ for pad, (b_tex, w64_tex, w41_tex) in TEX_SO.items():
           cmp_pair(base, SO[pad]["snapkv@r0.75:w41"])["acc"], w41_tex)
 
 # --------------------------------------------------------------------------
+print("## Appendix: Llama third family — tab:llama and the section prose")
+LL = load("llama.db")
+TEX_LL = {  # lang: (baseline, w64, hat, hat_w, hat_delta)
+    "en": (97, 98, 98, 43, 1),
+    "bn": (76, 58, 68, 212, -8),
+    "te": (51, 46, 50, 284, -1),
+}
+for lang, (b_tex, w64_tex, hat_tex, hw, hd_tex) in TEX_LL.items():
+    base = LL[lang]["baseline"]
+    check(f"llama {lang} base", round(100 * sum(base.values()) / len(base)), b_tex)
+    check(f"llama {lang} w64", cmp_pair(base, LL[lang]["snapkv@r0.75"])["acc"], w64_tex)
+    rh = cmp_pair(base, LL[lang][f"snapkv@r0.75:w{hw}"])
+    check(f"llama {lang} hat", rh["acc"], hat_tex)
+    check(f"llama {lang} hat delta", rh["d"], hd_tex)
+# prose in app:llama and in the scale paragraph
+r = cmp_pair(LL["bn"]["baseline"], LL["bn"]["snapkv@r0.75"])
+check("llama bn w64 delta", r["d"], -18)
+check("llama bn w64 fixed/broken", r["fb"], (2, 20))
+check("llama bn w64 star", r["star"], True)
+r = cmp_pair(LL["bn"]["snapkv@r0.75"], LL["bn"]["snapkv@r0.75:w212"])
+check("llama bn hat-vs-w64 delta", r["d"], 10)
+check("llama bn hat-vs-w64 fixed/broken", r["fb"], (13, 3))
+check("llama te w64 delta", cmp_pair(LL["te"]["baseline"], LL["te"]["snapkv@r0.75"])["d"], -5)
+
+# --------------------------------------------------------------------------
+print("## Main text: two remedies — tab:remedies")
+IF = load("instr_first.db")
+# columns 1-2 are the existing instruction-last cells (D and Q90 stores);
+# column 3 pairs within instr_first.db against its own baseline.
+TEX_REM = {  # lang: (last_w64, last_hat, question_last_w64)
+    "en": (0, 2, -1),
+    "bn": (-16, -2, -4),
+    "te": (-19, 0, -6),
+}
+for lang, (c1, c2, c3) in TEX_REM.items():
+    check(f"remedies {lang} last-w64",
+          cmp_pair(D[lang]["baseline"], D[lang]["snapkv@r0.75"])["d"], c1)
+    check(f"remedies {lang} last-hat",
+          cmp_pair(D[lang]["baseline"], Q[lang][f"snapkv@r0.75:w{TEX_AWA[lang][4]}"])["d"], c2)
+    check(f"remedies {lang} question-last",
+          cmp_pair(IF[lang]["baseline"], IF[lang]["snapkv@r0.75"])["d"], c3)
+check("remedies bn last-w64 star",
+      cmp_pair(D["bn"]["baseline"], D["bn"]["snapkv@r0.75"])["star"], True)
+check("remedies te last-w64 star",
+      cmp_pair(D["te"]["baseline"], D["te"]["snapkv@r0.75"])["star"], True)
+# cross-layout recoveries quoted in section 4 and the boundary paragraph
+for lang, want_d in [("bn", 13), ("te", 14)]:
+    def by_idx(m):
+        return {k.rsplit("-", 1)[-1]: v for k, v in m.items()}
+    r = cmp_pair(by_idx(D[lang]["snapkv@r0.75"]), by_idx(IF[lang]["snapkv@r0.75"]))
+    check(f"cross-layout {lang} recovery", r["d"], want_d)
+    check(f"cross-layout {lang} star", r["star"], True)
+
+# --------------------------------------------------------------------------
+print("## Appendix: interval rows added for the new arms — tab:ci")
+# The CI bounds themselves are owned by closure_cis.py; here we only check the
+# point estimates and discordant counts the table prints beside them.
+for label, base, comp, d_tex, fb_tex in [
+    ("ci llama en", LL["en"]["baseline"], LL["en"]["snapkv@r0.75:w43"], 1, (1, 0)),
+    ("ci llama bn", LL["bn"]["baseline"], LL["bn"]["snapkv@r0.75:w212"], -8, (3, 11)),
+    ("ci llama te", LL["te"]["baseline"], LL["te"]["snapkv@r0.75:w284"], -1, (3, 4)),
+    ("ci IF bn", IF["bn"]["baseline"], IF["bn"]["snapkv@r0.75"], -4, (3, 7)),
+    ("ci IF te", IF["te"]["baseline"], IF["te"]["snapkv@r0.75"], -6, (1, 7)),
+]:
+    r = cmp_pair(base, comp)
+    check(f"{label} delta", r["d"], d_tex)
+    check(f"{label} fixed/broken", r["fb"], fb_tex)
+
+# --------------------------------------------------------------------------
 print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")
 if FAILS:
     print("\n".join(FAILS))
