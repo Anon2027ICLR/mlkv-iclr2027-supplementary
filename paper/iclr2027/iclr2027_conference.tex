@@ -210,7 +210,9 @@ implementation at a fixed eviction ratio of $0.75$ --- three quarters of
 the prefill cache is discarded --- and expose the observation window as
 the treatment variable. SnapKV keeps the window inside the retained
 budget, so changing $w$ at a fixed ratio does not change how much cache
-survives; every comparison below is at matched retained KV. Decoding is
+survives; every comparison below is at matched retained KV
+(Appendix~\ref{app:snapkv} states the scoring step precisely, and
+Appendix~\ref{app:prod} the production scope). Decoding is
 greedy with a 384-token cap, after we found that the more common 128-token
 cap is itself a token-denominated constant: it truncates answers in
 high-fertility scripts and inflates apparent damage.
@@ -231,12 +233,13 @@ Prompts are instruction-last unless stated:
 \texttt{passages + question + instruction + chat suffix}. Write $I$ for
 the token length of the trailing instruction, $s$ for the chat-template
 suffix that follows it, and $c{=}I{+}s$ for the number of tokens after
-the question. Write $Q_i$ for the token length of item $i$'s question and
-$W$ for the set of token positions in the last-$w$ window. Query
-visibility is the share of the question the scorer can see,
+the question. Write $Q_i$ for the set of token positions holding item
+$i$'s question, so that $|Q_i|$ is its length, and $W$ for the set of
+positions in the last-$w$ window. Query visibility is the share of the
+question the scorer can see,
 \[
   V_i \;=\; \frac{|W \cap Q_i|}{|Q_i|}
-  \;=\; \mathrm{clamp}\!\left(\frac{w-c}{Q_i},\,0,\,1\right)
+  \;=\; \mathrm{clamp}\!\left(\frac{w-c}{|Q_i|},\,0,\,1\right)
   \quad\text{in this layout,}
 \]
 where we take the intersection as the definition and the closed form as a
@@ -245,7 +248,9 @@ Qwen3-4B the eight instructions tokenize to $I$ between 20 (English) and
 162 (Telugu) tokens; with $s{=}5$ this gives $c$ from 25 to 167
 (Appendix~\ref{app:grids}). Both $c$ and $Q$ are produced by script from
 the tokenizer and template actually used in the run, never copied from a
-table.
+table; Appendix~\ref{app:measure} gives the measurement procedure and
+Appendix~\ref{app:prompt} the frozen instructions and the exact prompt
+layout.
 
 \paragraph{The held-out percentile.}
 $Q_{90}$ is the 90th percentile of question token length on a split that
@@ -298,9 +303,10 @@ ever seeing what was asked.}
 
 The window does not know that it is looking at an instruction. It scores
 whatever occupies the tail of the prompt (Figure~\ref{fig:schematic}). This
-section establishes three facts about that tail: damage appears where
-$w<c$ and not elsewhere; it appears in English as soon as we lengthen the
-tail; and it appears at a constant that is already shipped.
+section establishes three facts about that tail: damage tracks the window
+against the tail rather than against the language; it appears in English
+as soon as we lengthen the tail; and it appears at a constant that is
+already shipped.
 
 \paragraph{A window sweep across five languages.}
 Table~\ref{tab:cliff} reports paired damage against the uncompressed
@@ -455,7 +461,7 @@ $p{<}.001$), and among the items whose correctness changes along the
 ladder, 21 are correct at high visibility and wrong at low against 2 in
 the opposite direction ($p{<}10^{-4}$). On treated rows, $V$ is also the
 better one-parameter summary: AIC prefers $y\sim V$ ($689.8$) to
-$y\sim(w{-}c)$ ($692.1$) and to $y\sim(w{-}c)+Q$ ($692.2$).
+$y\sim(w{-}c)$ ($692.1$) and to $y\sim(w{-}c)+|Q|$ ($692.2$).
 
 The bins are not monotone throughout, and we state where. The
 $0.75\le V<1$ band loses $11.9$\,pp ($n{=}59$, $p{=}.065$); it holds nine
@@ -482,7 +488,7 @@ be estimated from a held-out sample of questions. We therefore set
   \hat w \;=\; c + Q_{90},
 \]
 one integer per (model, language, template), computed offline and without
-a delimiter. A per-item window $w_i{=}c+Q_i$ would give $V_i{=}1$ by
+a delimiter. A per-item window $w_i{=}c+|Q_i|$ would give $V_i{=}1$ by
 construction, but it requires locating the question inside the prompt,
 which is exactly the assumption we are trying not to make
 \citep{corallo2024finch}. The language-level percentile is a
@@ -546,6 +552,7 @@ default window answered correctly (8/0, 7/0 and 7/0). The 120-token
 schema is worth a second look: its trailing block, $166$ tokens, is within
 one token of Telugu's $167$. The same blindness, produced by a response
 format instead of a script, is removed by the same integer.
+Appendix~\ref{app:schema} reports both runs side by side.
 
 \paragraph{A second tokenizer.}
 Gemma-3-4b-it tokenizes the same Bengali instruction to $26$ tokens
@@ -556,7 +563,8 @@ Two things follow. For Telugu the rule returns exactly the constant that
 kvpress already ships, and Telugu is indeed flat there ($-3$\,pp against
 its own baseline): a window rule that is worth running should also be able
 to say that the default is adequate. For Bengali, $\hat w{=}50$ leaves
-$-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B close met.
+$-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B close met
+(Appendix~\ref{app:gemma} gives the full sweep on this tokenizer).
 
 \paragraph{Scale.}
 A Qwen3-8B slice on English and Bengali reproduces the phenomenon and not
@@ -688,6 +696,16 @@ a model is allowed to look at, it should be derived from the tokenizer
 and the template instead of being shipped as a number.
 
 % =====================================================================
+\section*{Ethics statement}
+This work uses publicly released question-answering corpora and publicly
+released model weights; it involves no human subjects and no personal
+data. The failure it documents falls unevenly on users who write in
+scripts that current tokenizers encode inefficiently, so we have tried
+to describe it in terms of the mechanism rather than in terms of language
+rankings, and to avoid comparisons of absolute accuracy between languages
+that our item construction does not support. The remedy we propose is
+cheap and requires no additional data collection.
+
 \section*{AI use statement}
 The experimental harness, the literature survey, and a first draft of
 this paper were produced with substantial assistance from large language
