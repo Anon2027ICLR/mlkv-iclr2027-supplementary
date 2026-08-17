@@ -1,0 +1,118 @@
+\documentclass{article}
+\usepackage{iclr2027_conference,times}
+\input{math_commands.tex}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+
+\title{When the Window Cannot See the Question:\\
+Token-Denominated Observation Windows Are Not Language-Neutral}
+
+\author{Anonymous Authors}
+
+% \iclrfinalcopy
+\begin{document}
+\maketitle
+
+\begin{abstract}
+% TODO-ABSTRACT  [budget: 0.25 page, ~170 words, written LAST]
+\end{abstract}
+
+% =====================================================================
+\section{Introduction}
+% TODO-S1  [budget: 1.0 page]
+
+% =====================================================================
+\section{Related work}
+% TODO-S2  [budget: 0.9 page]
+
+% =====================================================================
+\section{Setup}
+% TODO-S3  [budget: 1.1 pages; float: T1 constants]
+
+% =====================================================================
+\section{The window is a threshold}
+% TODO-S4  [budget: 1.6 pages; floats: F1 schematic, T2 sweep, F2 triptych]
+
+% =====================================================================
+\section{The slack must be question-sized}
+% TODO-S5  [budget: 0.9 page; float: T3 dose ladder]
+
+% =====================================================================
+\section{AutoWindow: one integer, and where it stops}
+% TODO-S6  [budget: 1.7 pages; float: T4 close + schema tails]
+
+% =====================================================================
+\section{Analysis}
+% TODO-S7  [budget: 0.6 page]
+
+% =====================================================================
+\section{Limitations}
+% TODO-S8  [budget: 0.4 page]
+
+% =====================================================================
+\section{Conclusion}
+% TODO-S9  [budget: 0.3 page]
+
+% =====================================================================
+\section*{AI use statement}
+% TODO-AI
+
+\section*{Reproducibility statement}
+% TODO-REPRO
+
+\bibliography{iclr2027_conference}
+\bibliographystyle{iclr2027_conference}
+
+% =====================================================================
+\appendix
+\section{How last-$w$ scoring works}
+\label{app:snapkv}
+% TODO-APP-SNAPKV
+
+\section{Measuring $c$ and $Q_{90}$}
+\label{app:measure}
+% TODO-APP-MEASURE
+
+\section{The scoring rule and its robustness}
+\label{app:r2}
+% TODO-APP-R2
+
+\section{Full window, pad, and \texorpdfstring{$c{+}16$}{c+16} grids}
+\label{app:grids}
+% TODO-APP-GRIDS
+
+\section{The dose ladder in full}
+\label{app:dose}
+% TODO-APP-DOSE
+
+\section{Schema tails: the mis-sized run and the rerun}
+\label{app:schema}
+% TODO-APP-SCHEMA
+
+\section{A second tokenizer: Gemma-3-4b-it}
+\label{app:gemma}
+% TODO-APP-GEMMA
+
+\section{Scale: Qwen3-8B}
+\label{app:8b}
+% TODO-APP-8B
+
+\section{Frozen instructions and prompt layout}
+\label{app:prompt}
+% TODO-APP-PROMPT
+
+\section{Measurement transcripts and run provenance}
+\label{app:provenance}
+% TODO-APP-PROV
+
+\section{Production scope}
+\label{app:prod}
+% TODO-APP-PROD
+
+\end{document}

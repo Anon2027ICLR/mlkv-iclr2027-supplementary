@@ -14,3 +14,11 @@ data/cache/
 
 # OS
 .DS_Store
+
+# LaTeX build products
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
