@@ -7,14 +7,24 @@ tectonic -X compile iclr2027_conference.tex     # local, fast
 pdflatex iclr2027_conference && bibtex iclr2027_conference && pdflatex ... x2
 ```
 
-**Font caveat.** `tectonic` runs a Unicode engine, where the style file's
-`times` package does not resolve, so a local build falls back to Latin
-Modern and runs roughly 0.4 page longer than the submission build. Measured
-2026-08-17 after the review fixes: Latin Modern ends the main text low on
-page 9, Times (pdflatex, or a `newtxtext` test build) ends it mid-page 9 —
-about 8.7 pages against the 9-page limit. Judge the page budget on a Times
-build, and note the margin is now thin: anything added to the body needs a
-compensating cut.
+**Font caveat — judge the page budget on a Times build.** `tectonic` runs a
+Unicode engine where the style file's `times` package does not resolve, so a
+local build falls back to Latin Modern, which is wider. Measured 2026-08-17:
+in a Times build (pdflatex, or the `newtxtext` substitution used for testing)
+the main text ends about 72% of the way down page 9 — roughly 8.7 pages
+against the 9-page limit, with a usable margin. The same source in Latin
+Modern spills the conclusion onto page 10. Do not cut content to satisfy the
+Latin Modern build.
+
+To measure: copy the .tex, swap
+`\usepackage{iclr2027_conference,times}` for
+`\usepackage{iclr2027_conference}` plus `\usepackage{newtxtext,newtxmath}`,
+and compile that copy.
+
+**Bold does not render under `tectonic`.** The same missing Times shape
+that costs the font fallback also silently drops `\textbf`, so emphasis in
+tables and figure captions looks absent locally and appears correctly in a
+Times build. Judge emphasis, like page count, on a Times build.
 
 **Figures** are generated from the result stores, never hand-edited:
 
