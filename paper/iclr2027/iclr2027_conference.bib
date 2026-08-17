@@ -1,5 +1,5 @@
 @inproceedings{li2024snapkv,
-  title     = {Snap{KV}: {LLM} Knows What You Are Looking for before Generation},
+  title     = {Snap{KV}: {LLM} Knows What You Are Looking for Before Generation},
   author    = {Li, Yuhong and Huang, Yingbing and Yang, Bowen and Venkitesh, Bharat and Locatelli, Acyr and Ye, Hanchen and Cai, Tianle and Lewis, Patrick and Chen, Deming},
   booktitle = {Advances in Neural Information Processing Systems},
   year      = {2024}
@@ -21,7 +21,7 @@
 
 @inproceedings{chen2026instruction,
   title     = {The Pitfalls of {KV} Cache Compression},
-  author    = {Chen, Alex and Geh, Renato and Grover, Aditya and Van den Broeck, Guy and Israel, Daniel Mingyi},
+  author    = {Chen, Alex and Geh, Renato and Grover, Aditya and Van Den Broeck, Guy and Israel, Daniel Mingyi},
   booktitle = {Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
   year      = {2026},
   pages     = {41530--41553},
@@ -41,6 +41,8 @@
   author    = {Zhao, Liang and Feng, Xiaocheng and Zhong, Weihong and Huang, Lei and Zhu, Kun and Wang, Baoxin and Wu, Dayong and Hu, Guoping and Liu, Ting and Qin, Bing},
   booktitle = {Proceedings of the 64th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
   year      = {2026},
+  pages     = {27153--27169},
+  doi       = {10.18653/v1/2026.acl-long.1250},
   note      = {ACL Anthology 2026.acl-long.1250}
 }
 
@@ -51,10 +53,10 @@
   year      = {2026},
   pages     = {38667--38701},
   doi       = {10.18653/v1/2026.findings-acl.1926},
-  note      = {ACL Anthology 2026.findings-acl.1926 (Findings volume; distinct from Chen et al.\ 2026.acl-long.1926); arXiv:2504.17768}
+  note      = {ACL Anthology 2026.findings-acl.1926 (Findings volume; the shared number with Chen et al.\ 2026.acl-long.1926 is a coincidence across tracks, verified against the Anthology record); arXiv:2504.17768, whose listing names the second author Robert Li}
 }
 
-@article{mohtashami2024finch,
+@article{corallo2024finch,
   title   = {{FINCH}: Prompt-guided Key-Value Cache Compression for Large Language Models},
   author  = {Corallo, Giulio and Papotti, Paolo},
   journal = {Transactions of the Association for Computational Linguistics},
@@ -62,60 +64,67 @@
   year    = {2024},
   pages   = {1517--1532},
   doi     = {10.1162/tacl_a_00716},
-  note    = {Not Landmark Attention (Mohtashami and Jaggi). Anthology 2024.tacl-1.83}
+  note    = {Anthology 2024.tacl-1.83}
 }
 
 @article{devoto2025expected,
-  title   = {Expected Attention: {KV}-Cache Compression without Seeing the Query},
-  author  = {Devoto, Alessio and Jeblick, Max and J{\'e}gou, Herv{\'e}},
+  title   = {Expected Attention: {KV} Cache Compression by Estimating Attention from Future Queries Distribution},
+  author  = {Devoto, Alessio and Jeblick, Maximilian and J{\'e}gou, Simon},
   journal = {arXiv preprint arXiv:2510.00636},
   year    = {2025}
 }
 
 @article{marchisio2024multilingual,
   title   = {How Does Quantization Affect Multilingual {LLM}s?},
-  author  = {Marchisio, Kelly and others},
+  author  = {Marchisio, Kelly and Dash, Saurabh and Chen, Hongyu and Aumiller, Dennis and {\"U}st{\"u}n, Ahmet and Hooker, Sara and Ruder, Sebastian},
   journal = {arXiv preprint arXiv:2407.03211},
   year    = {2024}
 }
 
 @article{marie2025lowbit,
-  title   = {Low-bit Quantization and Multilingual Generation},
+  title   = {The Uneven Impact of Post-Training Quantization in Machine Translation},
   author  = {Marie, Benjamin and Fujita, Atsushi},
   journal = {arXiv preprint arXiv:2508.20893},
   year    = {2025}
 }
 
 @misc{nvidia2026efficient,
-  title        = {Efficient Inference for Long Context: What Ships and What Does Not},
-  author       = {{NVIDIA}},
+  title        = {{KV} Cache Compression and Its Infra Problems},
+  author       = {Mao, Weian and Chen, Yukang and Huang, Wei and Yang, Shuai and Wang, Luozhou and Han, Song},
   year         = {2026},
-  howpublished = {Technical blog, 12 June 2026},
+  howpublished = {NVIDIA Efficient AI Lab research blog, 12 June 2026},
   note         = {Cited against a serving-default claim}
 }
 
 @misc{qwen32025,
   title        = {Qwen3 Technical Report},
   author       = {{Qwen Team}},
-  year         = {2025}
+  year         = {2025},
+  note         = {arXiv:2505.09388}
 }
 
 @misc{gemma32025,
   title        = {Gemma 3 Technical Report},
-  author       = {{Gemma Team} and {Google DeepMind}},
-  year         = {2025}
+  author       = {{Gemma Team, Google DeepMind}},
+  year         = {2025},
+  note         = {arXiv:2503.19786}
 }
 
 @inproceedings{artetxe2020xquad,
   title     = {On the Cross-lingual Transferability of Monolingual Representations},
   author    = {Artetxe, Mikel and Ruder, Sebastian and Yogatama, Dani},
   booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},
-  year      = {2020}
+  year      = {2020},
+  pages     = {4623--4637},
+  doi       = {10.18653/v1/2020.acl-main.421}
 }
 
-@inproceedings{clark2020tydiqa,
-  title     = {{TyDi QA}: A Benchmark for Information-Seeking Question Answering in Typologically Diverse Languages},
-  author    = {Clark, Jonathan H. and Choi, Eunsol and Collins, Michael and Garrette, Dan and Kwiatkowski, Tom and Nikolaev, Vitaly and Palomaki, Jennimaria},
-  booktitle = {Transactions of the Association for Computational Linguistics},
-  year      = {2020}
+@article{clark2020tydiqa,
+  title   = {{TyDi QA}: A Benchmark for Information-Seeking Question Answering in Typologically Diverse Languages},
+  author  = {Clark, Jonathan H. and Choi, Eunsol and Collins, Michael and Garrette, Dan and Kwiatkowski, Tom and Nikolaev, Vitaly and Palomaki, Jennimaria},
+  journal = {Transactions of the Association for Computational Linguistics},
+  volume  = {8},
+  year    = {2020},
+  pages   = {454--470},
+  doi     = {10.1162/tacl_a_00317}
 }

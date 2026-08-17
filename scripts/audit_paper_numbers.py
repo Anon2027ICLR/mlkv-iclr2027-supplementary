@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""Recompute every table cell in the paper from the generation stores and
+compare it against the value currently written in the TeX source.
+
+The expected values below are transcribed from
+paper/iclr2027/iclr2027_conference.tex. Run before every submission:
+
+  UV_NO_SYNC=1 uv run python scripts/audit_paper_numbers.py
+
+Any MISMATCH is a bug in the paper, in this file, or in the data — stop
+and find out which before shipping.
+"""
+from __future__ import annotations
+
+import ast
+import math
+import re
+import sqlite3
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from mlkv.qa_metrics import containment_match_lenient  # noqa: E402
+
+RES = ROOT / "results"
+FAILS: list[str] = []
+CHECKS = [0]
+
+
+def golds(s):
+    s = (s or "").strip()
+    if s.startswith("["):
+        try:
+            v = ast.literal_eval(s)
+            if isinstance(v, list):
+                return [str(x) for x in v]
+        except Exception:
+            pass
+    return [s] if s else []
+
+
+def mcnemar_p(b, c):
+    n = b + c
+    if n == 0:
+        return 1.0
+    k = min(b, c)
+    return min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2**n)
+
+
+def load(db, key=None):
+    con = sqlite3.connect(f"file:{RES / db}?mode=ro", uri=True)
+    out = defaultdict(lambda: defaultdict(dict))
+    for iid, lang, cfg, o, g in con.execute(
+        "SELECT item_id, lang, config, output, answer_gold FROM generations"
+    ):
+        k = key(iid) if key else lang
+        out[k][cfg][iid] = bool(containment_match_lenient(o or "", golds(g), lang))
+    con.close()
+    return out
+
+
+def cmp_pair(base, comp):
+    common = sorted(set(base) & set(comp))
+    n = len(common)
+    fixed = sum(1 for i in common if not base[i] and comp[i])
+    broken = sum(1 for i in common if base[i] and not comp[i])
+    return dict(
+        n=n,
+        base=round(100 * sum(base[i] for i in common) / n),
+        acc=round(100 * sum(comp[i] for i in common) / n),
+        d=round(100 * (sum(comp[i] for i in common) - sum(base[i] for i in common)) / n),
+        star=mcnemar_p(fixed, broken) < 0.05,
+        fb=(fixed, broken),
+    )
+
+
+def check(label, got, want):
+    CHECKS[0] += 1
+    if got != want:
+        FAILS.append(f"{label}: TeX says {want!r}, data says {got!r}")
+        print(f"  MISMATCH  {label}: TeX {want!r} vs data {got!r}")
+
+
+# --------------------------------------------------------------------------
+print("## Table 1 (window sweep) — tab:cliff")
+S = load("cliff_multi-final.db")
+TEX_CLIFF = {  # lang: (base, [(delta, star) per w in 32,56,88,120,176])
+    "en": (93, [(2, False), (1, False), (1, False), (-1, False), (1, False)]),
+    "th": (85, [(-6, False), (-4, False), (0, False), (-2, False), (-3, False)]),
+    "sw": (56, [(-7, True), (-4, False), (-2, False), (-4, False), (-3, False)]),
+    "bn": (73, [(-13, True), (-15, True), (-21, True), (-8, False), (-3, False)]),
+    "te": (56, [(-19, True), (-21, True), (-18, True), (-14, True), (-13, True)]),
+}
+for lang, (base_tex, cells) in TEX_CLIFF.items():
+    base = S[lang]["baseline"]
+    check(f"cliff {lang} baseline", round(100 * sum(base.values()) / len(base)), base_tex)
+    for w, (d_tex, star_tex) in zip((32, 56, 88, 120, 176), cells):
+        r = cmp_pair(base, S[lang][f"snapkv@r0.75:w{w}"])
+        check(f"cliff {lang} w{w} delta", r["d"], d_tex)
+        check(f"cliff {lang} w{w} star", r["star"], star_tex)
+
+# --------------------------------------------------------------------------
+print("## Table 2 (dose ladder) — tab:dose")
+V = load("v_trace.db")
+TEX_DOSE = [  # w, acc, delta, fixed/broken
+    (171, 38, -18, (5, 23)), (183, 50, -6, (5, 11)), (199, 52, -4, (4, 8)),
+    (215, 52, -4, (6, 10)), (247, 56, 0, (6, 6)),
+]
+base_te = V["te"]["baseline"]
+check("dose te baseline", round(100 * sum(base_te.values()) / len(base_te)), 56)
+for w, acc_tex, d_tex, fb_tex in TEX_DOSE:
+    r = cmp_pair(base_te, V["te"][f"snapkv@r0.75:w{w}"])
+    check(f"dose w{w} acc", r["acc"], acc_tex)
+    check(f"dose w{w} delta", r["d"], d_tex)
+    check(f"dose w{w} fixed/broken", r["fb"], fb_tex)
+
+# --------------------------------------------------------------------------
+print("## Table 3A (AutoWindow, languages) — tab:aw")
+D = load("autowin-final.db")
+Q = load("autowin_q90.db")
+TEX_AWA = {  # lang: (base, (w64_acc, d, star), (c16_acc, d), (q90_acc, d), w_hat)
+    "en": (93, (93, 0, False), (94, 1), (95, 2), 43),
+    "bn": (73, (57, -16, True), (66, -7), (71, -2), 183),
+    "te": (56, (37, -19, True), (50, -6), (56, 0), 247),
+}
+C16 = {"en": 41, "bn": 123, "te": 183}
+for lang, (b_tex, w64, c16, q90, what) in TEX_AWA.items():
+    base = D[lang]["baseline"]
+    check(f"aw {lang} baseline", round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, D[lang]["snapkv@r0.75"])
+    check(f"aw {lang} w64 acc", r["acc"], w64[0])
+    check(f"aw {lang} w64 delta", r["d"], w64[1])
+    check(f"aw {lang} w64 star", r["star"], w64[2])
+    r = cmp_pair(base, D[lang][f"snapkv@r0.75:w{C16[lang]}"])
+    check(f"aw {lang} c+16 acc", r["acc"], c16[0])
+    check(f"aw {lang} c+16 delta", r["d"], c16[1])
+    r = cmp_pair(base, Q[lang][f"snapkv@r0.75:w{what}"])
+    check(f"aw {lang} q90 acc", r["acc"], q90[0])
+    check(f"aw {lang} q90 delta", r["d"], q90[1])
+
+# main-text claims: gains vs the default window
+for lang, want_d, want_fb in [("bn", 14, (16, 2)), ("te", 19, (21, 2))]:
+    r = cmp_pair(D[lang]["snapkv@r0.75"], Q[lang][f"snapkv@r0.75:w{TEX_AWA[lang][4]}"])
+    check(f"aw {lang} q90-vs-w64 delta", r["d"], want_d)
+    check(f"aw {lang} q90-vs-w64 fixed/broken", r["fb"], want_fb)
+
+# --------------------------------------------------------------------------
+print("## Table 3B (AutoWindow, schema tails) — tab:aw")
+SF = load("schema_fix.db", key=lambda i: re.search(r"JSON(\d+)", i).group(1))
+TEX_AWB = {  # pad: (base, (w64_acc, d, star), (hat_acc, d), hat_w, (fixed,broken) vs w64)
+    "60": (94, (88, -6, False), (96, 2), 90, (8, 0)),
+    "120": (95, (89, -6, True), (96, 1), 184, (7, 0)),
+    "200": (94, (89, -5, False), (96, 2), 231, (7, 0)),
+}
+for pad, (b_tex, w64, hat, hw, fb_tex) in TEX_AWB.items():
+    base = SF[pad]["baseline"]
+    check(f"schema {pad} baseline", round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, SF[pad]["snapkv@r0.75"])
+    check(f"schema {pad} w64 acc", r["acc"], w64[0])
+    check(f"schema {pad} w64 delta", r["d"], w64[1])
+    check(f"schema {pad} w64 star", r["star"], w64[2])
+    r = cmp_pair(base, SF[pad][f"snapkv@r0.75:w{hw}"])
+    check(f"schema {pad} hat acc", r["acc"], hat[0])
+    check(f"schema {pad} hat delta", r["d"], hat[1])
+    r = cmp_pair(SF[pad]["snapkv@r0.75"], SF[pad][f"snapkv@r0.75:w{hw}"])
+    check(f"schema {pad} hat-vs-w64 fixed/broken", r["fb"], fb_tex)
+
+# --------------------------------------------------------------------------
+print("## Appendix: c+16 eight-language grid — tab:aw16")
+TEX_AW16 = {
+    "en": (93, 93, 94), "zh": (83, 83, 85), "es": (88, 86, 88), "vi": (83, 78, 81),
+    "th": (85, 85, 84), "sw": (56, 53, 56), "bn": (73, 57, 66), "te": (56, 37, 50),
+}
+C16_ALL = {"en": 41, "zh": 45, "es": 51, "vi": 55, "th": 61, "sw": 63, "bn": 123, "te": 183}
+for lang, (b_tex, w64_tex, c16_tex) in TEX_AW16.items():
+    base = D[lang]["baseline"]
+    check(f"aw16 {lang} base", round(100 * sum(base.values()) / len(base)), b_tex)
+    check(f"aw16 {lang} w64", cmp_pair(base, D[lang]["snapkv@r0.75"])["acc"], w64_tex)
+    check(f"aw16 {lang} c+16",
+          cmp_pair(base, D[lang][f"snapkv@r0.75:w{C16_ALL[lang]}"])["acc"], c16_tex)
+
+# --------------------------------------------------------------------------
+print("## Appendix: English pad grid — tab:padgrid")
+P = load("cliff_en-final.db", key=lambda i: re.search(r"PAD(\d+)", i).group(1))
+TEX_PAD = {
+    "48": [81, 87, 92, 92, 92], "64": [86, 90, 94, 93, 93],
+    "96": [82, 90, 89, 90, 93], "128": [78, 85, 89, 89, 91],
+}
+for pad, accs in TEX_PAD.items():
+    for w, a_tex in zip((32, 56, 80, 104, 144), accs):
+        m = P[pad][f"snapkv@r0.75:w{w}"]
+        check(f"pad {pad} w{w}", round(100 * sum(m.values()) / len(m)), a_tex)
+
+# --------------------------------------------------------------------------
+print("## Appendix: Gemma sweep — tab:gemmasweep")
+G = load("cliff_gemma.db")
+TEX_GEM = {
+    "en": (75, [(2, False), (1, False), (3, False), (4, False), (3, False)]),
+    "bn": (62, [(-13, True), (-10, True), (-9, True), (-5, False), (-5, False)]),
+    "te": (37, [(-3, False), (-4, False), (-3, False), (-1, False), (-3, False)]),
+}
+for lang, (b_tex, cells) in TEX_GEM.items():
+    base = G[lang]["baseline"]
+    check(f"gemma {lang} base", round(100 * sum(base.values()) / len(base)), b_tex)
+    for w, (d_tex, star_tex) in zip((16, 24, 32, 48, 64), cells):
+        r = cmp_pair(base, G[lang][f"snapkv@r0.75:w{w}"])
+        check(f"gemma {lang} w{w} delta", r["d"], d_tex)
+        check(f"gemma {lang} w{w} star", r["star"], star_tex)
+
+# --------------------------------------------------------------------------
+print("## Appendix: Gemma AutoWindow arm")
+GQ = load("gemma_q90.db")
+TEX_GQ = {"en": (75, 78, 78, 45), "bn": (62, 57, 56, 50), "te": (37, 34, 34, 64)}
+for lang, (b_tex, w64_tex, hat_tex, hw) in TEX_GQ.items():
+    base = GQ[lang]["baseline"]
+    check(f"gemmaq {lang} base", round(100 * sum(base.values()) / len(base)), b_tex)
+    check(f"gemmaq {lang} w64", cmp_pair(base, GQ[lang]["snapkv@r0.75"])["acc"], w64_tex)
+    check(f"gemmaq {lang} hat",
+          cmp_pair(base, GQ[lang][f"snapkv@r0.75:w{hw}"])["acc"], hat_tex)
+
+# --------------------------------------------------------------------------
+print("## Appendix: 8B cells — tab:8brobust and app:8b")
+E = load("autowin_8b.db")
+TEX_8B = {"en": (96, 97, 96, 43), "bn": (81, 64, 73, 183)}
+for lang, (b_tex, w64_tex, hat_tex, hw) in TEX_8B.items():
+    base = E[lang]["baseline"]
+    check(f"8b {lang} base", round(100 * sum(base.values()) / len(base)), b_tex)
+    r64 = cmp_pair(base, E[lang]["snapkv@r0.75"])
+    check(f"8b {lang} w64", r64["acc"], w64_tex)
+    rh = cmp_pair(base, E[lang][f"snapkv@r0.75:w{hw}"])
+    check(f"8b {lang} hat", rh["acc"], hat_tex)
+check("8b bn w64 delta", cmp_pair(E["bn"]["baseline"], E["bn"]["snapkv@r0.75"])["d"], -17)
+check("8b bn w64 fixed/broken",
+      cmp_pair(E["bn"]["baseline"], E["bn"]["snapkv@r0.75"])["fb"], (1, 18))
+check("8b bn hat delta",
+      cmp_pair(E["bn"]["baseline"], E["bn"]["snapkv@r0.75:w183"])["d"], -8)
+check("8b bn hat fixed/broken",
+      cmp_pair(E["bn"]["baseline"], E["bn"]["snapkv@r0.75:w183"])["fb"], (0, 8))
+r = cmp_pair(E["bn"]["snapkv@r0.75"], E["bn"]["snapkv@r0.75:w183"])
+check("8b bn hat-vs-w64 delta", r["d"], 9)
+check("8b bn hat-vs-w64 fixed/broken", r["fb"], (11, 2))
+
+# --------------------------------------------------------------------------
+print("## Appendix: old (mis-sized) schema run — app:schema")
+SO = load("schema-final.db", key=lambda i: re.search(r"JSON(\d+)", i).group(1))
+TEX_SO = {"60": (94, 88, 88), "120": (95, 89, 72), "200": (94, 89, 75)}
+for pad, (b_tex, w64_tex, w41_tex) in TEX_SO.items():
+    base = SO[pad]["baseline"]
+    check(f"schema-old {pad} base", round(100 * sum(base.values()) / len(base)), b_tex)
+    check(f"schema-old {pad} w64", cmp_pair(base, SO[pad]["snapkv@r0.75"])["acc"], w64_tex)
+    check(f"schema-old {pad} w41",
+          cmp_pair(base, SO[pad]["snapkv@r0.75:w41"])["acc"], w41_tex)
+
+# --------------------------------------------------------------------------
+print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")
+if FAILS:
+    print("\n".join(FAILS))
+    sys.exit(1)
+print("all paper table cells reproduce from the stores")
