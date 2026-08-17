@@ -27,7 +27,7 @@ is a language-dependent threshold. In the common
 \texttt{passages\,+\,question\,+\,instruction} layout, an instruction
 longer than $w$ hides the question from the scorer: on Qwen3-4B the block
 of tokens after the question is 25 tokens in English but 107 in Bengali
-and 167 in Telugu, and the shipped default $w{=}64$ costs the latter two
+and 167 in Telugu, and the library default $w{=}64$ costs the latter two
 16 and 19 points of accuracy while leaving English untouched. The failure
 is not linguistic. Padding an English instruction reproduces it, a JSON
 response schema reproduces it, and a tokenizer that shortens the Bengali
@@ -60,7 +60,8 @@ SnapKV \citep{li2024snapkv} and its descendants do not read the whole
 prompt when they decide what to evict. They score the cached keys against
 the last $w$ tokens of the prompt --- the \emph{observation window} ---
 and keep the highest-scoring entries. The kvpress implementation ships
-$w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships $w{=}32$. In the
+$w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships $w{=}32$ --- a
+research default and an opt-in serving path, respectively. In the
 retrieval-QA layout \texttt{passages + question + instruction + chat
 suffix}, that window is consumed from the right. Write $c$ for the number
 of tokens standing after the question. If $c > w$, the window contains no
@@ -695,7 +696,12 @@ necessary. Deploying the rule also assumes the prompt family is known:
 $\hat w$ is one integer per trailing-block variant, so mixed traffic
 needs either per-family measurement or the maximum over families, and the
 mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
-measurement looks like.
+measurement looks like. The guidance for a deployer therefore splits.
+Sizing the window removes the blind mode wherever it appears --- the
+recovery over the default is significant in every family we ran ($+9$ to
+$+19$\,pp) --- while the few-point residual on Bengali-class cells is a
+property of eviction at this ratio, addressed by lowering the ratio, not
+by any window.
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
