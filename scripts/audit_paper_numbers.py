@@ -112,9 +112,33 @@ base_te = V["te"]["baseline"]
 check("dose te baseline", round(100 * sum(base_te.values()) / len(base_te)), 56)
 for w, acc_tex, d_tex, fb_tex in TEX_DOSE:
     r = cmp_pair(base_te, V["te"][f"snapkv@r0.75:w{w}"])
-    check(f"dose w{w} acc", r["acc"], acc_tex)
-    check(f"dose w{w} delta", r["d"], d_tex)
-    check(f"dose w{w} fixed/broken", r["fb"], fb_tex)
+    check(f"dose te w{w} acc", r["acc"], acc_tex)
+    check(f"dose te w{w} delta", r["d"], d_tex)
+    check(f"dose te w{w} fixed/broken", r["fb"], fb_tex)
+
+# The Bengali block of the same table, run to completion on its own grid.
+VB = load("v_trace_bn.db")
+TEX_DOSE_BN = [
+    (111, 56, -17, (3, 20), True), (123, 66, -7, (5, 12), False),
+    (139, 70, -3, (4, 7), False), (155, 68, -5, (3, 8), False),
+    (183, 71, -2, (6, 8), False),
+]
+base_bn = VB["bn"]["baseline"]
+check("dose bn baseline", round(100 * sum(base_bn.values()) / len(base_bn)), 73)
+for w, acc_tex, d_tex, fb_tex, star_tex in TEX_DOSE_BN:
+    r = cmp_pair(base_bn, VB["bn"][f"snapkv@r0.75:w{w}"])
+    check(f"dose bn w{w} acc", r["acc"], acc_tex)
+    check(f"dose bn w{w} delta", r["d"], d_tex)
+    check(f"dose bn w{w} fixed/broken", r["fb"], fb_tex)
+    check(f"dose bn w{w} star", r["star"], star_tex)
+# The completed block supersedes a run that stopped on its third rung; the
+# appendix quotes how many generations the two runs share.
+shared = sum(
+    1
+    for cfg in set(V["bn"]) & set(VB["bn"])
+    for iid in set(V["bn"][cfg]) & set(VB["bn"][cfg])
+)
+check("dose bn generations shared with the earlier run", shared, 343)
 
 # --------------------------------------------------------------------------
 print("## Table 3A (AutoWindow, languages) — tab:aw")

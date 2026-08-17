@@ -439,9 +439,10 @@ is what the same items lose at the shipped $w{=}64$, where they see none
 of the question at all. The curve then rises with the slack and reaches
 the baseline only at $c{+}80$. The sweep's Bengali cells tell the same
 story from the other grid: $c{+}13$ of slack still loses $8$\,pp and
-only $c{+}69$ is back within $3$ (Table~\ref{tab:cliff}). A partial Bengali
-replication reproduces the first two rungs before its block was cut
-short (Appendix~\ref{app:dose}).
+only $c{+}69$ is back within $3$ (Table~\ref{tab:cliff}). Running the
+ladder on Bengali reproduces the curve rung for rung --- $-17$, $-7$,
+$-3$, $-5$ and $-2$\,pp from $c{+}4$ up to $c{+}Q_{90}$ --- including a
+$c{+}4$ rung as useless there as here (Appendix~\ref{app:dose}).
 
 \paragraph{Visibility as the dose.}
 Question length varies across items (34 to 122 tokens here), so a single
@@ -985,11 +986,13 @@ pad & $c$ & $w{=}32$ & 56 & 80 & 104 & 144 \\
 \label{app:dose}
 
 \begin{table}[h]
-\caption{The dose ladder. Telugu, $c{=}167$, uncompressed baseline $56\%$,
-$n{=}100$, eviction ratio $0.75$, paired McNemar. Median $V$ is the median
-per-item share of the question that falls inside the window. Two rungs recur
-elsewhere: $w{=}183$ is the $c{+}16$ ablation, $w{=}247$ the shipped
-$\hat w$. No rung here is blind, so none is shaded.}
+\caption{The dose ladder, on both languages. $n{=}100$ per rung, eviction
+ratio $0.75$, paired McNemar against each language's own uncompressed
+baseline. Median $V$ is the median per-item share of the question that falls
+inside the window. In each block the offsets are the same and the top rung is
+that language's own $c{+}Q_{90}$, which is also its shipped $\hat w$. Two
+Telugu rungs recur elsewhere: $w{=}183$ is its $c{+}16$ ablation, $w{=}247$
+its $\hat w$. No rung here is blind, so none is shaded.}
 \label{tab:dose}
 \centering
 \small
@@ -997,16 +1000,24 @@ $\hat w$. No rung here is blind, so none is shaded.}
 \toprule
 $w$ & slack $w{-}c$ & median $V$ & accuracy & $\Delta$pp & fixed/broken & $p$ \\
 \midrule
+\multicolumn{7}{@{}l}{Telugu, $c{=}167$, baseline $56$} \\
 171 & 4 & 0.08 & 38 & ${-}18^{*}$ & 5/23 & $.0009$ \\
 183 & 16 & 0.31 & 50 & ${-}6$ & 5/11 & $.21$ \\
 199 & 32 & 0.62 & 52 & ${-}4$ & 4/8 & $.39$ \\
 215 & 48 & 0.92 & 52 & ${-}4$ & 6/10 & $.45$ \\
 247 & 80 & 1.00 & 56 & $0$ & 6/6 & $1.0$ \\
+\midrule
+\multicolumn{7}{@{}l}{Bengali, $c{=}107$, baseline $73$} \\
+111 & 4 & 0.09 & 56 & ${-}17^{*}$ & 3/20 & $.0005$ \\
+123 & 16 & 0.34 & 66 & ${-}7$ & 5/12 & $.14$ \\
+139 & 32 & 0.68 & 70 & ${-}3$ & 4/7 & $.55$ \\
+155 & 48 & 1.00 & 68 & ${-}5$ & 3/8 & $.23$ \\
+183 & 76 & 1.00 & 71 & ${-}2$ & 6/8 & $.79$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The Telugu ladder is Table~\ref{tab:dose}. Binning the
+The Telugu ladder is the upper block of Table~\ref{tab:dose}. Binning its
 five treated cells by per-item visibility gives: $V<0.25$, $n{=}118$,
 $-16.1$\,pp (6 fixed / 25 broken, $p{=}9\times10^{-4}$);
 $0.25 \le V < 0.5$, $n{=}104$, $-4.8$\,pp; $0.5 \le V < 0.75$, $n{=}84$,
@@ -1023,16 +1034,22 @@ $V{=}1$ bin, it says that visibility close to 1 is not yet equivalent to
 visibility at 1 for long questions --- which is the same statement as the
 registered leftover of a language-level percentile, seen per item.
 
-The partial Bengali block reproduces the first two rungs of the ladder
-before it was cut short: at $c{+}4$ ($w{=}111$) accuracy falls from 73 to
-56 ($-17$\,pp, 3 fixed / 20 broken, $p{=}.0005$), and at $c{+}16$
-($w{=}123$) it is 66 ($-7$\,pp). A third cell at $c{+}32$ completed only
-43 of 100 items and is reported here for completeness ($-2.3$\,pp on the
-items that finished) but is used nowhere in the paper. The within-item
-sign test on the Bengali block gives 13 items correct at high visibility
-against 1 in the opposite direction ($p{=}.002$); its AIC comparison ties
-between $V$ and $(w{-}c)$ at $318.4$, which we report as a tie rather
-than as support.
+The Bengali ladder, the lower block, was run on its own grid with the same
+readout script and repeats the shape. Its bins are $V<0.25$, $n{=}129$,
+$-14.0$\,pp (5 fixed / 23 broken, $p{=}9\times10^{-4}$);
+$0.25 \le V < 0.5$, $n{=}95$, $-7.4$\,pp; $0.5 \le V < 0.75$, $n{=}70$,
+$-5.7$\,pp; $0.75 \le V < 1$, $n{=}59$, $-8.5$\,pp (2/7, ns); $V{=}1$,
+$n{=}147$, $0.0$\,pp (9/9). Both ends land where the account says they
+should, and the band that breaks monotonicity is the same one, which
+makes the caveat above a two-language observation rather than an artefact
+of one grid. Within items, 18 switchers are correct at high visibility
+against 1 in the opposite direction ($p{=}10^{-4}$), the cluster-robust
+logit on $V$ gives $+0.65$ ($z{=}2.95$, $p{=}.003$), and AIC prefers $V$
+($637.7$) to $(w{-}c)$ ($639.7$) and to $(w{-}c)+|Q|$ ($641.5$). An
+earlier run of this block was cut short at 43 items on its third rung and
+tied on that last comparison; the tie resolves once the ladder is
+complete. Its numbers are superseded here, and the 343 generations the
+two runs share are byte-identical.
 
 \section{Schema tails: the mis-sized run and the rerun}
 \label{app:schema}
