@@ -35,10 +35,11 @@ instruction moves the threshold with it. Recovery needs question-sized
 slack: a window four tokens past the instruction recovers nothing. We
 therefore set $w = c + Q_{90}$ from the tokenizer, the chat template and
 a held-out question-length percentile. Preregistered and at matched
-retained cache, this closes the English, Bengali and Telugu gap
-($+2/{-}2/0$\,pp), closes the schema tails, and returns the shipped
-default where that default already suffices. Where it does not close, we
-show the residual is not a visibility failure.
+retained cache, this meets its $\pm 3$\,pp gate on English, Bengali and
+Telugu ($+2/{-}2/0$\,pp), closes the schema tails (non-inferior at
+$-3$\,pp by interval), returns the library default where that default
+already suffices, and recovers $+14$/$+19$\,pp over it ($p{\le}.001$).
+Where the gate is missed, the residual is not a visibility failure.
 \end{abstract}
 
 % =====================================================================
@@ -97,12 +98,13 @@ fitted to accuracy --- the choice of the 90th percentile is a design
 decision, registered in advance, whose cost we report --- no delimiter is
 required, and because SnapKV protects the window from within the retained
 budget, no extra cache is bought. Preregistered, the rule
-closes the English, Bengali and Telugu gap on Qwen3-4B
-($+2/{-}2/0$\,pp against uncompressed); closes the English JSON-schema
-tails that a mis-sized earlier version of the same rule had broken by 23
-points; and returns exactly the shipped constant of 64 for a tokenizer
-and language where that constant is already adequate. It does not close
-everywhere. On Bengali it leaves 6 points at Gemma-3-4b-it and 8 at
+meets its $\pm 3$\,pp gate on English, Bengali and Telugu at Qwen3-4B
+($+2/{-}2/0$\,pp against uncompressed); closes --- non-inferior by
+interval --- the English JSON-schema tails that a mis-sized earlier
+version of the same rule had broken by 23 points; and returns exactly
+the shipped constant of 64 for a tokenizer
+and language where that constant is already adequate. It does not meet
+the gate everywhere. On Bengali it leaves 6 points at Gemma-3-4b-it and 8 at
 Qwen3-8B and at Llama-3.1-8B, and we show that the residual is not, in
 the main, a visibility failure: moving the question to the end of the
 prompt --- full visibility by construction --- leaves the same few
@@ -119,9 +121,9 @@ zero-inference measure of it.
 (iii)~We propose and preregister AutoWindow, $\hat w = c + Q_{90}$, one
 integer per model, language and template, and report both where it closes
 and where it does not.
-(iv)~We diagnose the residual in the two cases where it does not close,
-showing that the question is fully visible there and the remaining error
-is of a different kind.
+(iv)~We diagnose the residual in the three cells where the gate is
+missed, showing that the question is fully visible there and the
+remaining error is of a different kind.
 
 \paragraph{Scope.}
 We study a method family rather than a shipped production default: vLLM
@@ -534,7 +536,7 @@ JSON-200 & 213 & 231 & 94 & \blind{89 (${-}5$)} & \textbf{96} (${+}2$) & --- \\
 \end{tabular}
 \end{table}
 
-\paragraph{The close.}
+\paragraph{The registered gate.}
 Panel~(A) of Table~\ref{tab:aw} is the preregistered test, whose success
 criterion was $|\Delta|\le 3$\,pp against the uncompressed baseline. The
 formula meets it, and gains $+14$ and $+19$\,pp on Bengali and Telugu
@@ -547,7 +549,7 @@ whose trailing block already fits inside the default window stay within
 $3$\,pp of baseline, with one marginal exception --- Vietnamese loses
 $5$\,pp at the default window, where it is not blind ($c{=}39{<}64$; ns,
 $p{=}.06$), and recovers to $-2$ under $c{+}16$
-(Appendix~\ref{app:grids}). The close is a statement about the languages
+(Appendix~\ref{app:grids}). The gate is a statement about the languages
 the default window actually blinds. Exact intervals for these cells are
 in Appendix~\ref{app:ci}: at $n{=}100$ the English and schema closes are
 non-inferior at $-3$\,pp, while the Bengali and Telugu intervals,
@@ -583,11 +585,11 @@ Two things follow. For Telugu the rule returns exactly the constant that
 kvpress already ships, and Telugu is indeed flat there ($-3$\,pp against
 its own baseline): a window rule that is worth running should also be able
 to say that the default is adequate. For Bengali, $\hat w{=}50$ leaves
-$-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B close met
+$-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B cells met
 (Appendix~\ref{app:gemma} gives the full sweep on this tokenizer).
 
 \paragraph{Scale, and a third family.}
-A Qwen3-8B slice reproduces the phenomenon and not the close: the
+A Qwen3-8B slice reproduces the phenomenon and not the gate: the
 default window costs Bengali $17$\,pp ($p{<}.001$); $\hat w$ recovers
 $+9$\,pp (11 fixed / 2 broken, $p{=}.022$) and remains $8$\,pp below
 baseline ($p{=}.008$); English is at ceiling throughout and carries no
@@ -688,7 +690,7 @@ $V{=}1$; and because SnapKV also protects the window it scores from, a
 very large $w$ at a very aggressive eviction ratio would begin to tax the
 content budget. At the ratio used here that tax is small relative to the
 gold passage, which is why we did not need to separate scoring from
-protection to close the gap; at heavier ratios that separation may become
+protection to meet the gate; at heavier ratios that separation may become
 necessary. Deploying the rule also assumes the prompt family is known:
 $\hat w$ is one integer per trailing-block variant, so mixed traffic
 needs either per-family measurement or the maximum over families, and the
@@ -717,10 +719,10 @@ can be computed before any inference: $c$, the number of tokens standing
 between the question and the end of the prompt, and the slack the window
 leaves beyond it, which has to be counted in units of the question rather
 than in constants. Setting $w = c + Q_{90}$ from the tokenizer, the chat
-template and a held-out percentile removes the default-window hole on
-English, Bengali and Telugu at 4B and on English schema tails, returns
-the shipped default where the default is already adequate, and where it
-does not close leaves a residual that we can show is not a visibility
+template and a held-out percentile meets its registered gate on
+English, Bengali and Telugu at 4B and closes the English schema tails,
+returns the library default where the default is already adequate, and
+where it misses leaves a residual that we can show is not a visibility
 failure. Fertility is the pathway rather than the ranking: the same
 failure is one instruction pad or one response schema away in English.
 The general lesson is cheaper than the specific one. Any constant that
@@ -816,7 +818,7 @@ The choice does not carry the results. Under a stricter marker-only rule
 the Telugu dose ladder still shows the same shape: the uncompressed
 baseline scores 50\% rather than 56\%, $c{+}4$ scores 35\% and
 $c{+}Q_{90}$ scores 47\%, so the hole is $-15$\,pp instead of $-18$\,pp
-and the close is $-3$\,pp instead of $0$\,pp. Table~\ref{tab:8brobust}
+and the $c{+}Q_{90}$ cell is $-3$\,pp instead of $0$\,pp. Table~\ref{tab:8brobust}
 repeats the 8B Bengali cells under two further scorers.
 
 \begin{table}[h]
