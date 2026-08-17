@@ -390,6 +390,10 @@ $p{=}.001$; $n{=}200$ each, as in Appendix~\ref{app:levers}). Both languages sit
 ($c{=}45$ and $47$) and below it at $w{=}32$. The failure is therefore not
 confined to the two scripts with the longest instructions: it reaches any
 language whose trailing block outgrows whichever constant is in force.
+Measured the same way, Thai's and Swahili's held-out percentiles give
+$\hat w = 91$ and $67$: the rule never returns a window below either
+language's $c$, so the flip at $w{=}32$ is impossible under it by
+construction.
 A third handle points the same way. Moving the instruction to the front
 of the prompt puts the question inside every window without touching
 the press or the retained budget, and recovers Bengali by $13$\,pp and
@@ -762,10 +766,15 @@ produced by \texttt{v\_trace\_bins.py}, which was committed before the
 corresponding data existed. Nine generation stores back the tables:
 \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
 \texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
-\texttt{schema\_fix}, \texttt{gemma\_q90} and \texttt{v\_trace}. Each
-table cell is recomputed from the raw generations in those stores, and
-comparisons never cross a stack boundary
-(Appendix~\ref{app:provenance}).
+\texttt{schema\_fix}, \texttt{gemma\_q90}, \texttt{v\_trace},
+\texttt{llama} and \texttt{instr\_first}. Each table cell is recomputed
+from the raw generations in those stores, and comparisons never cross a
+stack boundary (Appendix~\ref{app:provenance}). The predictions and kill
+conditions for every arm are files that ship with the code, each written
+before its run; for four of the seven arms the version-history timestamp
+also precedes the first generation in the corresponding store, while the
+other three files entered version control in a later batch. The history
+will be public with the code.
 
 \bibliography{iclr2027_conference}
 \bibliographystyle{iclr2027_conference}
@@ -930,8 +939,9 @@ Figure~\ref{fig:triptych}b.
 \caption{Measured constants, Qwen3-4B. $I$ is the instruction length,
 $c{=}I{+}s$ with $s{=}5$, and $Q_{90}$ is the held-out question-length
 percentile ($n{=}1090/2387/5563$ for en/bn/te; $Q_{50}$ is $12/46/54$ and
-$Q_{\max}$ is $36/141/170$). $Q_{90}$ was measured for the three
-languages the AutoWindow arms use.}
+$Q_{\max}$ is $36/141/170$). $Q_{90}$ was measured for the languages the
+AutoWindow arms use and for the two languages the $w{=}32$ flip
+touches.}
 \label{tab:constants}
 \centering
 \small
@@ -942,8 +952,8 @@ languages the AutoWindow arms use.}
 $I$ & 20 & 24 & 30 & 34 & 40 & 42 & 102 & 162 \\
 $c$ & 25 & 29 & 35 & 39 & 45 & 47 & 107 & 167 \\
 $c{+}16$ & 41 & 45 & 51 & 55 & 61 & 63 & 123 & 183 \\
-$Q_{90}$ & 18 & --- & --- & --- & --- & --- & 76 & 80 \\
-$\hat w = c{+}Q_{90}$ & 43 & --- & --- & --- & --- & --- & 183 & 247 \\
+$Q_{90}$ & 18 & --- & --- & --- & 46 & 20 & 76 & 80 \\
+$\hat w = c{+}Q_{90}$ & 43 & --- & --- & --- & 91 & 67 & 183 & 247 \\
 \bottomrule
 \end{tabular}
 \end{table}

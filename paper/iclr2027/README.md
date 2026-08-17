@@ -44,3 +44,19 @@ in this paper from the generation stores and fails on any drift:
 ```bash
 uv run python scripts/audit_paper_numbers.py    # 227 checks
 ```
+
+**Preregistration timestamps.** Reviewers asked whether the registrations
+are verifiable. They are files in this history, and the table below is the
+honest accounting the reproducibility statement refers to: each file was
+written before its run, but three entered version control in a later batch,
+so their commit time does not precede the run.
+
+| preregister | commit | committed (UTC) | first generation (UTC) | commit precedes run |
+|---|---|---|---|---|
+| `iclr-autowin-q90-preregister.md` | `f3f635f` | 2026-08-17 07:28 | 2026-08-14 14:24 | no (later batch) |
+| `iclr-8b-preregister.md` | `f3f635f` | 2026-08-17 07:28 | 2026-08-15 04:14 | no (later batch) |
+| `iclr-schema-fix-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 01:20 | no (later batch) |
+| `iclr-gemma-q90-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 05:28 | yes |
+| `iclr-v-trace-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 03:13 | yes |
+| `iclr-llama-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 09:50 | yes |
+| `iclr-instr-first-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
