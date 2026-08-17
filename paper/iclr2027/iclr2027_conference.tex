@@ -120,8 +120,8 @@ instruction pad, an English response schema, and a change of tokenizer.
 question-sized, and introduce query visibility $V$ as an input-side,
 zero-inference measure of it.
 (iii)~We propose and preregister AutoWindow, $\hat w = c + Q_{90}$, one
-integer per model, language and template, and report both where it closes
-and where it does not.
+integer per model, language and template, and report the gate, the
+intervals, and the misses.
 (iv)~We diagnose the residual in the three cells where the gate is
 missed, showing that the question is fully visible there and the
 remaining error is of a different kind.
@@ -180,7 +180,9 @@ suffix outperforms scoring under a global cache cap, assuming that the
 structurally critical tokens occupy a roughly fixed budget, on the order
 of 15 to 30 tokens for the Qwen chat template. On Qwen3-4B the Bengali
 and Telugu QA instructions occupy 102 and 162 tokens; we treat that
-assumption as a prediction and test it. FINCH \citep{corallo2024finch}
+assumption as a prediction and test it. Protection with a fixed suffix
+budget is, on our grid, the $c{+}16$ ablation under another name --- and
+protection with a measured budget is this paper's rule. FINCH \citep{corallo2024finch}
 sizes its window from a user-supplied delimiter in a
 context--delimiter--question layout, so $V{=}1$ holds there by
 construction. We read that as evidence for the problem rather than
@@ -303,8 +305,8 @@ tokens.}
 \label{fig:schematic}
 \end{figure}
 
-The window does not know that it is looking at an instruction. It scores
-whatever occupies the tail of the prompt (Figure~\ref{fig:schematic}). This
+The scorer ranks the cache against whatever occupies the tail of the
+prompt (Figure~\ref{fig:schematic}). This
 section establishes three facts about that tail: damage tracks the window
 against the tail rather than against the language; it appears in English
 as soon as we lengthen the tail; and it appears at a constant that is
@@ -323,7 +325,8 @@ uncompressed baseline, Qwen3-4B, $n{=}100$ items per cell, eviction ratio
 $0.75$. Shaded cells are those the registered rule called \textsc{blind}
 before the run, meaning $w<c$; stars mark McNemar $p<.05$. Shading
 is a property of the design and stars of the outcome, so the table is the
-comparison between the two.}
+comparison between the two. The library default $w{=}64$ sits between
+the third and fourth columns; its effect is Table~\ref{tab:aw}.}
 \label{tab:cliff}
 \centering
 \small
@@ -346,8 +349,7 @@ English never moves: its trailing block is 25 tokens, so every tested
 window contains the whole question. Bengali is damaged in every blind cell ($-13$ to $-21$\,pp, all
 $p<.01$) and comes back to $-3$\,pp only at $w{=}176$, which is $c{+}69$.
 Telugu is damaged in all five cells, including $w{=}176$ --- for Telugu
-that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$ before multiplicity
-correction; the dose ladder makes the same point at $p{=}.0009$,
+that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$, uncorrected;
 Appendix~\ref{app:r2}). Thai
 and Swahili, whose trailing blocks are 45 and 47 tokens, dip at the one
 tested window below their $c$ and are within noise elsewhere; we do not
@@ -390,10 +392,8 @@ $p{=}.001$; $n{=}200$ each, as in Appendix~\ref{app:levers}). Both languages sit
 ($c{=}45$ and $47$) and below it at $w{=}32$. The failure is therefore not
 confined to the two scripts with the longest instructions: it reaches any
 language whose trailing block outgrows whichever constant is in force.
-Measured the same way, Thai's and Swahili's held-out percentiles give
-$\hat w = 91$ and $67$: the rule never returns a window below either
-language's $c$, so the flip at $w{=}32$ is impossible under it by
-construction.
+Thai and Swahili would take $\hat w = 91$ and $67$, both above their own
+$c$: the rule cannot produce this flip.
 A third handle points the same way. Moving the instruction to the front
 of the prompt puts the question inside every window without touching
 the press or the retained budget, and recovers Bengali by $13$\,pp and
@@ -430,31 +430,9 @@ $c$'' is not the answer.
 We sweep five windows at fixed offsets above the measured $c$ on Telugu,
 the language with the longest trailing block and the deepest hole:
 $c{+}4$, $c{+}16$, $c{+}32$, $c{+}48$ and $c{+}80$, on 100 items with
-their own uncompressed baseline (Table~\ref{tab:dose},
-Figure~\ref{fig:triptych}c). The offsets were fixed before the run and $c$
+their own uncompressed baseline (Figure~\ref{fig:triptych}c;
+Table~\ref{tab:dose} in Appendix~\ref{app:dose}). The offsets were fixed before the run and $c$
 was re-measured on the run tokenizer.
-
-\begin{table}[t]
-\caption{The dose ladder. Telugu, $c{=}167$, uncompressed baseline $56\%$,
-$n{=}100$, eviction ratio $0.75$, paired McNemar. Median $V$ is the median
-per-item share of the question that falls inside the window. Two rungs recur
-elsewhere: $w{=}183$ is the $c{+}16$ ablation, $w{=}247$ the shipped
-$\hat w$. No rung here is blind, so none is shaded.}
-\label{tab:dose}
-\centering
-\small
-\begin{tabular}{rr@{\hspace{1.4em}}rrrrr}
-\toprule
-$w$ & slack $w{-}c$ & median $V$ & accuracy & $\Delta$pp & fixed/broken & $p$ \\
-\midrule
-171 & 4 & 0.08 & 38 & ${-}18^{*}$ & 5/23 & $.0009$ \\
-183 & 16 & 0.31 & 50 & ${-}6$ & 5/11 & $.21$ \\
-199 & 32 & 0.62 & 52 & ${-}4$ & 4/8 & $.39$ \\
-215 & 48 & 0.92 & 52 & ${-}4$ & 6/10 & $.45$ \\
-247 & 80 & 1.00 & 56 & $0$ & 6/6 & $1.0$ \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp, which
 is what the same items lose at the shipped $w{=}64$, where they see none
@@ -488,7 +466,8 @@ monotone per-item bin profile.
 
 Slack therefore has to be counted in units of the question rather than in
 constant tokens: a slack the size of an English question leaves the median
-Telugu item at $V{=}0.31$, and Table~\ref{tab:dose} shows what that buys.
+Telugu item at $V{=}0.31$, and Table~\ref{tab:dose} shows what that
+buys.
 
 % =====================================================================
 \section{AutoWindow: one integer, and where it stops}
@@ -704,12 +683,11 @@ necessary. Deploying the rule also assumes the prompt family is known:
 $\hat w$ is one integer per trailing-block variant, so mixed traffic
 needs either per-family measurement or the maximum over families, and the
 mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
-measurement looks like. The guidance for a deployer therefore splits.
-Sizing the window removes the blind mode wherever it appears --- the
-recovery over the default is significant in every family we ran ($+9$ to
-$+19$\,pp) --- while the few-point residual on Bengali-class cells is a
-property of eviction at this ratio, addressed by lowering the ratio, not
-by any window.
+measurement looks like. For a deployer the guidance splits: sizing
+the window removes the blind mode in every family we ran ($+9$ to
+$+19$\,pp over the default), while the few-point residual is a property
+of eviction at this ratio, addressed by lowering the ratio rather than by
+any window.
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
@@ -1006,7 +984,29 @@ pad & $c$ & $w{=}32$ & 56 & 80 & 104 & 144 \\
 \section{The dose ladder in full}
 \label{app:dose}
 
-The Telugu ladder is Table~\ref{tab:dose} in the main text. Binning the
+\begin{table}[h]
+\caption{The dose ladder. Telugu, $c{=}167$, uncompressed baseline $56\%$,
+$n{=}100$, eviction ratio $0.75$, paired McNemar. Median $V$ is the median
+per-item share of the question that falls inside the window. Two rungs recur
+elsewhere: $w{=}183$ is the $c{+}16$ ablation, $w{=}247$ the shipped
+$\hat w$. No rung here is blind, so none is shaded.}
+\label{tab:dose}
+\centering
+\small
+\begin{tabular}{rr@{\hspace{1.4em}}rrrrr}
+\toprule
+$w$ & slack $w{-}c$ & median $V$ & accuracy & $\Delta$pp & fixed/broken & $p$ \\
+\midrule
+171 & 4 & 0.08 & 38 & ${-}18^{*}$ & 5/23 & $.0009$ \\
+183 & 16 & 0.31 & 50 & ${-}6$ & 5/11 & $.21$ \\
+199 & 32 & 0.62 & 52 & ${-}4$ & 4/8 & $.39$ \\
+215 & 48 & 0.92 & 52 & ${-}4$ & 6/10 & $.45$ \\
+247 & 80 & 1.00 & 56 & $0$ & 6/6 & $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Telugu ladder is Table~\ref{tab:dose}. Binning the
 five treated cells by per-item visibility gives: $V<0.25$, $n{=}118$,
 $-16.1$\,pp (6 fixed / 25 broken, $p{=}9\times10^{-4}$);
 $0.25 \le V < 0.5$, $n{=}104$, $-4.8$\,pp; $0.5 \le V < 0.75$, $n{=}84$,
