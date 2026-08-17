@@ -545,7 +545,13 @@ whose trailing block already fits inside the default window stay within
 $3$\,pp of baseline, with one marginal exception --- Vietnamese loses
 $5$\,pp at the default window and recovers to $-2$ under $c{+}16$
 (Appendix~\ref{app:grids}). The close is a statement about the languages
-the default window actually blinds.
+the default window actually blinds. Exact intervals for these cells are
+in Appendix~\ref{app:ci}: at $n{=}100$ the English and schema closes are
+non-inferior at $-3$\,pp, while the Bengali and Telugu intervals,
+$[-9.1, +5.9]$ and $[-6.9, +6.9]$, meet the registered gate without
+excluding losses the gate would have rejected. The claim those two cells
+carry is the registered rule plus the recovery against the default, not
+demonstrated equivalence.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
 The same trailing-block logic applies when the tail is a response format
@@ -557,7 +563,9 @@ and at a 120-token schema that cost $23$\,pp. Measuring $c$ with the
 schema in place gives $72$, $166$ and $213$ tokens, hence
 $\hat w = 90$, $184$ and $231$. Panel~(B) shows the same formula closing
 all three tails while breaking none of the items the default window
-answered correctly (8/0, 7/0 and 7/0). The 120-token
+answered correctly (8/0, 7/0 and 7/0). By interval, the schema tails are
+also the best-supported close in the paper (Appendix~\ref{app:ci}).
+The 120-token
 schema is worth a second look: its trailing block, $166$ tokens, is within
 one token of Telugu's $167$. The same blindness, produced by a response
 format instead of a script, is removed by the same integer.
@@ -688,7 +696,10 @@ suite, and this is a deliberate trade. Published suites vary question
 length, instruction length, and language together, which is precisely the
 confound this paper has to hold fixed, but the price is that our absolute
 accuracies are not comparable to leaderboard numbers and that each cell
-rests on 100 items. Finally, one primary 4B model carries the headline
+rests on 100 items --- enough to detect the holes ($-16$ to $-19$\,pp at
+$p{<}.001$) but not to certify their absence: the closure intervals in
+Appendix~\ref{app:ci} span roughly $\pm 7$--$9$\,pp for Bengali and
+Telugu. Finally, one primary 4B model carries the headline
 result; the 8B slice shares its tokenizer, so it is a replication in
 scale rather than an independent sample, and a single contrast tokenizer
 cannot establish how the rule behaves across the space of tokenizers.
@@ -820,6 +831,50 @@ scorer & baseline & $w{=}64$ & $\hat w$ & $\hat w -$ baseline \\
 containment (used throughout) & 81 & 64 & 73 & ${-}8$ \\
 containment after a spelling fold & 81 & 65 & 75 & ${-}6$ \\
 gold-token recall $\ge 0.7$ & 85 & 70 & 79 & ${-}6$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Closure, with interval estimates}
+\label{app:ci}
+
+The registered closure rule --- $|\Delta| \le 3$\,pp against the
+uncompressed baseline, as a point estimate --- is a decision rule
+fixed before each run, not an equivalence test, and at $n{=}100$ the
+two are far apart. Table~\ref{tab:ci} reports an exact 95\% interval
+for every closure cell, obtained by conditioning on the discordant
+count $N$: given $N$, the number of items the treatment fixes is
+binomial, and a Clopper--Pearson interval for its rate maps
+monotonically onto an interval for $\Delta$. Four cells support the
+stronger reading that the lower bound excludes a loss beyond
+$-3$\,pp (English, and all three schema tails); the Bengali
+and Telugu intervals at 4B are consistent with the gate they met but
+also with losses the gate would have rejected, which is what
+$n{=}100$ can and cannot say; and the 8B interval excludes zero,
+confirming that residual. The recovery claims against the default
+window ($+14$/$+19$\,pp, $p{\le}.001$) are unaffected --- they are
+significance claims and carry their own tests.
+
+\begin{table}[h]
+\caption{Exact-conditional 95\% intervals for the paired difference at
+$\hat w$; \texttt{closure\_cis.py}.}
+\label{tab:ci}
+\centering
+\small
+\begin{tabular}{lrrrl}
+\toprule
+cell & $\Delta$pp & fixed/broken & 95\% CI & reading \\
+\midrule
+4B en & ${+}2$ & 2/0 & $[-1.4, +2.0]$ & non-inferior at $-3$\,pp \\
+4B bn & ${-}2$ & 6/8 & $[-9.1, +5.9]$ & interval too wide for $\pm 3$\,pp \\
+4B te & $0$ & 6/6 & $[-6.9, +6.9]$ & interval too wide for $\pm 3$\,pp \\
+\addlinespace
+JSON-60 & ${+}2$ & 3/1 & $[-2.4, +3.9]$ & non-inferior at $-3$\,pp \\
+JSON-120 & ${+}1$ & 1/0 & $[-0.9, +1.0]$ & non-inferior at $-3$\,pp \\
+JSON-200 & ${+}2$ & 2/0 & $[-1.4, +2.0]$ & non-inferior at $-3$\,pp \\
+\addlinespace
+Gemma bn & ${-}6$ & 3/9 & $[-10.7, +1.7]$ & interval too wide for $\pm 3$\,pp \\
+8B bn & ${-}8$ & 0/8 & $[-8.0, -2.1]$ & confirmed residual \\
 \bottomrule
 \end{tabular}
 \end{table}
