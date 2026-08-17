@@ -150,7 +150,7 @@ def fig_layout():
                (GRID, QUESTION, MUTED, INK_2)]
     ax.legend(handles, ["passages (8k tokens, truncated)", "question",
                         "instruction", "chat suffix"],
-              loc="lower center", bbox_to_anchor=(0.5, -0.40), ncol=4,
+              loc="lower center", bbox_to_anchor=(0.5, -0.66), ncol=4,
               frameon=False, handlelength=1.0, handleheight=0.8,
               columnspacing=1.3, handletextpad=0.4)
 
@@ -158,7 +158,7 @@ def fig_layout():
     ax.set_ylim(-0.70, 2.98)
     ax.set_xticks([-256, -192, -128, -64, 0])
     ax.set_xticklabels(["256", "192", "128", "64", "0"])
-    ax.set_xlabel("tokens before the end of the prompt")
+    ax.set_xlabel("tokens before the end of the prompt", labelpad=2)
     ax.set_yticks([])
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
