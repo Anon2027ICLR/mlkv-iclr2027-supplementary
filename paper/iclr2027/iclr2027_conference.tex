@@ -102,9 +102,11 @@ closes the English, Bengali and Telugu gap on Qwen3-4B
 tails that a mis-sized earlier version of the same rule had broken by 23
 points; and returns exactly the shipped constant of 64 for a tokenizer
 and language where that constant is already adequate. It does not close
-everywhere. On Bengali it leaves 6 points at Gemma-3-4b-it and 8 points
-at Qwen3-8B, and in both cases we show that the residual is not a
-visibility failure.
+everywhere. On Bengali it leaves 6 points at Gemma-3-4b-it and 8 at
+Qwen3-8B and at Llama-3.1-8B, and we show that the residual is not, in
+the main, a visibility failure: moving the question to the end of the
+prompt --- full visibility by construction --- leaves the same few
+points behind.
 
 \paragraph{Contributions.}
 (i)~We localise a language-dependent failure of KV eviction to the
