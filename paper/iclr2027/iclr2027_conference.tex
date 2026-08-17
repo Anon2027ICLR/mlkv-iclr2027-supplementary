@@ -376,11 +376,7 @@ block scores at most $90\%$ and every window clearing it at least
 $91\%$. Neighbouring cells sit within the noise of 100 items, so we read
 that separation as a description of the grid, not a test. Nothing about the language, the items,
 or the retained budget changed across these curves; only the number of
-tokens standing between the question and the end of the prompt did. In a
-separate matched run that carries its own uncompressed baselines, a
-64-token pad costs $8$\,pp at the default $w{=}64$ (2 fixed / 10 broken,
-$p{=}.039$) while the unpadded English prompt costs nothing.
-
+tokens standing between the question and the end of the prompt did.
 \paragraph{A constant that is already shipped.}
 kvpress ships $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships
 $w{=}32$. Moving from the first constant to the second, on matched items,
@@ -454,10 +450,9 @@ $w$ & slack $w{-}c$ & median $V$ & accuracy & $\Delta$pp & fixed/broken & $p$ \\
 Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp, which
 is what the same items lose at the shipped $w{=}64$, where they see none
 of the question at all. The curve then rises with the slack and reaches
-the baseline only at $c{+}80$. A partial Bengali replication reproduces
-the first two rungs --- $c{+}4$ costs $17$\,pp (3/20, $p{<}.001$) and
-$c{+}16$ costs $7$\,pp --- before that block was cut short; we report it
-in Appendix~\ref{app:dose} and do not treat it as a completed cell.
+the baseline only at $c{+}80$. A partial Bengali
+replication reproduces the first two rungs before its block was cut
+short (Appendix~\ref{app:dose}).
 
 \paragraph{Visibility as the dose.}
 Question length varies across items (34 to 122 tokens here), so a single
@@ -683,9 +678,7 @@ per-language constant. That separation comes from the experiments in
 which language is held fixed while $c$ moves --- the English pads
 (Section~\ref{sec:threshold}), the schema tails
 (Section~\ref{sec:autowindow}) and the change of tokenizer --- and from
-the dose ladder within a single language (Section~\ref{sec:dose}). We
-state the AIC result rather than omit it because it is the one place
-where our headline sweep is genuinely ambiguous.
+the dose ladder within a single language (Section~\ref{sec:dose}).
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
