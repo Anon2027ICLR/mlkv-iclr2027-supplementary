@@ -390,9 +390,10 @@ $p{=}.001$; $n{=}200$ each, as in Appendix~\ref{app:levers}). Both languages sit
 confined to the two scripts with the longest instructions: it reaches any
 language whose trailing block outgrows whichever constant is in force.
 A third handle points the same way. Moving the instruction to the front
-of the prompt puts the question inside every window without touching the
-press or the retained budget, and recovers Bengali by $14$\,pp
-(Appendix~\ref{app:levers}); we use it as a lever on the mechanism, not
+of the prompt puts the question inside every window without touching
+the press or the retained budget, and recovers Bengali by $13$\,pp and
+Telugu by $14$\,pp on the same items (both $p{<}.02$;
+Table~\ref{tab:remedies}); we use it as a lever on the mechanism, not
 as a deployment recommendation, since a chat deployment that ends with
 the question already has $V{=}1$.
 
@@ -586,39 +587,68 @@ to say that the default is adequate. For Bengali, $\hat w{=}50$ leaves
 $-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B close met
 (Appendix~\ref{app:gemma} gives the full sweep on this tokenizer).
 
-\paragraph{Scale.}
-A Qwen3-8B slice on English and Bengali reproduces the phenomenon and not
-the close. The default window costs Bengali $17$\,pp ($p{<}.001$);
-$\hat w$ recovers $+9$\,pp against it (11 fixed / 2 broken, $p{=}.022$)
-but remains $8$\,pp below baseline ($p{=}.008$). English is at ceiling
-throughout ($96/97/96$) and carries no information about either. We do
-not claim that the formula closes at 8B (Appendix~\ref{app:8b}).
+\paragraph{Scale, and a third family.}
+A Qwen3-8B slice reproduces the phenomenon and not the close: the
+default window costs Bengali $17$\,pp ($p{<}.001$); $\hat w$ recovers
+$+9$\,pp (11 fixed / 2 broken, $p{=}.022$) and remains $8$\,pp below
+baseline ($p{=}.008$); English is at ceiling throughout and carries no
+information about either (Appendix~\ref{app:8b}). Llama-3.1-8B-Instruct
+is the same test on a third tokenizer family, with both inputs
+re-measured on its tokenizer --- $c{=}125$ and $Q_{90}{=}87$ for
+Bengali, so $\hat w{=}212$. The hole reproduces at $-18$\,pp, and for
+the first time in this paper with an interval entirely below the
+damage bound: the 95\% CI is $[-21.5, -9.2]$. The formula recovers
+$+10$\,pp over the default (13/3, $p{=}.021$) and leaves $-8$\,pp
+($p{=}.057$) --- the same residual as 8B, reported the same way. We do
+not claim the formula closes on either model
+(Appendix~\ref{app:llama}).
 
-\paragraph{What the two residuals are not.}
-Both misses are Bengali, and it is worth saying why that is less of a
-pattern than it looks: Bengali is the only cell in either slice where a
-miss could have appeared at all. English is at ceiling at 8B ($96/97/96$)
-and has no hole to close at Gemma, Telugu was not run at 8B, and Gemma's
-Telugu is already flat at the default window. The diagnosis that follows
-was made after seeing the residuals rather than registered in advance; we
-report it as an audit of what the remaining errors look like, not as a
-tested prediction. Both misses look like the same failure of the remedy,
-and both turn out not to be failures of \emph{visibility}. At Gemma's
-$\hat w{=}50$ the median Bengali question occupies 11 tokens, so the
-window covers the question for nearly every item, and the same $5$--$6$\,pp
-gap is present at every window from $48$ to $64$ in the Gemma sweep --- it
-is a plateau, not a cliff. At 8B, every one of the eight residual items
-has its whole question inside the window (their questions run 38 to 67
-tokens, all below $Q_{90}{=}76$), seven of the eight echo the question
-verbatim in the output, and all twelve items whose question exceeds
-$Q_{90}$ --- the only items where blindness could still operate --- are
-answered correctly under $\hat w$. What is left is a different kind of
-error: a dropped morpheme or a spelling variant inside an otherwise
-correct span, or an answer whose supporting sentence the evictor removed
-from the retained cache, with six of the seven unrecovered items sitting
-at the middle gold position. Widening the window turns off the blind
-mode; it does not, and should not be expected to, remove the ordinary cost
-of discarding three quarters of the cache.
+\paragraph{What the residuals are not.}
+Three cells miss the closure gate --- Bengali at Gemma ($-6$), at 8B
+($-8$) and at Llama ($-8$) --- and Bengali is the only cell in any of
+the three slices where a miss could have appeared: English is at
+ceiling or flat everywhere, and Telugu was not run at 8B and carries no
+clear hole at Gemma or at Llama. The diagnosis below was made after
+seeing the residuals; the measurement that anchors it was not. In the
+instruction-first arm the question ends the prompt, so every window
+sees all of it by construction, and the same press at the same ratio
+still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns; CIs
+$[-8.7,+3.0]$ and $[-7.9,+0.4]$) --- while removing about three
+quarters of the instruction-last hole ($+13$/$+14$\,pp on the same
+items, both $p{<}.02$; Table~\ref{tab:remedies}). A residual of the
+same few points at full visibility is also what the missing cells
+show. At Gemma's $\hat w{=}50$ the median Bengali question occupies 11
+tokens and the $5$--$6$\,pp gap is a plateau across every window from
+48 to 64. At 8B, all eight residual items have their whole question
+inside the window and seven echo it verbatim. At Llama, nine of the
+eleven residual items sit within $Q_{90}$; the other two are the first
+visible instance of the registered percentile leftover
+(Appendix~\ref{app:llama}). Widening the window turns off the blind
+mode; it does not, and should not be expected to, remove the ordinary
+cost of discarding three quarters of the cache.
+
+\begin{table}[t]
+\caption{Two remedies at matched retained KV. Qwen3-4B, $n{=}100$,
+paired $\Delta$pp against each layout's own uncompressed baseline; star:
+McNemar $p<.05$. The measurement remedy (instruction-last at $\hat w$)
+and the layout remedy (question last, default window) land in the same
+place, and both leave the small non-visibility residual the text
+describes.}
+\label{tab:remedies}
+\centering
+\small
+\begin{tabular}{lrrr}
+\toprule
+ & \multicolumn{2}{c}{instruction-last} & question-last \\
+\cmidrule(lr){2-3}\cmidrule(l){4-4}
+ & $w{=}64$ & $\hat w$ & $w{=}64$ \\
+\midrule
+en & ${+}0$ & ${+}2$ & ${-}1$ \\
+bn & ${-}16^{*}$ & ${-}2$ & ${-}4$ \\
+te & ${-}19^{*}$ & $0$ & ${-}6$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 The rule also buys no extra cache: SnapKV keeps the window inside the
 retained budget, so every comparison in Table~\ref{tab:aw} sits at one
