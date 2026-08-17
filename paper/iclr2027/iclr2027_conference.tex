@@ -690,7 +690,11 @@ very large $w$ at a very aggressive eviction ratio would begin to tax the
 content budget. At the ratio used here that tax is small relative to the
 gold passage, which is why we did not need to separate scoring from
 protection to close the gap; at heavier ratios that separation may become
-necessary.
+necessary. Deploying the rule also assumes the prompt family is known:
+$\hat w$ is one integer per trailing-block variant, so mixed traffic
+needs either per-family measurement or the maximum over families, and the
+mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
+measurement looks like.
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
