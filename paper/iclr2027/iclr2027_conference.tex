@@ -389,7 +389,7 @@ A third handle points the same way. Moving the instruction to the front
 of the prompt puts the question inside every window without touching
 the press or the retained budget, and recovers Bengali by $13$\,pp and
 Telugu by $14$\,pp on the same items (both $p{<}.02$;
-Table~\ref{tab:remedies}); we use it as a lever on the mechanism, not
+Table~\ref{tab:aw}); we use it as a lever on the mechanism, not
 as a deployment recommendation, since a chat deployment that ends with
 the question already has $V{=}1$.
 
@@ -507,25 +507,29 @@ paired $\Delta$pp against each block's own uncompressed baseline in
 parentheses; $n{=}100$ per cell; star: McNemar $p<.05$. Panel~(A) is
 Qwen3-4B on three of the eight languages measured; panel~(B) is Qwen3-4B
 on English prompts carrying a JSON schema tail, where $c$ is measured with
-the schema in place. $c{+}16$ was not rerun for panel~(B).}
+the schema in place. The last column is the layout remedy --- the same press
+and ratio with the question moved to the end of the prompt, so $V{=}1$ by
+construction --- measured against that layout's own baseline; it was not
+run for panel~(B), and the $c{+}16$ ablation it replaces is in
+Appendix~\ref{app:grids}.}
 \label{tab:aw}
 \centering
 \small
 \begin{tabular}{lrr@{\hspace{1.6em}}rrrr}
 \toprule
- & \multicolumn{2}{c}{window} & \multicolumn{4}{c}{accuracy, $\Delta$pp vs.\ baseline in parentheses} \\
-\cmidrule(lr){2-3}\cmidrule(l){4-7}
- & $c$ & $\hat w$ & uncompressed & $w{=}64$ & $c{+}16$ & at $\hat w$ \\
+ & \multicolumn{2}{c}{window} & \multicolumn{3}{c}{accuracy ($\Delta$pp vs.\ baseline)} & layout \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-6}\cmidrule(l){7-7}
+ & $c$ & $\hat w$ & uncompressed & $w{=}64$ & at $\hat w$ & $\Delta$pp \\
 \midrule
 \multicolumn{7}{l}{\emph{(A) languages}} \\
-en & 25 & 43 & 93 & 93 (${+}0$) & 94 (${+}1$) & \textbf{95} (${+}2$) \\
-bn & 107 & 183 & 73 & \blind{57 (${-}16^{*}$)} & 66 (${-}7$) & \textbf{71} (${-}2$) \\
-te & 167 & 247 & 56 & \blind{37 (${-}19^{*}$)} & 50 (${-}6$) & \textbf{56} (${+}0$) \\
+en & 25 & 43 & 93 & 93 (${+}0$) & \textbf{95} (${+}2$) & ${-}1$ \\
+bn & 107 & 183 & 73 & \blind{57 (${-}16^{*}$)} & \textbf{71} (${-}2$) & ${-}4$ \\
+te & 167 & 247 & 56 & \blind{37 (${-}19^{*}$)} & \textbf{56} (${+}0$) & ${-}6$ \\
 \addlinespace
 \multicolumn{7}{l}{\emph{(B) English with a JSON schema tail}} \\
-JSON-60 & 72 & 90 & 94 & \blind{88 (${-}6$)} & --- & \textbf{96} (${+}2$) \\
-JSON-120 & 166 & 184 & 95 & \blind{89 (${-}6^{*}$)} & --- & \textbf{96} (${+}1$) \\
-JSON-200 & 213 & 231 & 94 & \blind{89 (${-}5$)} & --- & \textbf{96} (${+}2$) \\
+JSON-60 & 72 & 90 & 94 & \blind{88 (${-}6$)} & \textbf{96} (${+}2$) & --- \\
+JSON-120 & 166 & 184 & 95 & \blind{89 (${-}6^{*}$)} & \textbf{96} (${+}1$) & --- \\
+JSON-200 & 213 & 231 & 94 & \blind{89 (${-}5$)} & \textbf{96} (${+}2$) & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -599,51 +603,21 @@ not claim the formula closes on either model
 (Appendix~\ref{app:llama}).
 
 \paragraph{What the residuals are not.}
-Three cells miss the closure gate --- Bengali at Gemma ($-6$), at 8B
-($-8$) and at Llama ($-8$) --- and Bengali is the only cell in any of
-the three slices where a miss could have appeared: English is at
-ceiling or flat everywhere, and Telugu was not run at 8B and carries no
-clear hole at Gemma or at Llama. The diagnosis below was made after
-seeing the residuals; the measurement that anchors it was not. In the
-instruction-first arm the question ends the prompt, so every window
-sees all of it by construction, and the same press at the same ratio
-still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns; CIs
-$[-8.7,+3.0]$ and $[-7.9,+0.4]$) --- while removing about three
-quarters of the instruction-last hole ($+13$/$+14$\,pp on the same
-items, both $p{<}.02$; Table~\ref{tab:remedies}). A residual of the
-same few points at full visibility is also what the missing cells
-show. At Gemma's $\hat w{=}50$ the median Bengali question occupies 11
-tokens and the $5$--$6$\,pp gap is a plateau across every window from
-48 to 64. At 8B, all eight residual items have their whole question
-inside the window and seven echo it verbatim. At Llama, nine of the
-eleven residual items sit within $Q_{90}$; the other two are the first
-visible instance of the registered percentile leftover
-(Appendix~\ref{app:llama}). Widening the window turns off the blind
-mode; it does not, and should not be expected to, remove the ordinary
-cost of discarding three quarters of the cache.
-
-\begin{table}[t]
-\caption{Two remedies at matched retained KV. Qwen3-4B, $n{=}100$,
-paired $\Delta$pp against each layout's own uncompressed baseline; star:
-McNemar $p<.05$. The measurement remedy (instruction-last at $\hat w$)
-and the layout remedy (question last, default window) land in the same
-place, and both leave the small non-visibility residual the text
-describes.}
-\label{tab:remedies}
-\centering
-\small
-\begin{tabular}{lrrr}
-\toprule
- & \multicolumn{2}{c}{instruction-last} & question-last \\
-\cmidrule(lr){2-3}\cmidrule(l){4-4}
- & $w{=}64$ & $\hat w$ & $w{=}64$ \\
-\midrule
-en & ${+}0$ & ${+}2$ & ${-}1$ \\
-bn & ${-}16^{*}$ & ${-}2$ & ${-}4$ \\
-te & ${-}19^{*}$ & $0$ & ${-}6$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+The three cells that miss the closure gate are all Bengali ($-6$ at
+Gemma, $-8$ at 8B and at Llama), which is also the only cell where a
+miss could appear: English is at ceiling or flat throughout, and Telugu
+has no clear hole at Gemma or Llama and was not run at 8B. The diagnosis below was made after seeing the residuals;
+the measurement that anchors it was not. With the question last, every
+window sees all of it by construction, and the same press at the same
+ratio still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns; CIs
+$[-8.7,+3.0]$ and $[-7.9,+0.4]$) while removing about three quarters of
+the instruction-last hole (Table~\ref{tab:aw}). The missed cells
+look the same: at Gemma the gap is a plateau across every window from
+48 to 64, and at 8B all eight and at Llama nine of eleven
+residual items have their whole question inside the window
+(Appendices~\ref{app:gemma}, \ref{app:8b} and~\ref{app:llama}).
+Widening the window turns off the blind mode; it does not remove the
+ordinary cost of discarding three quarters of the cache.
 
 The rule also buys no extra cache: SnapKV keeps the window inside the
 retained budget, so every comparison in Table~\ref{tab:aw} sits at one
@@ -1238,7 +1212,7 @@ supporting window-widening comparison in Appendix~\ref{app:levers} was
 measured under a 128-token cap, as were the historical instruction-first
 numbers kept beside it; the instruction-first layout swap itself has
 been re-measured at the current cap and is reported in the main text
-(Table~\ref{tab:remedies}). We flag the difference here rather than
+(Table~\ref{tab:aw}). We flag the difference here rather than
 leave it to be discovered in a log. The
 cap matters: at 128 tokens, answers in high-fertility scripts are
 truncated at a rate that varies by language, which inflates apparent
@@ -1253,7 +1227,7 @@ the account in the main text. Both were measured under the 128-token
 decode cap noted above, so we report them as supporting rather than as
 headline evidence; the layout swap has since been re-measured at the
 current cap and moved to the main text. The clean, current-cap version of the layout swap is
-Table~\ref{tab:remedies} in the main text. The earlier cap-128
+Table~\ref{tab:aw} in the main text. The earlier cap-128
 measurement is retained here only as provenance: Bengali $+14$\,pp at
 a fixed ratio (34/6, $p{<}10^{-5}$, $n{=}200$) and $+22$\,pp under an
 absolute cache budget (51/7, $p{<}10^{-8}$, $n{=}200$), with a Thai
