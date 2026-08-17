@@ -122,6 +122,15 @@ ci_row("Gemma bn", G["bn"]["baseline"], G["bn"]["snapkv@r0.75:w50"])
 E = load("autowin_8b.db")
 ci_row("8B bn", E["bn"]["baseline"], E["bn"]["snapkv@r0.75:w183"])
 
-# Extend here for new arms (Llama) once their stores exist; the preregister
-# for each new arm commits to reporting this interval alongside the gate.
+L = load("llama.db")
+for lang, what in [("en", 43), ("bn", 212), ("te", 284)]:
+    ci_row(f"Llama {lang}", L[lang]["baseline"], L[lang][f"snapkv@r0.75:w{what}"])
+
+# The instruction-first cells are mechanism-gate cells, not w-hat closures:
+# the treatment is the default window with the question last (V=1 by
+# construction), judged by the same |delta| <= 3pp gate and CI vocabulary.
+F = load("instr_first.db")
+for lang in ["bn", "te"]:
+    ci_row(f"IF {lang} @w64", F[lang]["baseline"], F[lang]["snapkv@r0.75"])
+
 print("\ndone")
