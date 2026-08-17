@@ -88,12 +88,14 @@ template with no forward pass; \citet{luo2026visibility} showed that
 question visibility changes method rankings and left exactly such a
 continuous measure open.
 
-The measurement then implies a rule with no free parameters: set the
-window to the trailing block plus a question-sized slack,
+The measurement then implies a rule that is computed rather than tuned:
+set the window to the trailing block plus a question-sized slack,
 $\hat w = c + Q_{90}$, where $Q_{90}$ is a percentile of question length
-estimated on held-out questions. Both terms are computed offline, no
-delimiter is required, and because SnapKV protects the window from within
-the retained budget, no extra cache is bought. Preregistered, the rule
+estimated on held-out questions. Both terms are measured rather than
+fitted to accuracy --- the choice of the 90th percentile is a design
+decision, registered in advance, whose cost we report --- no delimiter is
+required, and because SnapKV protects the window from within the retained
+budget, no extra cache is bought. Preregistered, the rule
 closes the English, Bengali and Telugu gap on Qwen3-4B
 ($+2/{-}2/0$\,pp against uncompressed); closes the English JSON-schema
 tails that a mis-sized earlier version of the same rule had broken by 23
@@ -125,8 +127,11 @@ exposes no SnapKV-style evictor, the RocketKV path is opt-in, and
 defaults. We do not claim that KV-cache compression harms low-resource
 languages in general. We claim something narrower and more actionable:
 a token-denominated window blinds whichever prompts carry a trailing
-block longer than itself, and under today's tokenizers those prompts are
-systematically the non-English ones.
+block longer than itself, and under today's tokenizers such prompts are
+non-English. Which languages qualify depends on the constant: at the
+research default of 64 tokens, two of our eight languages are blinded; at
+the stricter shipped constant of 32, four are; English never is, at any
+window we tested.
 
 % =====================================================================
 \section{Related work}
@@ -226,8 +231,11 @@ used anywhere in this paper. The rule was fixed before the runs reported
 here and is applied offline to raw generations; a stricter, marker-only
 variant leaves every conclusion in the paper unchanged
 (Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar tests
-on 100 items, and we report the discordant counts (fixed/broken) so the
-reader can see what the $p$-value is made of.
+and we report the discordant counts (fixed/broken) so the reader can see
+what the $p$-value is made of. Every cell in the main text pairs 100
+items; the earlier supporting runs in Appendix~\ref{app:levers} pair 200,
+being the same 100 questions at two context budgets, and we mark them
+where they appear.
 
 \paragraph{The quantities.}
 Prompts are instruction-last unless stated:
@@ -380,7 +388,7 @@ $p{=}.039$) while the unpadded English prompt costs nothing.
 kvpress ships $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships
 $w{=}32$. Moving from the first constant to the second, on matched items,
 costs Thai $4.5$\,pp (2/11, $p{=}.022$) and Swahili $6.5$\,pp (1/14,
-$p{=}.001$). Both languages sit safely above the threshold at $w{=}64$
+$p{=}.001$; $n{=}200$ each, as in Appendix~\ref{app:levers}). Both languages sit safely above the threshold at $w{=}64$
 ($c{=}45$ and $47$) and below it at $w{=}32$. The failure is therefore not
 confined to the two scripts with the longest instructions: it reaches any
 language whose trailing block outgrows whichever constant is in force.
@@ -578,8 +586,15 @@ throughout ($96/97/96$) and carries no information about either. We do
 not claim that the formula closes at 8B (Appendix~\ref{app:8b}).
 
 \paragraph{What the two residuals are not.}
-The Gemma and 8B misses look like the same failure of the remedy, and both
-turn out not to be failures of \emph{visibility}. At Gemma's
+Both misses are Bengali, and it is worth saying why that is less of a
+pattern than it looks: Bengali is the only cell in either slice where a
+miss could have appeared at all. English is at ceiling at 8B ($96/97/96$)
+and has no hole to close at Gemma, Telugu was not run at 8B, and Gemma's
+Telugu is already flat at the default window. The diagnosis that follows
+was made after seeing the residuals rather than registered in advance; we
+report it as an audit of what the remaining errors look like, not as a
+tested prediction. Both misses look like the same failure of the remedy,
+and both turn out not to be failures of \emph{visibility}. At Gemma's
 $\hat w{=}50$ the median Bengali question occupies 11 tokens, so the
 window covers the question for nearly every item, and the same $5$--$6$\,pp
 gap is present at every window from $48$ to $64$ in the Gemma sweep --- it
@@ -610,11 +625,14 @@ Pooling the window sweep (3{,}000 generations over 500 items) and
 regressing correctness on a compression indicator and a blindness
 indicator $\mathbf{1}[w<c]$, with standard errors clustered by item, gives
 $+0.09$ log-odds for compression when the question is visible
-($p{=}.21$) and $-1.06$ for blindness ($z{=}{-}9.4$, $p{<}.001$). Because
-uncompressed rows are never blind, the interaction term is identical to
-the blindness term; we report the operational form. Discarding three
-quarters of the cache is, on this task, statistically free as long as the
-scorer can see what was asked.
+(95\% CI $[-0.05, 0.23]$, $p{=}.21$) and $-1.06$ for blindness
+($z{=}{-}9.4$, $p{<}.001$). Because uncompressed rows are never blind,
+the interaction term is identical to the blindness term; we report the
+operational form. We cannot distinguish the cost of discarding three
+quarters of the cache from zero when the scorer can see the question,
+which is not the same as showing it is zero: the interval still admits a
+small effect in either direction. What it does exclude is anything
+resembling the blindness term.
 
 We also compared one-parameter descriptions of the compressed rows, and
 the comparison does not fully favour us. AIC prefers language fixed
@@ -1095,12 +1113,12 @@ decode cap noted above, so we report them as supporting rather than as
 headline evidence. Moving the instruction to the front of the prompt,
 which places the question inside every window without changing the press
 or the retained budget, recovers Bengali by $14$\,pp at a fixed ratio
-(34 fixed / 6 broken, $p{<}10^{-5}$) and by $22$\,pp under an absolute
-cache budget (51/7, $p{<}10^{-8}$); English is unchanged and Thai loses
+(34 fixed / 6 broken, $p{<}10^{-5}$, $n{=}200$) and by $22$\,pp under an
+absolute cache budget (51/7, $p{<}10^{-8}$); English is unchanged and Thai loses
 $6.5$\,pp, so this is a lever on the mechanism rather than a deployment
 recommendation. Widening the window from 64 to 128 tokens at a fixed
 ratio recovers Bengali by $10.5$\,pp (22 fixed / 1 broken,
-$p{<}10^{-5}$) and saturates there: going on to 256 tokens changes
+$p{<}10^{-5}$, $n{=}200$) and saturates there: going on to 256 tokens changes
 nothing ($-0.5$\,pp, 8/9). Saturation at a window well below $c+Q_{90}$
 for that setting is consistent with the dose curve in
 Section~\ref{sec:dose}.
