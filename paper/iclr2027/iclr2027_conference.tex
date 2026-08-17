@@ -1136,6 +1136,55 @@ errors that remain are near-copies of the gold span (a dropped morpheme,
 an interchanged grapheme) or answers whose supporting sentence did not
 survive eviction --- ordinary compression damage, not blindness.
 
+\section{A third family: Llama-3.1-8B-Instruct}
+\label{app:llama}
+
+Both inputs to the rule are re-measured on the Llama tokenizer, which
+is costlier than Qwen's on both: the trailing blocks are $25/125/190$
+tokens for English, Bengali and Telugu (Qwen: $25/107/167$) and the
+held-out question percentiles are $Q_{90}{=}18/87/94$ (Qwen:
+$18/76/80$), giving $\hat w = 43/212/284$. Baselines are $97/76/51$.
+
+Bengali reproduces the hole at the default window --- $76 \to 58$,
+$-18$\,pp (2 fixed / 20 broken, $p{=}.0001$), with a 95\% interval of
+$[-21.5, -9.2]$, the only hole in the paper whose interval sits
+entirely below the $-8$ damage bound --- and $\hat w{=}212$ recovers
+$+10$\,pp (13/3, $p{=}.021$) while remaining $-8$\,pp below baseline
+($p{=}.057$). English is at ceiling ($97/98/98$). Telugu shows no
+clear hole at the default ($-5$, ns) and $\hat w$ meets the gate
+($-1$), but the cell is low-confidence: 88 of 100 Telugu outputs never
+emit the answer marker, so scoring rests entirely on the
+first-sentence rule and the marker-only robustness check that backs
+the Qwen tables does not exist here. We quote Telugu-Llama only as
+``no clear hole; the formula does not hurt''.
+
+The residual audit is more mixed than at 8B. Of the eleven items that
+the baseline answers and $\hat w$ does not, nine have questions within
+$Q_{90}$ (the window covers them fully; seven of the eleven sit at the
+middle gold position, and 4 of 10 unrecovered default-window breaks
+ramble to the decode cap), while the other two belong to the long
+decile --- the first arm in which the registered percentile leftover
+is actually visible: 10 of 12 long-question items are correct under
+$\hat w$, against 12 of 12 at 8B.
+
+\begin{table}[h]
+\caption{Llama-3.1-8B-Instruct, $n{=}100$ per cell, eviction ratio
+$0.75$, own stack. Accuracy, with the paired difference against this
+model's uncompressed baseline and its exact 95\% interval.}
+\label{tab:llama}
+\centering
+\small
+\begin{tabular}{lrrrrl}
+\toprule
+ & $c$ & $\hat w$ & baseline & $w{=}64$ & at $\hat w$ \\
+\midrule
+en & 25 & 43 & 97 & 98 (${+}1$) & \textbf{98} (${+}1$; $[-0.9, +1.0]$) \\
+bn & 125 & 212 & 76 & 58 (${-}18^{*}$) & \textbf{68} (${-}8$; $[-12.7, +0.2]$) \\
+te & 190 & 284 & 51 & 46 (${-}5$) & \textbf{50} (${-}1$; $[-5.6, +4.4]$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Frozen instructions and prompt layout}
 \label{app:prompt}
 
@@ -1191,11 +1240,13 @@ requests the default window implicitly and the other names $w{=}64$
 explicitly --- and agree token for token, as they should.
 
 \paragraph{Decode cap.}
-Every arm reported in the main text uses a 384-token decode cap. Two
-supporting results quoted from earlier work were measured under a
-128-token cap --- the instruction-first layout swap and the
-window-widening comparison in Appendix~\ref{app:levers} --- and we flag
-the difference here rather than leave it to be discovered in a log. The
+Every arm reported in the main text uses a 384-token decode cap. The
+supporting window-widening comparison in Appendix~\ref{app:levers} was
+measured under a 128-token cap, as were the historical instruction-first
+numbers kept beside it; the instruction-first layout swap itself has
+been re-measured at the current cap and is reported in the main text
+(Table~\ref{tab:remedies}). We flag the difference here rather than
+leave it to be discovered in a log. The
 cap matters: at 128 tokens, answers in high-fertility scripts are
 truncated at a rate that varies by language, which inflates apparent
 per-language damage. That is itself an instance of this paper's subject,
@@ -1205,15 +1256,18 @@ and it is why the main arms were re-run at 384.
 \label{app:levers}
 
 Two earlier interventions move the same quantity and are consistent with
-the account in the main text; both were measured under the 128-token
+the account in the main text. Both were measured under the 128-token
 decode cap noted above, so we report them as supporting rather than as
-headline evidence. Moving the instruction to the front of the prompt,
-which places the question inside every window without changing the press
-or the retained budget, recovers Bengali by $14$\,pp at a fixed ratio
-(34 fixed / 6 broken, $p{<}10^{-5}$, $n{=}200$) and by $22$\,pp under an
-absolute cache budget (51/7, $p{<}10^{-8}$); English is unchanged and Thai loses
-$6.5$\,pp, so this is a lever on the mechanism rather than a deployment
-recommendation. Widening the window from 64 to 128 tokens at a fixed
+headline evidence; the layout swap has since been re-measured at the
+current cap and moved to the main text. The clean, current-cap version of the layout swap is
+Table~\ref{tab:remedies} in the main text. The earlier cap-128
+measurement is retained here only as provenance: Bengali $+14$\,pp at
+a fixed ratio (34/6, $p{<}10^{-5}$, $n{=}200$) and $+22$\,pp under an
+absolute cache budget (51/7, $p{<}10^{-8}$, $n{=}200$), with a Thai
+cost of $6.5$\,pp. The current-cap rerun locates that Thai cost in the
+uncompressed baseline (a layout effect, $-5$\,pp, ns) rather than in
+compression, and notes that Thai drops the answer marker in 43\% of
+question-last outputs, so part of the shift is format behaviour. Widening the window from 64 to 128 tokens at a fixed
 ratio recovers Bengali by $10.5$\,pp (22 fixed / 1 broken,
 $p{<}10^{-5}$, $n{=}200$) and saturates there: going on to 256 tokens changes
 nothing ($-0.5$\,pp, 8/9). Saturation at a window well below $c+Q_{90}$
