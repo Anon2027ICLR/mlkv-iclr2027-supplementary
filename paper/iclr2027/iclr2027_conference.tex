@@ -65,8 +65,9 @@ of tokens standing after the question. If $c > w$, the window contains no
 token of the question at all, and the scorer decides what to keep without
 seeing what was asked (Figure~\ref{fig:schematic}).
 
-On Qwen3-4B, the same one-line QA instruction occupies 25 tokens in
-English, 107 in Bengali and 167 in Telugu. At the shipped default,
+On Qwen3-4B, the tokens standing after the question --- a one-line QA
+instruction plus the chat suffix --- number 25 in English, 107 in Bengali
+and 167 in Telugu. At the shipped default,
 English prompts are safe while Bengali and Telugu prompts are blind, and
 they lose 16 and 19 points of accuracy. The mechanism, however, is not
 about those languages. Padding the English instruction until $c$ passes
@@ -266,7 +267,7 @@ CUDA, torch, kvpress); cells from different stacks, models or tokenizers
 are never pooled, even when they carry the same configuration name. The
 follow-up runs reported in Sections~\ref{sec:dose}
 and~\ref{sec:autowindow} re-ran cells that earlier stores already
-contained; across those 1{,}200 shared generations the new text is
+contained; across those 1{,}500 shared generations the new text is
 byte-identical to the old (Appendix~\ref{app:provenance}), which is what
 licenses reading the earlier and later tables as describing one system.
 
@@ -454,8 +455,8 @@ Question length varies across items (34 to 122 tokens here), so a single
 window already spreads visibility across items, and each item passes
 through several values of $V$ as the window widens. Pooling the five
 treated cells and binning by per-item $V$: items with $V<0.25$ lose
-$16.1$\,pp ($n{=}118$, $p{<}10^{-3}$) and items with $V{=}1$ lose
-$0.7$\,pp ($n{=}135$). Within items, a cluster-robust logistic regression
+$16.1$\,pp ($n{=}118$, $p{<}10^{-3}$), while items with $V{=}1$ are flat
+($+0.7$\,pp, $n{=}135$). Within items, a cluster-robust logistic regression
 of correctness on $V$ across the ladder gives $+0.68$ ($z{=}3.35$,
 $p{<}.001$), and among the items whose correctness changes along the
 ladder, 21 are correct at high visibility and wrong at low against 2 in
@@ -534,8 +535,10 @@ English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
 ($-7$ and $-6$\,pp). Across the full eight-language grid, the languages
 whose trailing block already fits inside the default window stay within
-$3$\,pp of baseline throughout (Appendix~\ref{app:grids}); the close is a
-statement about the languages the default window actually blinds.
+$3$\,pp of baseline, with one marginal exception --- Vietnamese loses
+$5$\,pp at the default window and recovers to $-2$ under $c{+}16$
+(Appendix~\ref{app:grids}). The close is a statement about the languages
+the default window actually blinds.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
 The same trailing-block logic applies when the tail is a response format
@@ -1065,9 +1068,12 @@ machines, and they re-ran cells that the earlier stores already
 contained: the uncompressed and default-window cells of the schema
 conditions, the uncompressed and default-window cells of the Gemma
 languages, and three Telugu cells shared with the AutoWindow stores.
-Across those 1{,}200 shared generations, the re-run text is byte-identical
+Across those 1{,}500 shared generations the re-run text is byte-identical
 to the original, which is what allows us to treat the re-measured
-constants and the earlier tables as describing the same system.
+constants and the earlier tables as describing the same system. Three
+hundred of those pairs also cross a naming difference --- one store
+requests the default window implicitly and the other names $w{=}64$
+explicitly --- and agree token for token, as they should.
 
 \paragraph{Decode cap.}
 Every arm reported in the main text uses a 384-token decode cap. Two
