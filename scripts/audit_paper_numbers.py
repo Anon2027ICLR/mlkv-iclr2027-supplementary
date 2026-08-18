@@ -415,6 +415,34 @@ for label, base, comp, d_tex, fb_tex in [
     check(f"{label} fixed/broken", r["fb"], fb_tex)
 
 # --------------------------------------------------------------------------
+# The abstract, the introduction and contribution (i) all rest on one pair of
+# constants: the Telugu trailing block and the trailing block of an English
+# prompt carrying a 120-token JSON schema, which differ by a single token.
+# Those come from the tokenizer rather than from any store, so they are
+# recomputed here from the same code the runs used. Skipped, loudly, where
+# the tokenizer is not available -- this must not turn the audit red on a
+# machine that only has the stores.
+print("## Abstract: the two trailing blocks that land one token apart")
+try:
+    from transformers import AutoTokenizer  # noqa: E402
+
+    from mlkv.languages import LANGUAGES  # noqa: E402
+    from mlkv.tasks.mrag import _pad_instruction  # noqa: E402
+
+    tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-4B")
+    suffix = 5  # assistant header, as measured by measure_c.py
+
+    def trailing(instruction):
+        return len(tok(instruction, add_special_tokens=False)["input_ids"]) + suffix
+
+    check("abstract c for Telugu", trailing(LANGUAGES["te"].qa_instruction), 167)
+    check("abstract c for English with a 120-token JSON schema",
+          trailing(_pad_instruction(LANGUAGES["en"].qa_instruction, "en", tok,
+                                    120, tail="json")), 166)
+except Exception as exc:  # tokenizer or model files unavailable
+    print(f"  SKIPPED (no tokenizer available: {type(exc).__name__})")
+
+# --------------------------------------------------------------------------
 print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")
 if FAILS:
     print("\n".join(FAILS))

@@ -29,9 +29,11 @@ longer than $w$ hides the question from the scorer: on Qwen3-4B the block
 of tokens after the question is 25 tokens in English but 107 in Bengali
 and 167 in Telugu, and the library default $w{=}64$ costs the latter two
 16 and 19 points of accuracy while leaving English untouched. The failure
-is not linguistic. Padding an English instruction reproduces it, a JSON
-response schema reproduces it, and a tokenizer that shortens the Bengali
-instruction moves the threshold with it. Recovery needs question-sized
+is not linguistic. Padding an English instruction reproduces it, a
+tokenizer that shortens the Bengali instruction moves the threshold with
+it, and an English prompt carrying a JSON response schema leaves a
+trailing block of $166$ tokens --- one from Telugu's $167$ --- and is
+blinded in exactly the same way. Recovery needs question-sized
 slack: a window four tokens past the instruction recovers nothing. We
 therefore set $w = c + Q_{90}$ from the tokenizer, the chat template and
 a held-out question-length percentile. Preregistered and at matched
@@ -74,9 +76,10 @@ and 167 in Telugu. At the shipped default,
 English prompts are safe while Bengali and Telugu prompts are blind, and
 they lose 16 and 19 points of accuracy. The mechanism, however, is not
 about those languages. Padding the English instruction until $c$ passes
-$w$ reproduces the cliff without leaving English; attaching a JSON
-response schema does the same; and a tokenizer that encodes the Bengali
-instruction in 26 tokens rather than 102 moves the cliff along with it.
+$w$ reproduces the cliff without leaving English; a JSON response schema
+does the same and puts its trailing block one token from Telugu's; and a
+tokenizer that encodes the Bengali instruction in 26 tokens rather than
+102 moves the cliff along with it.
 High-fertility tokenizers are the pathway that makes a fixed instruction
 overflow a fixed window, not a ranking of languages by difficulty.
 
@@ -115,7 +118,9 @@ points behind.
 (i)~We localise a language-dependent failure of KV eviction to the
 relation between the observation window and the trailing block, using
 experiments in which language is held fixed and $c$ moves: an English
-instruction pad, an English response schema, and a change of tokenizer.
+instruction pad, a change of tokenizer, and an English response schema
+whose trailing block lands one token from Telugu's and is blinded the
+same way.
 (ii)~We measure the dose-response, showing that the slack must be
 question-sized, and introduce query visibility $V$ as an input-side,
 zero-inference measure of it.

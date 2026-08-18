@@ -49,7 +49,7 @@ by eye.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 328 checks
+uv run python scripts/audit_paper_numbers.py    # 332 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
