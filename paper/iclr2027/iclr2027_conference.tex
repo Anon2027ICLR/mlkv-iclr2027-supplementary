@@ -66,7 +66,7 @@ prompt when they decide what to evict. They score the cached keys against
 the last $w$ tokens of the prompt --- the \emph{observation window} ---
 and keep the highest-scoring entries. The kvpress implementation ships
 $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships $w{=}32$ --- a
-research default and an opt-in serving path, respectively. In the
+research default and an opt-in serving path. In the
 retrieval-QA layout \texttt{passages + question + instruction + chat
 suffix}, that window is consumed from the right. Write $c$ for the number
 of tokens standing after the question. If $c > w$, the window contains no
@@ -78,7 +78,7 @@ instruction plus the chat suffix --- number 25 in English, 107 in Bengali
 and 167 in Telugu. At the shipped default,
 English prompts are safe while Bengali and Telugu prompts are blind, and
 they lose 16 and 19 points of accuracy. The mechanism, however, is not
-about those languages. Padding the English instruction until $c$ passes
+about those languages: padding the English instruction until $c$ passes
 $w$ reproduces the cliff without leaving English; a JSON response schema
 does the same and puts its trailing block one token from Telugu's; and a
 tokenizer that encodes the Bengali instruction in 26 tokens rather than
@@ -174,13 +174,11 @@ compression methods on English long-context benchmarks --- the
 query-aware versus query-agnostic gap is largest for SnapKV among the
 methods they audit --- and left a continuous measure of query sensitivity
 open, noting that the natural candidates require a forward pass. $V$
-fills that slot from the other side: it is a property of the scorer's
-input rather than of its output. SnapKV's accumulated attention and the
-estimated attention of \citet{devoto2025expected} are computed from the
-model; $V$ is computed from the tokenizer and the template. Expected
-Attention is the informative contrast, because it removes the need to see
-the question by estimating the distribution of future queries, and never
-reasons about an observation window at all.
+fills that slot from the input side: SnapKV's accumulated attention and
+the estimated attention of \citet{devoto2025expected} are computed from
+the model, $V$ from the tokenizer and the template. Expected Attention is
+the informative contrast: it removes the need to see the question by
+estimating future queries, and never reasons about a window at all.
 
 \paragraph{How $w$ gets chosen.}
 Recent eviction work treats $w$ as a hyperparameter to set rather than as
@@ -195,23 +193,21 @@ items, which is the cell this paper occupies.
 \citet{chen2026instruction} document that eviction can discard an
 instruction in multi-instruction English prompts and propose a whitelist
 and a fair-eviction split; their reordering moves two instructions inside
-a system prompt, whereas we move the instruction relative to the question
-and vary its token length until it overflows the window, and our remedy
-requires no knowledge of prompt structure.
+a system prompt; we move the instruction relative to the question and
+grow it until it overflows the window, with a remedy that needs no
+knowledge of prompt structure.
 \citet{garcia2026protection} show that protecting a prompt's prefix and
-suffix outperforms scoring under a global cache cap, assuming that the
-structurally critical tokens occupy a roughly fixed budget, on the order
-of 15 to 30 tokens for the Qwen chat template. On Qwen3-4B the Bengali
-and Telugu QA instructions occupy 102 and 162 tokens; we treat that
-assumption as a prediction and test it. Protection with a fixed suffix
+suffix outperforms scoring under a global cache cap, assuming the
+structurally critical tokens occupy a roughly fixed 15--30-token budget
+--- while the Bengali and Telugu instructions occupy 102 and 162. We
+treat that assumption as a prediction and test it. Protection with a fixed suffix
 budget is, on our grid, the $c{+}16$ ablation under another name --- and
 protection with a measured budget is this paper's rule. FINCH \citep{corallo2024finch}
 sizes its window from a user-supplied delimiter in a
 context--delimiter--question layout, so $V{=}1$ holds there by
-construction. We read that as evidence for the problem rather than
-against the remedy: it shows that $w$ must adapt, but it adapts using a
-delimiter and a question-last assumption that the failure studied here
-does not enjoy.
+construction. We read that as evidence for the problem: $w$
+must adapt --- but FINCH adapts via a delimiter and a question-last
+layout that the failure studied here does not enjoy.
 
 \paragraph{Tokenizer fertility.}
 \citet{petrov2023language} established that a fixed context budget is not
@@ -234,8 +230,8 @@ rotating through front, middle and back positions by item index.
 Questions and passages come from XQuAD \citep{artetxe2020xquad} for
 English, Chinese, Spanish, Vietnamese and Thai, and from TyDiQA-GoldP
 \citep{clark2020tydiqa} for Swahili, Bengali and Telugu. The two
-collections are not comparable to each other, and XQuAD is parallel only
-within itself, so we never compare accuracy across languages. Every number
+collections are not comparable and XQuAD is parallel only within
+itself, so we never compare accuracy across languages. Every number
 in this paper is a within-language, item-paired difference between two
 configurations evaluated on the same 100 items.
 
@@ -261,9 +257,9 @@ answer span or inside the first sentence of the prose. No LLM judge is
 used anywhere in this paper. The rule was fixed before the runs reported
 here and is applied offline to raw generations; a stricter, marker-only
 variant leaves every conclusion in the paper unchanged
-(Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar tests
-and we report the discordant counts (fixed/broken) so the reader can see
-what the $p$-value is made of. Every cell in the main text pairs 100
+(Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar
+tests, reported with their discordant counts (fixed/broken) so the
+reader sees what the $p$-value is made of. Every cell in the main text pairs 100
 items; the supporting runs in Appendix~\ref{app:levers} pair 200, being
 the same questions at two context budgets, and are marked where they
 appear.
@@ -277,13 +273,10 @@ the question. Write $Q_i$ for the set of token positions holding item
 $i$'s question, so that $|Q_i|$ is its length, and $W$ for the set of
 positions in the last-$w$ window. Query visibility is the share of the
 question the scorer can see,
-\[
-  V_i \;=\; \frac{|W \cap Q_i|}{|Q_i|}
-  \;=\; \mathrm{clamp}\!\left(\frac{w-c}{|Q_i|},\,0,\,1\right)
-  \quad\text{in this layout,}
-\]
-where we take the intersection as the definition and the closed form as a
-corollary, so that interleaved layouts do not silently break it. On
+$V_i = |W \cap Q_i|\,/\,|Q_i| = \mathrm{clamp}((w-c)/|Q_i|,0,1)$ in
+this layout, where we take the intersection as the definition and the
+closed form as a corollary, so that interleaved layouts do not silently
+break it. On
 Qwen3-4B the eight instructions tokenize to $I$ between 20 (English) and
 162 (Telugu) tokens; with $s{=}5$ this gives $c$ from 25 to 167
 (Appendix~\ref{app:grids}). Both $c$ and $Q$ are produced by script from
@@ -403,9 +396,9 @@ four conditions collapse onto one curve (Figure~\ref{fig:triptych}b):
 across the twenty cells, every window short of its condition's trailing
 block scores at most $90\%$ and every window clearing it at least
 $91\%$. Neighbouring cells sit within the noise of 100 items, so we read
-that separation as a description of the grid, not a test. Across these
-curves only the number of tokens between the question and the end of the
-prompt changed.
+that separation as a description of the grid, not a test; across these curves only
+the number of tokens between the question and the end of the prompt
+changed.
 \paragraph{A constant that is already shipped.}
 kvpress ships $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships
 $w{=}32$. Moving from the first constant to the second, on matched items,
@@ -456,9 +449,9 @@ their own uncompressed baseline (Figure~\ref{fig:triptych}c;
 Table~\ref{tab:dose} in Appendix~\ref{app:dose}; offsets fixed before the
 run, $c$ re-measured on the run tokenizer).
 
-Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp, which
-is what the same items lose at the shipped $w{=}64$, where they see none
-of the question at all. The curve then rises with the slack and reaches
+Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp ---
+what the same items lose at the shipped $w{=}64$, seeing none of the
+question. The curve then rises with the slack and reaches
 the baseline only at $c{+}80$. The same ladder on Bengali, a language
 with a different $c$ and its own baseline, reproduces it rung for rung
 --- $-17$, $-7$, $-3$, $-5$ and $-2$\,pp from $c{+}4$ up to $c{+}Q_{90}$
@@ -500,9 +493,7 @@ Both quantities that Sections~\ref{sec:threshold} and~\ref{sec:dose}
 identify are available before any forward pass. The trailing block $c$
 comes from the tokenizer and the chat template; a question-sized slack can
 be estimated from a held-out sample of questions. We therefore set
-\[
-  \hat w \;=\; c + Q_{90},
-\]
+$\hat w = c + Q_{90}$:
 one integer per (model, language, template), computed offline and without
 a delimiter. A per-item window $w_i{=}c+|Q_i|$ would give $V_i{=}1$ by
 construction, but it requires locating the question inside the prompt,
@@ -561,8 +552,8 @@ $16/5$, $p{=}.027$ pooled over the two languages' independent items). Across the
 trailing block already fits inside the default window stay within
 $3$\,pp of baseline; the one marginal exception, Vietnamese, loses $5$ at
 the default where it is not blind (ns) and recovers to $-2$ under
-$c{+}16$ (Appendix~\ref{app:grids}). The gate is a statement about the languages
-the default window actually blinds. Exact intervals for these cells are
+$c{+}16$ (Appendix~\ref{app:grids}); the gate is a statement about the
+languages the default window actually blinds. Exact intervals for these cells are
 in Appendix~\ref{app:ci}: at $n{=}100$ the English and schema closes are
 non-inferior at $-3$\,pp, while the Bengali and Telugu intervals,
 $[-9.1, +5.9]$ and $[-6.9, +6.9]$, meet the registered gate without
@@ -592,7 +583,7 @@ Gemma-3-4b-it tokenizes the same Bengali instruction to $26$ tokens
 against Qwen's $102$, and its Bengali questions to a median of $11$
 tokens, so both inputs to the rule move: $c$ is $27/32/44$ and $Q_{90}$ is
 $18/18/20$ for English, Bengali and Telugu, giving $\hat w = 45/50/64$.
-Two things follow. For Telugu the rule returns exactly the constant that
+For Telugu the rule returns exactly the constant that
 kvpress already ships, and Telugu is indeed flat there ($-3$\,pp against
 its own baseline): a window rule that is worth running should also be able
 to say that the default is adequate. For Bengali, $\hat w{=}50$ leaves
@@ -606,9 +597,9 @@ below baseline ($p{=}.008$); English is at ceiling and carries no
 information about either (Appendix~\ref{app:8b}). Llama-3.1-8B-Instruct
 is the same test on a third tokenizer family, with both inputs
 re-measured on its tokenizer --- $c{=}125$ and $Q_{90}{=}87$ for
-Bengali, so $\hat w{=}212$. The hole reproduces at $-18$\,pp, and for
-the first time in this paper with an interval entirely below the
-damage bound: the 95\% CI is $[-21.5, -9.2]$. The formula recovers
+Bengali, so $\hat w{=}212$. The hole reproduces at $-18$\,pp ---
+the first interval in the paper entirely below the damage bound
+($[-21.5, -9.2]$). The formula recovers
 $+10$\,pp and leaves $-8$ ($p{=}.057$), the same residual as 8B; we do
 not claim it closes on either model (Appendix~\ref{app:llama}).
 
@@ -632,9 +623,8 @@ ordinary cost of discarding three quarters of the cache.
 The rule also buys no extra cache: SnapKV keeps the window inside the
 retained budget, so every comparison in Table~\ref{tab:aw} sits at one
 eviction ratio, and AutoWindow costs one offline percentile per (model,
-language, template).
-
-Nor is the integer a property of one method: dropped unchanged into
+language, template). Nor is the integer a property of one method:
+dropped unchanged into
 PyramidKV \citep{cai2024pyramidkv}, which inherits the same shipped
 window, it takes Bengali from $-28$ to $-2$ and Telugu from $-32$ to
 $-1$ against that method's own baselines (Appendix~\ref{app:rivals}).
@@ -650,10 +640,9 @@ $+0.09$ log-odds for compression when the question is visible
 (95\% CI $[-0.05, 0.23]$, $p{=}.21$) and $-1.06$ for blindness
 ($z{=}{-}9.4$, $p{<}.001$). Uncompressed rows are never blind, so the
 interaction term equals the blindness term; we report the operational
-form. We cannot distinguish the cost of discarding three
-quarters of the cache from zero when the scorer can see the question,
-which is not the same as showing it is zero: the interval still admits a
-small effect in either direction. What it does exclude is anything
+form. We cannot distinguish the compression cost from zero when the scorer
+sees the question --- which is not showing it is zero: the interval
+admits a small effect either way. What it excludes is anything
 resembling the blindness term.
 
 We also compared one-parameter descriptions of the compressed rows, and
@@ -742,15 +731,13 @@ eviction, is a tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$
 from the tokenizer, the chat template and a held-out percentile meets its
 registered gate, returns the library default where that default already
 suffices, leaves a residual we can show is not a visibility failure, and
-transfers unchanged to a second evictor --- which is what says the
-integer belongs to the prompt rather than to either method. The general
-lesson is cheaper than the specific one, and we did not escape it
-ourselves: our own first decode cap silently decided which branch of the
-scoring rule each language was judged by (Appendix~\ref{app:cap}). Any
-constant that
-counts tokens inherits the tokenizer, and when such a constant gates what
-a model is allowed to look at, it should be derived from the tokenizer
-and the template instead of being shipped as a number.
+transfers unchanged to a second evictor --- the integer belongs to the
+prompt, not the method. The general lesson is cheaper than the specific
+one, and we did not escape it ourselves: our own decode cap chose which
+branch of the scoring rule judged each language
+(Appendix~\ref{app:cap}). Any constant that counts tokens inherits the
+tokenizer; when it gates what a model may look at, it should be derived
+from the tokenizer and the template, not shipped as a number.
 
 % =====================================================================
 \section*{Ethics statement}

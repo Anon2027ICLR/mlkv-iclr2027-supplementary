@@ -1,37 +1,27 @@
 # ICLR 2027 submission
 
-Build:
+Build — **the official artifact is the pdflatex build**:
 
 ```bash
-tectonic -X compile iclr2027_conference.tex     # local, fast
-pdflatex iclr2027_conference && bibtex iclr2027_conference && pdflatex ... x2
+export PATH=/Library/TeX/texbin:$PATH    # BasicTeX + tlmgr install helvetic courier
+pdflatex iclr2027_conference && bibtex iclr2027_conference \
+  && pdflatex iclr2027_conference && pdflatex iclr2027_conference
+uv run python scripts/page_budget.py paper/iclr2027/iclr2027_conference.pdf  # must print 0
 ```
 
-**Font caveat — judge the page budget on a Times build.** `tectonic` runs a
-Unicode engine where the style file's `times` package does not resolve, so a
-local build falls back to Latin Modern, which is wider. Measured 2026-08-18:
-in a Times build (pdflatex, or the `newtxtext` substitution used for testing)
-the conclusion's last line lands on the last line of page 9. There is no
-margin left: any addition to the main text has to be paid for by a cut of the
-same size, measured on a Times build. The same source in Latin Modern spills
-the conclusion onto page 10. Do not cut content to satisfy the Latin Modern
-build.
+**Font history, learned the expensive way.** Three different builds give
+three different page counts, and only one of them is the submission:
 
-Two things that do *not* work, learned the expensive way: trimming a few words
-(inter-paragraph glue stretches to absorb it, and the page break lands in the
-same place), and building a probe copy in a scratch directory (it picks up a
-stale `.bib`, so citations render short and the layout lies). Cut a whole
-clause or a whole sentence, and build in this directory.
+| build | fonts | verdict |
+|---|---|---|
+| `tectonic` | Latin Modern (\`times\` fails silently) | ~1 page long; **never judge anything on it** |
+| `newtxtext` substitution | Times clone, CM tt, no Helvetica | flattered us by ~11 lines; retired 2026-08-19 |
+| `pdflatex` + `times` (+ helvetic, courier) | NimbusRoman / Helvetica / Courier | **the artifact**; page limit judged here only |
 
-To measure: copy the .tex, swap
-`\usepackage{iclr2027_conference,times}` for
-`\usepackage{iclr2027_conference}` plus `\usepackage{newtxtext,newtxmath}`,
-and compile that copy.
-
-**Bold does not render under `tectonic`.** The same missing Times shape
-that costs the font fallback also silently drops `\textbf`, so emphasis in
-tables and figure captions looks absent locally and appears correctly in a
-Times build. Judge emphasis, like page count, on a Times build.
+ICLR 2027 desk-rejects main text beyond 9 pages. The Ethics,
+Reproducibility and AI-use statements do not count toward the limit and
+stay where the template puts them (after the conclusion, before
+references) — do not move them to the appendix.
 
 **Figures** are generated from the result stores, never hand-edited:
 
