@@ -49,7 +49,7 @@ by eye.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 332 checks
+uv run python scripts/audit_paper_numbers.py    # 394 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
@@ -69,6 +69,7 @@ so their commit time does not precede the run.
 | `iclr-instr-first-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
 | `iclr-agnostic-baseline-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
 | `iclr-ratio-sweep-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
+| `iclr-pyramidkv-preregister.md` | `74840de` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so
@@ -78,5 +79,12 @@ does not add a row.
 script, not by hand:
 
 ```bash
-uv run python scripts/determinism_ledger.py     # 3,243 repeats, all identical
+uv run python scripts/determinism_ledger.py     # 3,243 same-stack, 300 cross
+uv run python scripts/decode_cap_ledger.py      # the appendix on the decode cap
 ```
+
+The determinism ledger separates repeats within one stack descriptor (the
+figure the paper quotes) from repeats across descriptors, which the PyramidKV
+pod produced by accident and which are reported apart. `decode_cap_ledger.py`
+owns Appendix on the decode cap and fails on any drift in the values it
+prints; `audit_paper_numbers.py` pins the same cells independently.

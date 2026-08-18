@@ -431,6 +431,38 @@ for label, base, comp, d_tex, fb_tex in [
     check(f"{label} fixed/broken", r["fb"], fb_tex)
 
 # --------------------------------------------------------------------------
+print("## Appendix: PyramidKV, the second member of the family — tab:rivals")
+# Its pod did not reproduce the campaign stack, so every comparison here is
+# within this store; the SnapKV values printed beside it in the table are
+# checked above against their own stores and are never paired with these.
+PK = load("pyramidkv.db")
+TEX_PK = {  # lang: (baseline, w-hat, (default d, star), (hat d, star),
+            #        (recovery d, star, fixed/broken))
+    "bn": (73, 183, (-28, True), (-2, False), (26, True, (29, 3))),
+    "en": (93, 43, (2, False), (0, False), (-2, False, (0, 2))),
+    "te": (56, 247, (-32, True), (-1, False), (31, True, (32, 1))),
+}
+for lang, (b_tex, what, dflt, hat, rec) in TEX_PK.items():
+    base = PK[lang]["baseline"]
+    check(f"pyramidkv {lang} baseline",
+          round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, PK[lang]["pyramidkv@r0.75"])
+    check(f"pyramidkv {lang} default delta", r["d"], dflt[0])
+    check(f"pyramidkv {lang} default star", r["star"], dflt[1])
+    r = cmp_pair(base, PK[lang][f"pyramidkv@r0.75:w{what}"])
+    check(f"pyramidkv {lang} hat delta", r["d"], hat[0])
+    check(f"pyramidkv {lang} hat star", r["star"], hat[1])
+    r = cmp_pair(PK[lang]["pyramidkv@r0.75"], PK[lang][f"pyramidkv@r0.75:w{what}"])
+    check(f"pyramidkv {lang} recovery delta", r["d"], rec[0])
+    check(f"pyramidkv {lang} recovery star", r["star"], rec[1])
+    check(f"pyramidkv {lang} recovery fixed/broken", r["fb"], rec[2])
+# The abstract prints the two recoveries as a pair.
+check("abstract transfer recoveries",
+      sorted(cmp_pair(PK[l]["pyramidkv@r0.75"],
+                      PK[l][f"pyramidkv@r0.75:w{TEX_PK[l][1]}"])["d"]
+             for l in ("bn", "te")), [26, 31])
+
+# --------------------------------------------------------------------------
 # The abstract, the introduction and contribution (i) all rest on one pair of
 # constants: the Telugu trailing block and the trailing block of an English
 # prompt carrying a 120-token JSON schema, which differ by a single token.
@@ -474,6 +506,34 @@ try:
           sum(1 for c in measured.values() if c > 32), 6)
 except Exception as exc:  # tokenizer or model files unavailable
     print(f"  SKIPPED (no tokenizer available: {type(exc).__name__})")
+
+# --------------------------------------------------------------------------
+print("## Appendix: the decode cap — tab:cap")
+# Full derivation, including the within-item causal comparison, lives in
+# scripts/decode_cap_ledger.py; the cells the appendix prints are pinned here
+# too, so one script still fails on any drift in the paper.
+_cap_rows = {}
+for _db in ("e3-final.db", "e3_384.db"):
+    _con = sqlite3.connect(f"file:{RES / _db}?mode=ro", uri=True)
+    _cap = _con.execute("SELECT MAX(n_output_tokens) FROM generations").fetchone()[0]
+    for _lang, _out, _ntok in _con.execute(
+        "SELECT lang, output, n_output_tokens FROM generations WHERE config='baseline'"
+    ):
+        _d = _cap_rows.setdefault((_cap, _lang), {"n": 0, "trunc": 0, "mark": 0})
+        _d["n"] += 1
+        _d["trunc"] += _ntok >= _cap
+        _d["mark"] += "####" in (_out or "")
+    _con.close()
+TEX_CAP = {  # (cap, lang): (truncated %, marker %)
+    (128, "el"): (65, 45), (128, "hi"): (50, 59), (128, "ru"): (30, 71),
+    (128, "th"): (14, 58), (128, "de"): (12, 74), (128, "en"): (6, 95),
+    (128, "vi"): (4, 94), (128, "es"): (4, 96), (128, "zh"): (1, 98),
+    (384, "el"): (17, 90), (384, "hi"): (4, 97), (384, "ru"): (2, 92),
+}
+for (cap, lang), (t_tex, m_tex) in TEX_CAP.items():
+    d = _cap_rows[(cap, lang)]
+    check(f"cap{cap} {lang} truncated", round(100 * d["trunc"] / d["n"]), t_tex)
+    check(f"cap{cap} {lang} marker", round(100 * d["mark"] / d["n"]), m_tex)
 
 # --------------------------------------------------------------------------
 print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")

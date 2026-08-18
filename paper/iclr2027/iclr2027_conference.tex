@@ -28,8 +28,9 @@ is a language-dependent threshold. In the common
 longer than $w$ hides the question from the scorer: on Qwen3-4B the block
 of tokens after the question is 25 tokens in English but 107 in Bengali
 and 167 in Telugu, and the library default $w{=}64$ costs the latter two
-16 and 19 points of accuracy while leaving English untouched. The failure
-is not linguistic. Padding an English instruction reproduces it, a
+16 and 19 points of accuracy while leaving English untouched; at the
+stricter constant of 32 that one serving path ships, six of our eight
+languages are blind. The failure is not linguistic. Padding an English instruction reproduces it, a
 tokenizer that shortens the Bengali instruction moves the threshold with
 it, and an English prompt carrying a JSON response schema leaves a
 trailing block of $166$ tokens --- one from Telugu's $167$ --- and is
@@ -41,6 +42,8 @@ retained cache, this meets its $\pm 3$\,pp gate on English, Bengali and
 Telugu ($+2/{-}2/0$\,pp), closes the schema tails (non-inferior at
 $-3$\,pp by interval), returns the library default where that default
 already suffices, and recovers $+14$/$+19$\,pp over it ($p{\le}.001$).
+The same integers transfer unchanged to a second evictor with the same
+window, removing its deeper holes ($+26$/$+31$\,pp).
 Where the gate is missed, the residual is not a visibility failure.
 \end{abstract}
 
@@ -603,10 +606,10 @@ not claim the formula closes on either model
 
 \paragraph{What the residuals are not.}
 The three cells that miss the closure gate are all Bengali ($-6$ at
-Gemma, $-8$ at 8B and at Llama), which is also the only cell where a
-miss could appear: English is at ceiling or flat throughout, and Telugu
-has no clear hole at Gemma or Llama and was not run at 8B. The diagnosis below was made after seeing the residuals;
-the measurement that anchors it was not. With the question last, every
+Gemma, $-8$ at 8B and at Llama) --- also the only cell where a miss could
+appear, since English is at ceiling throughout and Telugu has no clear
+hole at Gemma or Llama. The diagnosis below was made after seeing the
+residuals; the measurement that anchors it was not. With the question last, every
 window sees all of it by construction, and the same press at the same
 ratio still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns; CIs
 $[-8.7,+3.0]$ and $[-7.9,+0.4]$) while removing about three quarters of
@@ -622,6 +625,11 @@ The rule also buys no extra cache: SnapKV keeps the window inside the
 retained budget, so every comparison in Table~\ref{tab:aw} sits at one
 eviction ratio, and AutoWindow costs one offline percentile per (model,
 language, template).
+
+Nor is the integer a property of one method: dropped unchanged into
+PyramidKV \citep{cai2024pyramidkv}, which inherits the same shipped
+window, it takes Bengali from $-28$ to $-2$ and Telugu from $-32$ to
+$-1$ against that method's own baselines (Appendix~\ref{app:rivals}).
 
 % =====================================================================
 \section{Analysis}
@@ -658,10 +666,9 @@ A stuffed arithmetic-reasoning control does not reproduce the effect
 (Bengali $-3$\,pp, ns): the failure needs a question matched against
 passages, not merely a long prompt. Two scorers
 designed never to look at the question \citep{devoto2025expected,
-oren2024transformers} fail differently, and worse: at the same ratio they
-cost English $14$ and $8$\,pp, where no window we tested costs it
-anything, and Bengali and Telugu at least as much as blindness does
-(Appendix~\ref{app:rivals}).
+oren2024transformers} fail differently and worse, costing even English
+$14$ and $8$\,pp at the ratio where no window we tested costs it
+anything (Appendix~\ref{app:rivals}).
 Four-bit KV quantization damages languages in an order that is not the
 fertility order, and Qwen3-4B and 8B share a tokenizer, so the scale
 slice is a replication rather than an independent sample. A capacity
@@ -700,10 +707,7 @@ measurement looks like. For a deployer the guidance splits: sizing
 the window removes the blind mode in every family we ran ($+9$ to
 $+19$\,pp over the default), while the residual is a property of eviction
 at that ratio, addressed by lowering the ratio rather than by any window.
-Both hold where eviction is heaviest: at $r{=}0.9375$ the rule buys
-Bengali its largest recovery in this paper and still leaves it $24$\,pp
-down, while a $w{=}256$ constant costs English $9$\,pp where
-$\hat w_{\text{en}}{=}43$ costs one.
+Both hold where eviction is heaviest (Appendix~\ref{app:rivals}).
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
@@ -727,14 +731,16 @@ can be computed before any inference: $c$, the number of tokens standing
 between the question and the end of the prompt, and the slack the window
 leaves beyond it, which has to be counted in units of the question rather
 than in constants: too little slack is blindness, and too much, at heavy
-eviction, is a tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$ from the tokenizer, the chat
-template and a held-out percentile meets its registered gate on
-English, Bengali and Telugu at 4B and closes the English schema tails,
-returns the library default where the default is already adequate, and
-where it misses leaves a residual that we can show is not a visibility
-failure. Fertility is the pathway rather than the ranking: the same
-failure is one instruction pad or one response schema away in English.
-The general lesson is cheaper than the specific one. Any constant that
+eviction, is a tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$
+from the tokenizer, the chat template and a held-out percentile meets its
+registered gate, returns the library default where that default already
+suffices, leaves a residual we can show is not a visibility failure, and
+transfers unchanged to a second evictor --- which is what says the
+integer belongs to the prompt rather than to either method. The general
+lesson is cheaper than the specific one, and we did not escape it
+ourselves: our own first decode cap silently decided which branch of the
+scoring rule each language was judged by (Appendix~\ref{app:cap}). Any
+constant that
 counts tokens inherits the tokenizer, and when such a constant gates what
 a model is allowed to look at, it should be derived from the tokenizer
 and the template instead of being shipped as a number.
@@ -758,18 +764,19 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Fifteen generation stores back the tables:
+corresponding data existed. Sixteen generation stores back the tables:
 \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
 \texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
 \texttt{gemma\_q90}, \texttt{schema}, \texttt{schema\_fix},
 \texttt{v\_trace}, \texttt{v\_trace\_bn}, \texttt{llama},
-\texttt{instr\_first}, \texttt{agnostic} and \texttt{ratio}. Every table
+\texttt{instr\_first}, \texttt{agnostic}, \texttt{ratio} and
+\texttt{pyramidkv}. Every table
 cell in this paper is recomputed from the raw generations in those stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
 conditions for every arm are files that ship with the code, each written
-before its run; for six of the nine arms the version-history timestamp
+before its run; for seven of the ten arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three files entered version control in a later batch. The history
 will be public with the code.
@@ -1220,14 +1227,16 @@ te & 190 & 284 & 51 & 46 (${-}5$) & \textbf{50} (${-}1$; $[-5.6, +4.4]$) \\
 \end{tabular}
 \end{table}
 
-\section{Rival remedies at the same ratio}
+\section{Rival remedies, and a second member of the family}
 \label{app:rivals}
 
 Two remedies compete with sizing the window: switch to a scorer that
 never reads the question, so that nothing can be hidden from it, or ship
 one larger constant and stop measuring. Both were run on the same items,
 at matched ratios, against each store's own uncompressed baseline
-(Table~\ref{tab:rivals}).
+(Table~\ref{tab:rivals}). A third block asks the complementary question:
+whether the integer we compute is a property of the prompt or of the
+method it was first tested on.
 
 \paragraph{Scorers that do not read the question.}
 Expected Attention ranks by an estimate of future attention
@@ -1257,17 +1266,36 @@ $\hat w_{\text{en}}{=}43$ costs one. It does not beat $\hat w$ anywhere:
 $-8$\,pp on English ($p{=}.077$) and $-4$\,pp on Bengali (ns), so the
 dominance is carried by English and we do not claim it per language.
 Bengali collapses at the default window here ($-44$\,pp) and $\hat w$
-recovers $+20$\,pp of that (22 fixed / 2 broken, $p{<}10^{-4}$), the
-largest recovery in this paper --- and still finishes $24$\,pp below
+recovers $+20$\,pp of that (22 fixed / 2 broken, $p{<}10^{-4}$), its
+largest recovery at this ratio --- and still finishes $24$\,pp below
 baseline. Sizing the window is what removes the blind mode; it is not
 what makes aggressive eviction free.
+
+\paragraph{A second member of the family.}
+PyramidKV \citep{cai2024pyramidkv} keeps the observation window and
+changes what is done with the retained budget, allocating more of it to
+lower layers; its kvpress implementation subclasses SnapKV and inherits
+$w{=}64$ unchanged. On its own pod and its own baselines, that inherited
+default digs deeper holes than SnapKV's --- $-28$\,pp on Bengali and
+$-32$ on Telugu, against $-16$ and $-19$ --- and the AutoWindow integers,
+used exactly as shipped, remove them: $-2$, $-1$ and $+0$ on Bengali,
+Telugu and English, with recoveries of $+26$ (29 fixed / 3 broken) and
+$+31$ (32/1), the two largest in this paper. We registered the opposite
+guess about the depth, expecting the pyramid allocation to shallow the
+blind hole rather than deepen it, and report the outcome as an
+observation we did not predict. The transfer itself is the point: an
+integer computed from a tokenizer and a template, never tuned against
+accuracy on either method, repairs both.
 
 \begin{table}[h]
 \caption{Rival remedies, paired $\Delta$pp against each store's own
 uncompressed baseline, $n{=}100$ per cell; star: McNemar $p<.05$. Top:
 two query-agnostic scorers at the ratio used throughout the paper, beside
 the windowed cells they would replace. Bottom: the heavy-ratio sweep,
-where $\hat w$ is $43$ for English and $183$ for Bengali.}
+where $\hat w$ is $43$ for English and $183$ for Bengali. Third block:
+PyramidKV at $r{=}0.75$ on its own pod, which did not reproduce the
+campaign stack, so the bracketed SnapKV values are context rather than
+comparators and are never pooled with it.}
 \label{tab:rivals}
 \centering
 \small
@@ -1283,6 +1311,75 @@ $r{=}0.9375$ & $w{=}64$ & $w{=}256$ & $\hat w$ & \\
 \midrule
 en & ${-}2$ & ${-}9^{*}$ & $\mathbf{{-}1}$ & \\
 bn & ${-}44^{*}$ & ${-}28^{*}$ & $\mathbf{{-}24^{*}}$ & \\
+\midrule
+PyramidKV & $w{=}64$ & $\hat w$ & \multicolumn{2}{c}{[SnapKV: $w{=}64$ / $\hat w$]} \\
+\midrule
+en & ${+}2$ & $\mathbf{{+}0}$ & \multicolumn{2}{c}{[${+}0$ / ${+}2$]} \\
+bn & ${-}28^{*}$ & $\mathbf{{-}2}$ & \multicolumn{2}{c}{[${-}16^{*}$ / ${-}2$]} \\
+te & ${-}32^{*}$ & $\mathbf{{-}1}$ & \multicolumn{2}{c}{[${-}19^{*}$ / ${+}0$]} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{A second constant: the decode cap}
+\label{app:cap}
+
+The main arms decode under a 384-token cap, and
+Appendix~\ref{app:provenance} says why in a sentence; this appendix is the
+measurement behind it. The campaign's first arms used 128, and a decode
+cap is itself a token-denominated constant --- so the paper's thesis
+applies to it, one layer further out, in the evaluation harness rather
+than in the evictor. The evidence comes from the cap-128-era stores: a
+different stack and the byte-parallel item variant, whose inputs are
+byte-equal across languages. Nothing here is pooled with the main tables,
+and every number is recomputed by \texttt{decode\_cap\_ledger.py}.
+
+At a 128-token cap, the share of \emph{uncompressed} baseline generations
+that hit the cap runs from $1\%$ in Chinese to $65\%$ in Greek
+(Table~\ref{tab:cap}) --- a spread produced by one integer, on byte-equal
+inputs, with no compression anywhere in the picture. Because the
+instruction asks for the answer marker at the end of the reply,
+truncation does not merely shorten an answer: it decides which branch of
+the scoring rule fires. At 128, $95\%$ of English baselines carry the
+marker against $45\%$ of Greek; at 384 the marker comes back
+($90/97/92\%$ for Greek, Hindi and Russian). An English-validated harness
+would see none of this.
+
+Greedy decoding makes the 128-token output a byte prefix of the 384-token
+output on $1{,}124$ of the $1{,}200$ generations the two runs share, so
+the cap's effect is isolable within an item rather than inferred across
+conditions. On the 327 generations where truncation destroys the marker,
+our scoring rule loses $4$\,pp (19 fixed / 7 broken, $p{=}.029$;
+Greek $+2$ and Hindi $+1$, both ns, Russian $+11$, $p{=}.039$). That is
+real and it is bounded, because the rule's prose-fallback branch was
+built to absorb exactly this failure. We cannot say from these stores
+what a format-strict harness would lose --- our own strict marker path
+also fails for reformatting reasons that have nothing to do with the cap
+--- so we claim only the part we can measure: the cap selects the scoring
+branch per language, and under our rule the residual cost is four points
+on the cells it touches. This is why the main arms decode at 384, and why
+we treat every token-denominated constant in the pipeline --- window,
+cap, budget --- as a quantity to measure rather than a default to
+inherit.
+
+\begin{table}[h]
+\caption{The decode cap as a second token-denominated constant.
+Uncompressed baselines on byte-parallel items, $n{=}100$ per language,
+from the cap-128-era stores; Greek, Hindi and Russian were re-run at 384.
+Truncated: share of generations that reach the cap. Marker: share
+carrying the end-of-reply answer marker that the scoring rule keys on.}
+\label{tab:cap}
+\centering
+\small
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+ & el & hi & ru & th & de & en & vi & es & zh \\
+\midrule
+truncated at 128 & $65\%$ & $50\%$ & $30\%$ & $14\%$ & $12\%$ & $6\%$ & $4\%$ & $4\%$ & $1\%$ \\
+marker at 128 & $45\%$ & $59\%$ & $71\%$ & $58\%$ & $74\%$ & $95\%$ & $94\%$ & $96\%$ & $98\%$ \\
+\addlinespace
+truncated at 384 & $17\%$ & $4\%$ & $2\%$ & --- & --- & --- & --- & --- & --- \\
+marker at 384 & $90\%$ & $97\%$ & $92\%$ & --- & --- & --- & --- & --- & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1324,9 +1421,12 @@ specification in the same position.
 \paragraph{Stacks.}
 Each generation record stores a stack descriptor (GPU, driver, CUDA,
 torch, transformers, kvpress) and every comparison in this paper is
-within one descriptor. The Qwen3-4B cells share one stack, the
-Gemma cells another, and the Qwen3-8B slice a third; we never pool
-across them.
+within one descriptor. The Gemma cells share one stack and the Qwen3-8B
+slice another; the Qwen3-4B cells share a third, with one exception ---
+the PyramidKV pod landed on a fourth descriptor (a newer driver patch and
+host kernel, same GPU model and library versions), so that arm pairs only
+within itself and is quoted beside the others rather than pooled with
+them. We never pool across descriptors.
 
 \paragraph{Determinism, measured.}
 The follow-up runs were executed weeks after the original ones, on new
@@ -1342,7 +1442,12 @@ allows us to treat the re-measured constants and the earlier tables as
 describing the same system. Three hundred of those pairs also cross a
 naming difference --- one store requests the default window implicitly
 and the other names $w{=}64$ explicitly --- and agree token for token, as
-they should.
+they should. The PyramidKV pod's stack drift bought one measurement we
+had not planned: the $300$ uncompressed baselines it shares with the
+AutoWindow store are byte-identical \emph{across} that boundary. The
+ledger counts same-descriptor repeats ($3{,}243$, the figure above) and
+cross-descriptor ones ($300$) separately, and the argument that the
+earlier and later tables describe one system rests only on the former.
 
 \paragraph{Decode cap.}
 Every arm reported in the main text uses a 384-token decode cap. The
