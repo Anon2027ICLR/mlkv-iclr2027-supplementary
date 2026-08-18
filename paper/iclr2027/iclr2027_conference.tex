@@ -775,6 +775,27 @@ also precedes the first generation in the corresponding store, while the
 other three files entered version control in a later batch. The history
 will be public with the code.
 
+\section*{AI use statement}
+Large language models were used substantially and throughout this work,
+and this statement follows the categories of the ICLR AI policy.
+Research ideation, experimental design and the preregistered predictions
+were developed by the authors in dialogue with LLMs; every
+preregistration was reviewed, approved and committed by the authors
+before the corresponding run. Experiments were executed by LLM agents
+operating the experiment harness against those committed protocols,
+whose kill conditions bound what an agent could decide alone. The
+harness, the analysis scripts and the figures are code written with
+substantial LLM assistance; the paper's text was drafted and revised
+the same way. Interpretation of results was constrained by design
+rather than delegated: no LLM judges any output in any reported metric,
+every table cell is recomputed from the raw generation records by a
+committed audit script, and cross-checking between independent models
+during preparation surfaced and corrected errors, including fabricated
+bibliography entries and two internal miscounts, before submission. LLMs
+were not used to generate synthetic evaluation data; all items derive
+from XQuAD and TyDiQA-GoldP. The authors reviewed all AI-assisted
+content and take full responsibility for every claim in this paper.
+
 \bibliography{iclr2027_conference}
 \bibliographystyle{iclr2027_conference}
 
