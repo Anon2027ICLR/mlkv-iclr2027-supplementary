@@ -45,6 +45,24 @@ ordered pad conditions, a distinct marker per series so identity survives
 greyscale). The accent pair was checked with a colour-vision validator, not
 by eye.
 
+**After adding any result**, run the claim linter *before* the number audit:
+
+```bash
+uv run python scripts/claim_lint.py            # all rules
+uv run python scripts/claim_lint.py --rule superlative
+```
+
+It prints the sentences whose truth depends on the rest of the paper --
+superlatives a later arm can overtake, counts that must match a list
+elsewhere, universals one new pod can falsify, staleness markers describing
+a state the campaign has moved past. It proves nothing and flags no errors;
+it is the re-confirmation list. Every claim-level error this campaign has
+shipped ("four of eight blind at w=32" against its own constants table,
+"nine generation stores" beside a list of eleven, "largest recovery in this
+paper" after a larger one landed, "inflates apparent damage" against an
+appendix that declines to claim it) is in a category this catches, and each
+was previously found by accident.
+
 **Before submitting**, run the number audit; it recomputes every table cell
 in this paper from the generation stores and fails on any drift:
 
