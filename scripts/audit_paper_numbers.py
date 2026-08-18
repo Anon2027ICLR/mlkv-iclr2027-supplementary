@@ -455,6 +455,23 @@ try:
     check("abstract c for English with a 120-token JSON schema",
           trailing(_pad_instruction(LANGUAGES["en"].qa_instruction, "en", tok,
                                     120, tail="json")), 166)
+
+    # The constants table, and the two counts the scope paragraph and the
+    # abstract draw from it. A blinded language is one whose trailing block
+    # exceeds the constant, so the counts follow from these eight numbers and
+    # nothing else -- which is how "four" survived here for a while: it was
+    # the count over the five swept languages, quoted in a sentence about all
+    # eight.
+    TEX_C = {"en": 25, "zh": 29, "es": 35, "vi": 39,
+             "th": 45, "sw": 47, "bn": 107, "te": 167}
+    measured = {}
+    for lang, want in TEX_C.items():
+        measured[lang] = trailing(LANGUAGES[lang].qa_instruction)
+        check(f"constants table c for {lang}", measured[lang], want)
+    check("languages blinded at the research default of 64",
+          sum(1 for c in measured.values() if c > 64), 2)
+    check("languages blinded at the shipped constant of 32",
+          sum(1 for c in measured.values() if c > 32), 6)
 except Exception as exc:  # tokenizer or model files unavailable
     print(f"  SKIPPED (no tokenizer available: {type(exc).__name__})")
 
