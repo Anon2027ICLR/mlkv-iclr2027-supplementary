@@ -12,10 +12,20 @@ with the AutoWindow store are **byte-identical across this boundary
 too** — cross-stack determinism is now 600/600 over two independent
 drifted pods, and the ledger prints it separately from the 3,243.
 
-**Missing deliverable:** the driver's `pool_check` block output (TyDiQA
-validation pool sizes, for W4 scoping) did not land in the repo — no
-Grok commit carries it. Ask for `/workspace/iclr6_chain.log` or re-run
-the block; W4's feasibility question stays open.
+**Pool check (W4 scoping), resolved 2026-08-19** — the pod log never
+carried it home, so it was re-run locally (pure `datasets`, no GPU):
+TyDiQA-GoldP validation pools are **bn 113, te 669, sw 499**. The
+reviewer's n=500 request is therefore **feasible for Telugu and
+structurally impossible for Bengali**: bn is capped at 113 evaluation
+items, and reaching past the validation split would consume the train
+split that Q90 is estimated on, breaking the held-out discipline. The
+clean extension design, if run: final n = the *entire* validation pool
+(bn 113, te 669) — a stopping rule with no free parameter, which kills
+the optional-stopping objection outright. At n=669 the Telugu closure
+interval scales to roughly ±2.7 pp — inside the ±3 gate for the first
+time — so the extension could convert one of the two headline cells from
+gate-met to certified, while Bengali's cap is stated as the honest
+constraint it is.
 
 ## Numbers (Δpp vs own baseline; context in brackets)
 
