@@ -34,6 +34,7 @@ STORES = [
     "autowin_q90.db", "autowin_8b.db", "cliff_gemma.db", "gemma_q90.db",
     "schema-final.db", "schema_fix.db", "v_trace.db", "v_trace_bn.db",
     "llama.db", "instr_first.db", "agnostic.db", "ratio.db",
+    "pyramidkv.db",
 ]
 
 DEFAULT_W = 64
@@ -57,26 +58,30 @@ def main() -> int:
             print(f"  missing store, skipped: {db}")
             continue
         con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-        for model, task, lang, cfg, iid, pv, out, created in con.execute(
+        for model, task, lang, cfg, iid, pv, out, created, stack in con.execute(
             "SELECT model, task, lang, config, item_id, prompt_version, "
-            "output, created_at FROM generations"
+            "output, created_at, stack_id FROM generations"
         ):
             key = (model, task, lang, norm_config(cfg), iid, pv)
-            rows[key].append((created, db, cfg, out))
+            rows[key].append((created, db, cfg, out, stack))
         con.close()
 
-    pair_shared: dict[tuple[str, str], int] = defaultdict(int)
-    pair_identical: dict[tuple[str, str], int] = defaultdict(int)
+    # A repeat within one stack hash supports the paper's same-system claim;
+    # a repeat across stack hashes is a separate, stronger observation and is
+    # tallied apart so the paper can quote each precisely.
+    pair_shared: dict[tuple[str, str, bool], int] = defaultdict(int)
+    pair_identical: dict[tuple[str, str, bool], int] = defaultdict(int)
     renamed = renamed_identical = 0
     for key, entries in rows.items():
         if len(entries) < 2:
             continue
         entries.sort(key=lambda e: e[0])
-        _, first_store, first_cfg, first_out = entries[0]
-        for created, store, cfg, out in entries[1:]:
+        _, first_store, first_cfg, first_out, first_stack = entries[0]
+        for created, store, cfg, out, stack in entries[1:]:
             same = out == first_out
-            pair_shared[(first_store, store)] += 1
-            pair_identical[(first_store, store)] += same
+            cross = stack != first_stack
+            pair_shared[(first_store, store, cross)] += 1
+            pair_identical[(first_store, store, cross)] += same
             if cfg != first_cfg:
                 # Same treatment reached under two config spellings: one
                 # store asks for the default window implicitly, the other
@@ -84,22 +89,31 @@ def main() -> int:
                 renamed += 1
                 renamed_identical += same
 
-    print(f"{'original store':<26} {'re-run store':<22} shared  identical")
+    print(f"{'original store':<26} {'re-run store':<22} {'stack':<6} shared  identical")
     for pair in sorted(pair_shared, key=lambda p: -pair_shared[p]):
         n, k = pair_shared[pair], pair_identical[pair]
         flag = "" if n == k else f"   <-- {n - k} DIFFER"
-        print(f"{pair[0]:<26} {pair[1]:<22} {n:6} {k:10}{flag}")
+        tag = "cross" if pair[2] else "same"
+        print(f"{pair[0]:<26} {pair[1]:<22} {tag:<6} {n:6} {k:10}{flag}")
 
-    repeats = sum(pair_shared.values())
-    identical = sum(pair_identical.values())
-    print(f"\n{repeats} generations re-run in a later store, {identical} "
-          f"byte-identical to the first run")
-    print(f"of those, {renamed} also cross the implicit/explicit spelling of "
-          f"the default window, {renamed_identical} byte-identical")
-    if repeats != identical or renamed != renamed_identical:
-        print("MISMATCH: a repeat differs from its original")
+    same_n = sum(v for (a, b, c), v in pair_shared.items() if not c)
+    same_k = sum(v for (a, b, c), v in pair_identical.items() if not c)
+    cross_n = sum(v for (a, b, c), v in pair_shared.items() if c)
+    cross_k = sum(v for (a, b, c), v in pair_identical.items() if c)
+    print(f"\nsame stack : {same_n} repeats, {same_k} byte-identical "
+          f"(the paper's same-system claim)")
+    print(f"cross stack: {cross_n} repeats, {cross_k} byte-identical "
+          f"(stronger; quoted separately, never pooled)")
+    print(f"of the same-stack repeats, {renamed} also cross the "
+          f"implicit/explicit spelling of the default window, "
+          f"{renamed_identical} byte-identical")
+    if same_n != same_k or renamed != renamed_identical:
+        print("MISMATCH: a same-stack repeat differs from its original")
         return 1
-    print("every repeated generation reproduces exactly")
+    if cross_n != cross_k:
+        print("note: cross-stack repeats differ, as stack discipline allows")
+    else:
+        print("every repeated generation reproduces exactly")
     return 0
 
 
