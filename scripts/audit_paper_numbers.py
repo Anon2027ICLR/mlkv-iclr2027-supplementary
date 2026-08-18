@@ -93,6 +93,22 @@ TEX_CLIFF = {  # lang: (base, [(delta, star) per w in 32,56,88,120,176])
     "bn": (73, [(-13, True), (-15, True), (-21, True), (-8, False), (-3, False)]),
     "te": (56, [(-19, True), (-21, True), (-18, True), (-14, True), (-13, True)]),
 }
+# The scope paragraph claims an English-validated benchmark cannot tell the
+# two shipped constants apart. That is a direct paired comparison the tables
+# never make: w=32 lives in this store and w=64 (the implicit default) in the
+# AutoWindow store. Both are English, same items, same stack, so the
+# comparison is legal -- but it has to be computed, not inferred from two
+# rows that each sit beside a different baseline.
+_D_EN = load("autowin-final.db")["en"]
+check("scope en w32-vs-w64 delta",
+      cmp_pair(S["en"]["snapkv@r0.75:w32"], _D_EN["snapkv@r0.75"])["d"], -2)
+check("scope en w32-vs-w64 not significant",
+      cmp_pair(S["en"]["snapkv@r0.75:w32"], _D_EN["snapkv@r0.75"])["star"], False)
+# and the two stores must agree on the English baseline they share, or the
+# comparison above is crossing an item boundary rather than a window one
+check("scope en baselines agree across the two stores",
+      cmp_pair(S["en"]["baseline"], _D_EN["baseline"])["fb"], (0, 0))
+
 for lang, (base_tex, cells) in TEX_CLIFF.items():
     base = S[lang]["baseline"]
     check(f"cliff {lang} baseline", round(100 * sum(base.values()) / len(base)), base_tex)

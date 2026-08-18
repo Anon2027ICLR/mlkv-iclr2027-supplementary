@@ -135,14 +135,18 @@ remaining error is of a different kind.
 We study a method family rather than a shipped production default: vLLM
 exposes no SnapKV-style evictor, the RocketKV path is opt-in, and
 \citet{nvidia2026efficient} argue that research evictors rarely ship as
-defaults. We do not claim that KV-cache compression harms low-resource
-languages in general. We claim something narrower and more actionable:
+defaults. Our claim is narrower and more actionable than harm to
+low-resource languages in general:
 a token-denominated window blinds whichever prompts carry a trailing
 block longer than itself, and under today's tokenizers such prompts are
 non-English. Which languages qualify depends on the constant: at the
 research default of 64 tokens, two of our eight languages are blinded; at
 the stricter shipped constant of 32, four are; English never is, at any
-window we tested.
+window we tested. That last clause is why the number goes unaudited: at
+this ratio no tested window costs English anything --- $w{=}32$ and
+$w{=}64$ differ by $2$\,pp (ns) on our items --- so an English-validated
+benchmark cannot tell those two constants apart, and nothing in standard
+practice objects to whichever ships.
 
 % =====================================================================
 \section{Related work}
@@ -436,8 +440,8 @@ We sweep five windows at fixed offsets above the measured $c$ on Telugu,
 the language with the longest trailing block and the deepest hole:
 $c{+}4$, $c{+}16$, $c{+}32$, $c{+}48$ and $c{+}80$, on 100 items with
 their own uncompressed baseline (Figure~\ref{fig:triptych}c;
-Table~\ref{tab:dose} in Appendix~\ref{app:dose}). The offsets were fixed before the run and $c$
-was re-measured on the run tokenizer.
+Table~\ref{tab:dose} in Appendix~\ref{app:dose}; offsets fixed before the
+run, $c$ re-measured on the run tokenizer).
 
 Four visible tokens of question buy nothing: $c{+}4$ loses $18$\,pp, which
 is what the same items lose at the shipped $w{=}64$, where they see none
@@ -651,8 +655,8 @@ the dose ladder within a single language (Section~\ref{sec:dose}).
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
-(Bengali $-3$\,pp, ns): the failure needs a question whose content the
-scorer must match against passages, not merely a long prompt. Two scorers
+(Bengali $-3$\,pp, ns): the failure needs a question matched against
+passages, not merely a long prompt. Two scorers
 designed never to look at the question \citep{devoto2025expected,
 oren2024transformers} fail differently, and worse: at the same ratio they
 cost English $14$ and $8$\,pp, where no window we tested costs it
@@ -722,7 +726,8 @@ trailing instructions are not. Two quantities decide the outcome and both
 can be computed before any inference: $c$, the number of tokens standing
 between the question and the end of the prompt, and the slack the window
 leaves beyond it, which has to be counted in units of the question rather
-than in constants. Setting $w = c + Q_{90}$ from the tokenizer, the chat
+than in constants: too little slack is blindness, and too much, at heavy
+eviction, is a tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$ from the tokenizer, the chat
 template and a held-out percentile meets its registered gate on
 English, Bengali and Telugu at 4B and closes the English schema tails,
 returns the library default where the default is already adequate, and
