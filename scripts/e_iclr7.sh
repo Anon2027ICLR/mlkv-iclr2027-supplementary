@@ -13,7 +13,7 @@
 #   e_iclr7.sh guards|te|bn
 #
 # UV_NO_SYNC is not optional -- docs/runpod-api-guide.md §7.
-set -u
+set -uo pipefail
 export HF_HOME=/workspace/hf PATH=$HOME/.local/bin:$PATH UV_NO_SYNC=1
 export HF_HUB_DISABLE_XET=1
 cd /workspace/mlkv
