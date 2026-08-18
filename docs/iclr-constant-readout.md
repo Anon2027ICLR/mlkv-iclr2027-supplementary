@@ -12,9 +12,15 @@ with the AutoWindow store are **byte-identical across this boundary
 too** — cross-stack determinism is now 600/600 over two independent
 drifted pods, and the ledger prints it separately from the 3,243.
 
-**Pool check (W4 scoping), resolved 2026-08-19** — the pod log never
-carried it home, so it was re-run locally (pure `datasets`, no GPU):
-TyDiQA-GoldP validation pools are **bn 113, te 669, sw 499**. The
+**Pool check (W4 scoping), resolved 2026-08-19** — campaign log excerpt
+now in `docs/iclr6-pool-check.md` (pulled from
+`/workspace/iclr6_chain.log` on `297ccl21a2urwe`). Driver print:
+**bn 113** (headroom 13); te line is tee-interleaved but begins
+`te: TyDiQA-GoldP validation pool = 669`, and the same process then
+logged `mrag[bn]: pool ready (113 questions…)` /
+`mrag[te]: pool ready (669 questions…)`. A local `datasets` re-run
+agrees and adds **sw 499**. TyDiQA-GoldP validation pools are
+**bn 113, te 669, sw 499**. The
 reviewer's n=500 request is therefore **feasible for Telugu and
 structurally impossible for Bengali**: bn is capped at 113 evaluation
 items, and reaching past the validation split would consume the train
