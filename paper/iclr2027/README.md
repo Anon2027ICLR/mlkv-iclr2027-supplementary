@@ -67,7 +67,7 @@ was previously found by accident.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 411 checks
+uv run python scripts/audit_paper_numbers.py    # 434 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
@@ -89,6 +89,7 @@ so their commit time does not precede the run.
 | `iclr-ratio-sweep-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
 | `iclr-pyramidkv-preregister.md` | `74840de` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
 | `iclr-template-survey-preregister.md` | `813bcad` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
+| `iclr-constant-and-ranking-preregister.md` | `e287172` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so

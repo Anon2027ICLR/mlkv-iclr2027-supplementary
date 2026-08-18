@@ -136,7 +136,8 @@ remaining error is of a different kind.
 (v)~We show the integer belongs to the prompt rather than to the method:
 it transfers unchanged to a second evictor that inherits the same window,
 while the two obvious alternatives --- a scorer that never reads the
-question, and one larger constant --- are worse at the same ratio.
+question, and one larger constant --- miss gates the rule meets at
+matched ratios.
 
 \paragraph{Scope.}
 We study a method family rather than a shipped production default: vLLM
@@ -770,19 +771,19 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Sixteen generation stores back the tables:
+corresponding data existed. Seventeen generation stores back the tables:
 \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
 \texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
 \texttt{gemma\_q90}, \texttt{schema}, \texttt{schema\_fix},
 \texttt{v\_trace}, \texttt{v\_trace\_bn}, \texttt{llama},
-\texttt{instr\_first}, \texttt{agnostic}, \texttt{ratio} and
-\texttt{pyramidkv}. Every table
+\texttt{instr\_first}, \texttt{agnostic}, \texttt{ratio},
+\texttt{pyramidkv} and \texttt{constant}. Every table
 cell in this paper is recomputed from the raw generations in those stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
 conditions for every arm are files that ship with the code, each written
-before its run; for seven of the ten arms the version-history timestamp
+before its run; for eight of the eleven arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three files entered version control in a later batch. The history
 will be public with the code.
@@ -1154,8 +1155,13 @@ discontinuity at $c$ here either; Telugu's baseline of 37\% is low enough
 that the sweep would not resolve a small hole; and English is itself
 blind at $w{=}16$ and $24$ on this tokenizer without being damaged
 there --- indeed no window we tested damages Gemma's English at this
-ratio. Blindness is necessary for the failure but not sufficient: it
-costs accuracy only where the scorer's ranking was carrying the answer.
+ratio. Blindness is necessary for the failure but not sufficient. How much any
+ranking is worth is measured in Appendix~\ref{app:rivals}: evicting at
+the same ratio with no ranking at all collapses generation itself, so
+even a blinded ranking does most of the work. What distinguishes Gemma's
+undamaged blind English cells from Qwen's damaged padded ones, that
+measurement cannot say, and we report the asymmetry as an observation
+rather than an account.
 The within-model contrast is untouched --- the same two blind windows
 cost Bengali 13 and 10 points --- but the shading makes the asymmetry
 visible, and we would rather state it than let a reader find it. The AutoWindow arm on this
@@ -1290,6 +1296,29 @@ largest recovery at this ratio --- and still finishes $24$\,pp below
 baseline. Sizing the window is what removes the blind mode; it is not
 what makes aggressive eviction free.
 
+The reviewer-facing question is the other ratio: does the constant
+suffice where the headline numbers live? Measured on its own pod and
+baselines, judged by the same preregistered $\pm 3$ gate the rule was
+judged by, $w{=}256$ at $r{=}0.75$ is $+1$ on English, $-3$ on Telugu
+--- at the boundary --- and $-5$ on Bengali (5 fixed / 10 broken, ns, CI
+$[-11.5,+3.5]$), missing the gate that $\hat w$ met at $-2$. The
+preregistration expected the constant to pass and committed to rewriting
+our claim if it did; it did not, and we state the symmetric caveat
+instead: at $n{=}100$ the Bengali interval certifies neither the miss nor
+a close, so what the grid supports is that the rule met all six of its
+gates and the constant met four of six across the two ratios, never
+beating the rule's cell anywhere.
+
+\paragraph{No ranking at all.}
+The same store carries the control the registry always reserved:
+\texttt{random@r0.75}, eviction with no scorer. It does not lose
+answers; it collapses generation --- $6/1/0\%$ accuracy on English,
+Bengali and Telugu, with $96$--$100\%$ of outputs running to the decode
+cap, mostly as repetition loops. Even a blinded ranking is carrying
+enormous weight. Because random sits at the floor for every language, it
+bounds the value of ranking from above without discriminating between
+them, and we draw no per-language conclusion from it.
+
 \paragraph{A second member of the family.}
 PyramidKV \citep{cai2024pyramidkv} keeps the observation window and
 changes what is done with the retained budget, allocating more of it to
@@ -1312,9 +1341,10 @@ uncompressed baseline, $n{=}100$ per cell; star: McNemar $p<.05$. Top:
 two query-agnostic scorers at the ratio used throughout the paper, beside
 the windowed cells they would replace. Bottom: the heavy-ratio sweep,
 where $\hat w$ is $43$ for English and $183$ for Bengali. Third block:
-PyramidKV at $r{=}0.75$ on its own pod, which did not reproduce the
-campaign stack, so the bracketed SnapKV values are context rather than
-comparators and are never pooled with it.}
+the constant and the no-ranking control at the headline ratio; fourth:
+PyramidKV. Both ran on pods that did not reproduce the campaign stack,
+so their bracketed SnapKV values are context rather than comparators and
+are never pooled with them.}
 \label{tab:rivals}
 \centering
 \small
@@ -1330,6 +1360,12 @@ $r{=}0.9375$ & $w{=}64$ & $w{=}256$ & $\hat w$ & \\
 \midrule
 en & ${-}2$ & ${-}9^{*}$ & $\mathbf{{-}1}$ & \\
 bn & ${-}44^{*}$ & ${-}28^{*}$ & $\mathbf{{-}24^{*}}$ & \\
+\midrule
+$r{=}0.75$, own pod & random & $w{=}256$ & \multicolumn{2}{c}{[SnapKV $\hat w$]} \\
+\midrule
+en & ${-}87^{*}$ & $\mathbf{{+}1}$ & \multicolumn{2}{c}{[${+}2$]} \\
+bn & ${-}72^{*}$ & ${-}5$ & \multicolumn{2}{c}{[${-}2$]} \\
+te & ${-}56^{*}$ & $\mathbf{{-}3}$ & \multicolumn{2}{c}{[${+}0$]} \\
 \midrule
 PyramidKV & $w{=}64$ & $\hat w$ & \multicolumn{2}{c}{[SnapKV: $w{=}64$ / $\hat w$]} \\
 \midrule
@@ -1442,10 +1478,10 @@ Each generation record stores a stack descriptor (GPU, driver, CUDA,
 torch, transformers, kvpress) and every comparison in this paper is
 within one descriptor. The Gemma cells share one stack and the Qwen3-8B
 slice another; the Qwen3-4B cells share a third, with one exception ---
-the PyramidKV pod landed on a fourth descriptor (a newer driver patch and
-host kernel, same GPU model and library versions), so that arm pairs only
-within itself and is quoted beside the others rather than pooled with
-them. We never pool across descriptors.
+the PyramidKV and constant-control pods each landed on descriptors of
+their own (a newer driver patch or a different host kernel; same GPU
+model and library versions), so those arms pair only within themselves
+and are quoted beside the others rather than pooled with them. We never pool across descriptors.
 
 \paragraph{Determinism, measured.}
 The follow-up runs were executed weeks after the original ones, on new
@@ -1461,11 +1497,11 @@ allows us to treat the re-measured constants and the earlier tables as
 describing the same system. Three hundred of those pairs also cross a
 naming difference --- one store requests the default window implicitly
 and the other names $w{=}64$ explicitly --- and agree token for token, as
-they should. The PyramidKV pod's stack drift bought one measurement we
-had not planned: the $300$ uncompressed baselines it shares with the
-AutoWindow store are byte-identical \emph{across} that boundary. The
+they should. The two drifted pods bought a measurement we had not
+planned: the $600$ uncompressed baselines they share with the AutoWindow
+store are byte-identical \emph{across} those boundaries. The
 ledger counts same-descriptor repeats ($3{,}243$, the figure above) and
-cross-descriptor ones ($300$) separately, and the argument that the
+cross-descriptor ones ($600$) separately, and the argument that the
 earlier and later tables describe one system rests only on the former.
 
 \paragraph{Decode cap.}

@@ -561,6 +561,44 @@ except Exception as exc:  # tokenizer or model files unavailable
     print(f"  SKIPPED (no tokenizer available: {type(exc).__name__})")
 
 # --------------------------------------------------------------------------
+print("## Appendix: the constant and the no-ranking control — tab:rivals")
+# Its pod is a fifth stack descriptor, so every comparison is within this
+# store; the bracketed SnapKV values printed beside it are checked above
+# against their own stores and are never paired with these.
+CO = load("constant.db")
+TEX_CO = {  # lang: (baseline, (w256 d, star), (random d, star, fixed/broken))
+    "en": (93, (1, False), (-87, True, (0, 87))),
+    "bn": (73, (-5, False), (-72, True, (0, 72))),
+    "te": (56, (-3, False), (-56, True, (0, 56))),
+}
+for lang, (b_tex, w256, rnd) in TEX_CO.items():
+    base = CO[lang]["baseline"]
+    check(f"constant {lang} baseline",
+          round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, CO[lang]["snapkv@r0.75:w256"])
+    check(f"constant {lang} w256 delta", r["d"], w256[0])
+    check(f"constant {lang} w256 star", r["star"], w256[1])
+    r = cmp_pair(base, CO[lang]["random@r0.75"])
+    check(f"constant {lang} random delta", r["d"], rnd[0])
+    check(f"constant {lang} random star", r["star"], rnd[1])
+    check(f"constant {lang} random fixed/broken", r["fb"], rnd[2])
+# The Bengali miss is what the appendix hangs its argument on, so pin its
+# discordant counts too.
+check("constant bn w256 fixed/broken",
+      cmp_pair(CO["bn"]["baseline"], CO["bn"]["snapkv@r0.75:w256"])["fb"], (5, 10))
+# Derived: the appendix says the constant meets the gate on two of three
+# languages. Recompute that count rather than trusting the sentence.
+_gate = sum(
+    1 for lang in TEX_CO
+    if abs(cmp_pair(CO[lang]["baseline"], CO[lang]["snapkv@r0.75:w256"])["d"]) <= 3
+)
+check("constant meets the +-3 gate on this many languages", _gate, 2)
+# and the no-ranking accuracies the appendix prints as 6/1/0
+for lang, want in (("en", 6), ("bn", 1), ("te", 0)):
+    check(f"constant {lang} random accuracy",
+          cmp_pair(CO[lang]["baseline"], CO[lang]["random@r0.75"])["acc"], want)
+
+# --------------------------------------------------------------------------
 print("## Appendix: the decode cap — tab:cap")
 # Full derivation, including the within-item causal comparison, lives in
 # scripts/decode_cap_ledger.py; the cells the appendix prints are pinned here
