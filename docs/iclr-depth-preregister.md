@@ -40,6 +40,32 @@ appear in the Q₉₀ estimation split — the split is `train`, eval is
 `validation`, and the driver asserts the id sets are disjoint rather
 than assuming it), and the usual stack preflight.
 
+## Amendment, 2026-08-19 — before any generation exists
+
+The guard fired on its first run, which is what guards are for, and what
+it found was a mis-specification in the guard itself, not in the
+discipline it protects. TyDiQA-GoldP's Bengali train and validation
+splits share **three exact duplicate examples** (same id, same question,
+same context: indices 38, 51 and 68 of the validation pool). The guard
+as written demanded the *raw HF splits* be disjoint — a property of the
+dataset we do not control. The invariant the preregistration actually
+depends on is ours: **no evaluation item may contribute to the Q₉₀
+estimation set**, and that set has always been `train` minus the ids of
+`validation[:100]` (`measure_q.py`), which excludes all three duplicates.
+Re-verified independently on 2026-08-19: eval(full pool) ∩ Q₉₀-source =
+∅ for both languages, and the item builder is inert to the wart as well
+(distractor pools deduplicate by context string and exclude the gold by
+string equality, so a train copy of an eval item's context can neither
+duplicate the gold nor enter its own prompt).
+
+The guard is therefore corrected to assert the true invariant, the three
+duplicate ids are reported here rather than silently tolerated, and
+nothing else changes: predictions, stopping rule and paper consequences
+below stand as written. The run also exposed a driver bug — `| tee`
+swallowed the FATAL exit code — fixed in `533ca26` (`set -uo pipefail`)
+before any generation; the same latent pattern exists in the earlier
+drivers `e_iclr4–6`, where it never bit because their guards passed.
+
 ## Predictions (fixed)
 
 1. **Main:** Telugu at $\hat w{=}247$ meets the ±3 point gate on the
