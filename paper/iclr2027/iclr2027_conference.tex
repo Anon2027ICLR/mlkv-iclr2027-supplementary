@@ -129,10 +129,14 @@ question-sized, and introduce query visibility $V$ as an input-side,
 zero-inference measure of it.
 (iii)~We propose and preregister AutoWindow, $\hat w = c + Q_{90}$, one
 integer per model, language and template, and report the gate, the
-intervals, the misses, and its transfer to a second evictor.
+intervals, and the misses.
 (iv)~We diagnose the residual in the three cells where the gate is
 missed, showing that the question is fully visible there and the
 remaining error is of a different kind.
+(v)~We show the integer belongs to the prompt rather than to the method:
+it transfers unchanged to a second evictor that inherits the same window,
+while the two obvious alternatives --- a scorer that never reads the
+question, and one larger constant --- are worse at the same ratio.
 
 \paragraph{Scope.}
 We study a method family rather than a shipped production default: vLLM
@@ -239,9 +243,9 @@ budget, so changing $w$ at a fixed ratio does not change how much cache
 survives; every comparison below is at matched retained KV
 (Appendix~\ref{app:snapkv} states the scoring step precisely, and
 Appendix~\ref{app:prod} the production scope). Decoding is
-greedy with a 384-token cap, after we found that the more common 128-token
-cap is itself a token-denominated constant: it truncates answers in
-high-fertility scripts and inflates apparent damage.
+greedy with a 384-token cap: the more common 128-token cap is itself a
+token-denominated constant, and Appendix~\ref{app:cap} reports what it
+did to our own measurements.
 
 \paragraph{Scoring.}
 An answer counts as correct if a gold span appears, after Unicode
@@ -253,9 +257,9 @@ variant leaves every conclusion in the paper unchanged
 (Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar tests
 and we report the discordant counts (fixed/broken) so the reader can see
 what the $p$-value is made of. Every cell in the main text pairs 100
-items; the earlier supporting runs in Appendix~\ref{app:levers} pair 200,
-being the same 100 questions at two context budgets, and we mark them
-where they appear.
+items; the supporting runs in Appendix~\ref{app:levers} pair 200, being
+the same questions at two context budgets, and are marked where they
+appear.
 
 \paragraph{The quantities.}
 Prompts are instruction-last unless stated:
@@ -367,13 +371,12 @@ and Swahili, whose trailing blocks are 45 and 47 tokens, dip at the one
 tested window below their $c$ and are within noise elsewhere; we do not
 headline Swahili, whose baseline is $56\%$.
 
-Two features matter more than the average effect. The ordering of damage
-follows the ordering of $c$, not of baseline accuracy: Swahili has the
-weakest baseline of the five and close to the smallest loss, while
-Bengali and Telugu have the longest trailing blocks and the largest
-losses. And clearing $c$ is evidently not sufficient --- Telugu at
-$c{+}9$ is still down 13 points --- which is the question
-Section~\ref{sec:dose} takes up.
+Two features matter more than the average effect. Damage follows the
+ordering of $c$, not of baseline accuracy: Swahili has the weakest
+baseline of the five and close to the smallest loss, while Bengali and
+Telugu have the longest trailing blocks and the largest losses. And
+clearing $c$ is evidently not sufficient --- Telugu at $c{+}9$ is still
+down 13 points --- which is what Section~\ref{sec:dose} takes up.
 
 \paragraph{The same cliff, constructed in English.}
 If the mechanism is trailing length rather than language, then padding an
@@ -393,9 +396,9 @@ four conditions collapse onto one curve (Figure~\ref{fig:triptych}b):
 across the twenty cells, every window short of its condition's trailing
 block scores at most $90\%$ and every window clearing it at least
 $91\%$. Neighbouring cells sit within the noise of 100 items, so we read
-that separation as a description of the grid, not a test. Nothing about the language, the items,
-or the retained budget changed across these curves; only the number of
-tokens standing between the question and the end of the prompt did.
+that separation as a description of the grid, not a test. Across these
+curves only the number of tokens between the question and the end of the
+prompt changed.
 \paragraph{A constant that is already shipped.}
 kvpress ships $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships
 $w{=}32$. Moving from the first constant to the second, on matched items,
@@ -470,16 +473,15 @@ better one-parameter summary: AIC prefers $y\sim V$ ($689.8$) to
 $y\sim(w{-}c)$ ($692.1$) and to $y\sim(w{-}c)+|Q|$ ($692.2$).
 
 The bins are not monotone throughout, and we state where. The
-$0.75\le V<1$ band loses $11.9$\,pp ($n{=}59$, $p{=}.065$); it holds nine
-distinct long-question items, six of them contributed by the single
-$c{+}48$ cell, four of which recover once $V$ reaches $1$. We therefore
-claim the window-level dose curve and the within-item trend, not a
-monotone per-item bin profile.
+$0.75\le V<1$ band loses $11.9$\,pp ($n{=}59$, $p{=}.065$), and the
+Bengali ladder breaks in the same band; both hold long-question items
+that recover once $V$ reaches $1$ (Appendix~\ref{app:dose}). We claim the
+window-level dose curve and the within-item trend, not a monotone
+per-item bin profile.
 
 Slack therefore has to be counted in units of the question rather than in
-constant tokens: a slack the size of an English question leaves the median
-Telugu item at $V{=}0.31$, and Table~\ref{tab:dose} shows what that
-buys.
+constant tokens: a slack the size of an English question leaves the
+median Telugu item at $V{=}0.31$.
 
 % =====================================================================
 \section{AutoWindow: one integer, and where it stops}
@@ -544,12 +546,11 @@ against the shipped default (16 fixed / 2 broken and 21/2; $p{=}.001$
 and $p{<}.001$). The
 English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
-($-7$ and $-6$\,pp). Across the full eight-language grid, the languages
-whose trailing block already fits inside the default window stay within
-$3$\,pp of baseline, with one marginal exception --- Vietnamese loses
-$5$\,pp at the default window, where it is not blind ($c{=}39{<}64$; ns,
-$p{=}.06$), and recovers to $-2$ under $c{+}16$
-(Appendix~\ref{app:grids}). The gate is a statement about the languages
+($-7$ and $-6$\,pp). Across the eight-language grid, languages whose
+trailing block already fits inside the default window stay within
+$3$\,pp of baseline; the one marginal exception, Vietnamese, loses $5$ at
+the default where it is not blind (ns) and recovers to $-2$ under
+$c{+}16$ (Appendix~\ref{app:grids}). The gate is a statement about the languages
 the default window actually blinds. Exact intervals for these cells are
 in Appendix~\ref{app:ci}: at $n{=}100$ the English and schema closes are
 non-inferior at $-3$\,pp, while the Bengali and Telugu intervals,
@@ -560,11 +561,10 @@ demonstrated equivalence.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
 The same trailing-block logic applies when the tail is a response format
-rather than a translated instruction. An earlier run tested this and
-failed: it applied AutoWindow to English prompts carrying JSON schema
-tails but sized the window from the \emph{unpadded} English instruction
-($w{=}41$), which is smaller than the default it was meant to improve on,
-and at a 120-token schema that cost $23$\,pp. Measuring $c$ with the
+rather than a translated instruction. An earlier run sized the window
+from the \emph{unpadded} English instruction ($w{=}41$, below the very
+default it meant to improve on) and cost $23$\,pp at the 120-token
+schema. Measuring $c$ with the
 schema in place gives $72$, $166$ and $213$ tokens, hence
 $\hat w = 90$, $184$ and $231$. Panel~(B) shows the same formula closing
 all three tails while breaking none of the items the default window
@@ -590,19 +590,16 @@ $-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B cells met
 
 \paragraph{Scale, and a third family.}
 A Qwen3-8B slice reproduces the phenomenon and not the gate: the
-default window costs Bengali $17$\,pp ($p{<}.001$); $\hat w$ recovers
-$+9$\,pp (11 fixed / 2 broken, $p{=}.022$) and remains $8$\,pp below
-baseline ($p{=}.008$); English is at ceiling throughout and carries no
+default costs Bengali $17$\,pp, $\hat w$ recovers $+9$ and remains $8$
+below baseline ($p{=}.008$); English is at ceiling and carries no
 information about either (Appendix~\ref{app:8b}). Llama-3.1-8B-Instruct
 is the same test on a third tokenizer family, with both inputs
 re-measured on its tokenizer --- $c{=}125$ and $Q_{90}{=}87$ for
 Bengali, so $\hat w{=}212$. The hole reproduces at $-18$\,pp, and for
 the first time in this paper with an interval entirely below the
 damage bound: the 95\% CI is $[-21.5, -9.2]$. The formula recovers
-$+10$\,pp over the default (13/3, $p{=}.021$) and leaves $-8$\,pp
-($p{=}.057$) --- the same residual as 8B, reported the same way. We do
-not claim the formula closes on either model
-(Appendix~\ref{app:llama}).
+$+10$\,pp and leaves $-8$ ($p{=}.057$), the same residual as 8B; we do
+not claim it closes on either model (Appendix~\ref{app:llama}).
 
 \paragraph{What the residuals are not.}
 The three cells that miss the closure gate are all Bengali ($-6$ at
@@ -614,10 +611,10 @@ window sees all of it by construction, and the same press at the same
 ratio still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns; CIs
 $[-8.7,+3.0]$ and $[-7.9,+0.4]$) while removing about three quarters of
 the instruction-last hole (Table~\ref{tab:aw}). The missed cells
-look the same: at Gemma the gap is a plateau across every window from
-48 to 64, and at 8B all eight and at Llama nine of eleven
-residual items have their whole question inside the window
-(Appendices~\ref{app:gemma}, \ref{app:8b} and~\ref{app:llama}).
+look the same: at Gemma the gap is a plateau from 48 to 64, and at 8B all
+eight residual items and at Llama nine of eleven have their whole
+question inside the window (Appendices~\ref{app:gemma},
+\ref{app:8b} and~\ref{app:llama}).
 Widening the window turns off the blind mode; it does not remove the
 ordinary cost of discarding three quarters of the cache.
 
@@ -640,9 +637,9 @@ regressing correctness on a compression indicator and a blindness
 indicator $\mathbf{1}[w<c]$, with standard errors clustered by item, gives
 $+0.09$ log-odds for compression when the question is visible
 (95\% CI $[-0.05, 0.23]$, $p{=}.21$) and $-1.06$ for blindness
-($z{=}{-}9.4$, $p{<}.001$). Because uncompressed rows are never blind,
-the interaction term is identical to the blindness term; we report the
-operational form. We cannot distinguish the cost of discarding three
+($z{=}{-}9.4$, $p{<}.001$). Uncompressed rows are never blind, so the
+interaction term equals the blindness term; we report the operational
+form. We cannot distinguish the cost of discarding three
 quarters of the cache from zero when the scorer can see the question,
 which is not the same as showing it is zero: the interval still admits a
 small effect in either direction. What it does exclude is anything
@@ -655,11 +652,10 @@ the binary blindness indicator ($3075$), and the raw window $w$ ($3220$).
 The mechanism's prediction that $(w{-}c)$ beats raw $w$ holds. But on a
 five-language grid $(w{-}c)$ is nearly collinear with language identity,
 and the sweep alone therefore cannot separate a threshold from a
-per-language constant. That separation comes from the experiments in
-which language is held fixed while $c$ moves --- the English pads
-(Section~\ref{sec:threshold}), the schema tails
-(Section~\ref{sec:autowindow}) and the change of tokenizer --- and from
-the dose ladder within a single language (Section~\ref{sec:dose}).
+per-language constant. That separation comes from the experiments that hold
+language fixed while $c$ moves (Sections~\ref{sec:threshold}
+and~\ref{sec:autowindow}) and from the dose ladder within one language
+(Section~\ref{sec:dose}).
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
@@ -1456,11 +1452,11 @@ measured under a 128-token cap, as were the historical instruction-first
 numbers kept beside it; the instruction-first layout swap itself has
 been re-measured at the current cap and is reported in the main text
 (Table~\ref{tab:aw}). We flag the difference here rather than
-leave it to be discovered in a log. The
-cap matters: at 128 tokens, answers in high-fertility scripts are
-truncated at a rate that varies by language, which inflates apparent
-per-language damage. That is itself an instance of this paper's subject,
-and it is why the main arms were re-run at 384.
+leave it to be discovered in a log. The cap matters, and it is an
+instance of this paper's subject rather than a detail of it: at 128
+tokens the share of answers truncated varies from $1$ to $65\%$ across
+languages, which is why the main arms were re-run at 384
+(Appendix~\ref{app:cap}).
 
 \section{Two further levers on visibility}
 \label{app:levers}
