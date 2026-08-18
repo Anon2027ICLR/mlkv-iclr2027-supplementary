@@ -67,7 +67,7 @@ was previously found by accident.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 394 checks
+uv run python scripts/audit_paper_numbers.py    # 398 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
@@ -88,6 +88,7 @@ so their commit time does not precede the run.
 | `iclr-agnostic-baseline-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
 | `iclr-ratio-sweep-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
 | `iclr-pyramidkv-preregister.md` | `74840de` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
+| `iclr-template-survey-preregister.md` | `813bcad` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so
@@ -99,6 +100,7 @@ script, not by hand:
 ```bash
 uv run python scripts/determinism_ledger.py     # 3,243 same-stack, 300 cross
 uv run python scripts/decode_cap_ledger.py      # the appendix on the decode cap
+uv run python scripts/template_survey_measure.py  # the layout-in-the-wild appendix
 ```
 
 The determinism ledger separates repeats within one stack descriptor (the

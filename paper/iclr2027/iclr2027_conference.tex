@@ -153,7 +153,12 @@ window we tested. That last clause is why the number goes unaudited: at
 this ratio no tested window costs English anything --- $w{=}32$ and
 $w{=}64$ differ by $2$\,pp (ns) on our items --- so an English-validated
 benchmark cannot tell those two constants apart, and nothing in standard
-practice objects to whichever ships.
+practice objects to whichever ships. Nor is the layout an artefact of our
+items: among 22 popular templates, frozen before their bodies were read,
+single-shot retrieval defaults are safe, while a shipped refine template
+leaves exactly the library default of $64$ tokens after the query and an
+agent scaffold leaves $221$ before its first observation
+(Appendix~\ref{app:wild}).
 
 % =====================================================================
 \section{Related work}
@@ -1480,13 +1485,104 @@ nothing ($-0.5$\,pp, 8/9). Saturation at a window well below $c+Q_{90}$
 for that setting is consistent with the dose curve in
 Section~\ref{sec:dose}.
 
+\section{The layout in the wild}
+\label{app:wild}
+
+Our items are constructed, which invites a fair question: does any widely
+used prompt actually put a long block after the question? We surveyed 22
+templates selected by popularity and officialness \emph{before} their
+bodies were read --- the default QA prompt of a framework above 5k stars,
+an official vendor documentation example, or the prompt of a published
+benchmark or harness --- so that safe layouts could not be filtered out.
+Each was recorded verbatim from a commit-pinned source, the list was
+frozen, and only then was anything tokenized. We measure the
+\emph{static} trailing block: the text after the question placeholder
+with every unfilled placeholder deleted, on the Qwen3-4B tokenizer.
+Deleting placeholders makes every number a lower bound, because runtime
+content only adds (Table~\ref{tab:wild}).
+
+This is a measurement of geometry, not of damage. Whether windowed
+eviction harms an agent loop the way it harms instruction-last QA is not
+tested here, and the question an agent is answering at step $k$ is not
+only the task it was given at step $0$. What the survey supports is
+narrower: the layout in which a token-denominated window can blind the
+scorer is not an artefact of our construction.
+
+Most of what ships is safe, and that is the first half of the result.
+Single-shot retrieval-QA defaults leave 4--5 tokens after the question,
+and their chat variants leave none. Modern vendor structured-output and
+tool-use APIs carry the schema in an API field rather than in prompt
+text, so they leave nothing after the task at all --- which falsifies the
+guess we began with, that in-prompt response schemas would be where long
+trailing blocks live. Harness QA templates leave 3--5 tokens.
+
+The blocks appear where a prompt is \emph{iterated}. LlamaIndex's shipped
+refine template puts the query first and, at its empty-placeholder floor,
+exactly $64$ tokens after it --- the kvpress default, to the token,
+before the existing answer or the new context contributes anything.
+SWE-agent's default instance template puts $221$ static tokens after the
+problem statement, longer than the longest trailing block among our eight
+languages, before its first observation arrives. ReAct and the OpenHands
+loop render the user's question once and append every later tool result
+after it by construction. The full record, with permalinks and verbatim
+template text, ships with the code.
+
+\begin{table}[h]
+\caption{Static trailing block of 22 popular templates, in tokens on the
+Qwen3-4B tokenizer, with unfilled placeholders deleted so each number is
+a lower bound. Zero means the question is last. Selection was frozen
+before any template body was read or tokenized.}
+\label{tab:wild}
+\centering
+\small
+\begin{tabular}{llr}
+\toprule
+ & template & tokens \\
+\midrule
+\multicolumn{3}{@{}l}{\emph{Single-shot retrieval QA}} \\
+T01 & LangChain \texttt{RetrievalQA}, completion & 5 \\
+T02 & LangChain \texttt{RetrievalQA}, chat & 0 \\
+T03 & LangChain hub \texttt{retrieval-qa-chat} & 0 \\
+T04 & LlamaIndex text-QA default & 4 \\
+T05 & LlamaIndex text-QA, chat & 4 \\
+T08 & Haystack \texttt{PromptBuilder} example & 5 \\
+T09 & RAGFlow chat assembly & 0 \\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Structured output and tool use}} \\
+T10 & OpenAI structured outputs & 0 \\
+T11 & OpenAI function calling & 0 \\
+T12 & OpenAI JSON mode example & 6 \\
+T13 & Anthropic tool use & 0 \\
+T14--T16 & Instructor, Outlines, Guidance & 0 \\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Evaluation harnesses}} \\
+T20 & \texttt{lm-eval} XQuAD, English & 3 \\
+T21 & \texttt{lm-eval} XQuAD, Arabic & 5 \\
+T22 & Belebele, official / harness & 19 / 15 \\
+\addlinespace
+\multicolumn{3}{@{}l}{\emph{Iterated prompts}} \\
+T07 & LlamaIndex refine, chat & 9 \\
+T17 & LangChain ReAct, static suffix & 3 \\
+T06 & \textbf{LlamaIndex refine default} & \textbf{64} \\
+T18 & \textbf{SWE-agent instance template} & \textbf{221} \\
+T19 & OpenHands mid-loop & grows \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{Production scope}
 \label{app:prod}
 
+Re-checked on 2026-08-18, with permalinks in the supplementary record.
 vLLM exposes KV-cache dtype and scheduler token budgets, not a
-SnapKV-style evictor. TensorRT-LLM implements last-$w$ scoring as an
-opt-in sparse-attention backend whose default window is 32 tokens, and
-skips it entirely below a prompt-length threshold.
+SnapKV-style evictor; its default attention backends are dense.
+TensorRT-LLM implements last-$w$ scoring as an opt-in sparse-attention
+backend whose configuration default is a 32-token window, and skips it
+entirely below a prompt-length threshold. SGLang has an open proposal for
+a sparsity framework which states that it must be default-off and names
+SnapKV and PyramidKV among its explicit non-goals --- so the family we
+study is, for now, deliberately outside the default path of the two most
+used open serving stacks.
 \citet{nvidia2026efficient} argue that research evictors rarely ship as
 production defaults, and we cite that against ourselves: the constant we
 study is a research default and one opt-in production constant, not

@@ -494,6 +494,27 @@ try:
     # nothing else -- which is how "four" survived here for a while: it was
     # the count over the five swept languages, quoted in a sentence about all
     # eight.
+    # The two template-survey numbers the paper prints. The trailing-block
+    # strings are locked in template_survey_measure.py (which checks its own
+    # transcription against the collected report), so they are imported
+    # rather than copied -- one source of truth for the locked text.
+    import importlib.util
+    _spec = importlib.util.spec_from_file_location(
+        "tsm", ROOT / "scripts" / "template_survey_measure.py")
+    _tsm = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_tsm)
+
+    def survey_tokens(tid):
+        block = next(r[3] for r in _tsm.RECORDS if r[0] == tid)
+        cleaned = _tsm.PLACEHOLDER.sub("", block)
+        return len(tok(cleaned, add_special_tokens=False)["input_ids"])
+
+    check("survey T06 LlamaIndex refine default", survey_tokens("T06"), 64)
+    check("survey T18 SWE-agent instance template", survey_tokens("T18"), 221)
+    # The scope sentence says the refine block equals the library default and
+    # the agent block exceeds the longest trailing block among our languages.
+    check("survey T06 equals the library default", survey_tokens("T06") == 64, True)
+
     TEX_C = {"en": 25, "zh": 29, "es": 35, "vi": 39,
              "th": 45, "sw": 47, "bn": 107, "te": 167}
     measured = {}
@@ -504,6 +525,11 @@ try:
           sum(1 for c in measured.values() if c > 64), 2)
     check("languages blinded at the shipped constant of 32",
           sum(1 for c in measured.values() if c > 32), 6)
+    # The appendix says the agent template's static block is longer than the
+    # longest trailing block among our eight languages. Derive that bound
+    # from the same measured constants rather than pinning Telugu's 167.
+    check("survey T18 exceeds the longest language trailing block",
+          survey_tokens("T18") > max(measured.values()), True)
 except Exception as exc:  # tokenizer or model files unavailable
     print(f"  SKIPPED (no tokenizer available: {type(exc).__name__})")
 
