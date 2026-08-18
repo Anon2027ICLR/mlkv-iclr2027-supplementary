@@ -30,7 +30,7 @@ of tokens after the question is 25 tokens in English but 107 in Bengali
 and 167 in Telugu, and the library default $w{=}64$ costs the latter two
 16 and 19 points of accuracy while leaving English untouched; at the
 stricter constant of 32 that one serving path ships, six of our eight
-languages are blind. The failure is not linguistic. Padding an English instruction reproduces it, a
+languages leave the window no token of the question. The failure is not linguistic. Padding an English instruction reproduces it, a
 tokenizer that shortens the Bengali instruction moves the threshold with
 it, and an English prompt carrying a JSON response schema leaves a
 trailing block of $166$ tokens --- one from Telugu's $167$ --- and is
@@ -43,7 +43,7 @@ Telugu ($+2/{-}2/0$\,pp), closes the schema tails (non-inferior at
 $-3$\,pp by interval), returns the library default where that default
 already suffices, and recovers $+14$/$+19$\,pp over it ($p{\le}.001$).
 The same integers transfer unchanged to a second evictor with the same
-window, removing its deeper holes ($+26$/$+31$\,pp).
+window, removing its deeper holes ($+26$/$+31$\,pp on its own baselines).
 Where the gate is missed, the residual is not a visibility failure.
 \end{abstract}
 
@@ -155,7 +155,8 @@ $w{=}64$ differ by $2$\,pp (ns) on our items --- so an English-validated
 benchmark cannot tell those two constants apart, and nothing in standard
 practice objects to whichever ships. Nor is the layout an artefact of our
 items: among 22 popular templates, frozen before their bodies were read,
-single-shot retrieval defaults are safe, while a shipped refine template
+most of what ships --- single-shot retrieval defaults included --- is
+safe, while a shipped refine template
 leaves exactly the library default of $64$ tokens after the query and an
 agent scaffold leaves $221$ before its first observation
 (Appendix~\ref{app:wild}).
@@ -474,8 +475,9 @@ of correctness on $V$ across the ladder gives $+0.68$ ($z{=}3.35$,
 $p{<}.001$), and among the items whose correctness changes along the
 ladder, 21 are correct at high visibility and wrong at low against 2 in
 the opposite direction ($p{<}10^{-4}$). On treated rows, $V$ is also the
-better one-parameter summary: AIC prefers $y\sim V$ ($689.8$) to
-$y\sim(w{-}c)$ ($692.1$) and to $y\sim(w{-}c)+|Q|$ ($692.2$).
+narrowly better one-parameter summary: AIC prefers $y\sim V$ ($689.8$)
+to $y\sim(w{-}c)$ ($692.1$) and to $y\sim(w{-}c)+|Q|$ ($692.2$) --- a gap
+of two is support, not a discrimination.
 
 The bins are not monotone throughout, and we state where. The
 $0.75\le V<1$ band loses $11.9$\,pp ($n{=}59$, $p{=}.065$), and the
@@ -518,7 +520,8 @@ Qwen3-4B on three of the eight languages measured; panel~(B) is Qwen3-4B
 on English prompts carrying a JSON schema tail, where $c$ is measured with
 the schema in place. The last column is the layout remedy --- the same press
 and ratio with the question moved to the end of the prompt, so $V{=}1$ by
-construction --- measured against that layout's own baseline; it was not
+construction --- measured against that layout's own baseline (accuracy
+printed beside the difference); it was not
 run for panel~(B), and the $c{+}16$ ablation it replaces is in
 Appendix~\ref{app:grids}.}
 \label{tab:aw}
@@ -531,9 +534,9 @@ Appendix~\ref{app:grids}.}
  & $c$ & $\hat w$ & uncompressed & $w{=}64$ & at $\hat w$ & $\Delta$pp \\
 \midrule
 \multicolumn{7}{l}{\emph{(A) languages}} \\
-en & 25 & 43 & 93 & 93 (${+}0$) & \textbf{95} (${+}2$) & ${-}1$ \\
-bn & 107 & 183 & 73 & \blind{57 (${-}16^{*}$)} & \textbf{71} (${-}2$) & ${-}4$ \\
-te & 167 & 247 & 56 & \blind{37 (${-}19^{*}$)} & \textbf{56} (${+}0$) & ${-}6$ \\
+en & 25 & 43 & 93 & 93 (${+}0$) & \textbf{95} (${+}2$) & 95 (${-}1$) \\
+bn & 107 & 183 & 73 & \blind{57 (${-}16^{*}$)} & \textbf{71} (${-}2$) & 70 (${-}4$) \\
+te & 167 & 247 & 56 & \blind{37 (${-}19^{*}$)} & \textbf{56} (${+}0$) & 51 (${-}6$) \\
 \addlinespace
 \multicolumn{7}{l}{\emph{(B) English with a JSON schema tail}} \\
 JSON-60 & 72 & 90 & 94 & \blind{88 (${-}6$)} & \textbf{96} (${+}2$) & --- \\
@@ -551,7 +554,9 @@ against the shipped default (16 fixed / 2 broken and 21/2; $p{=}.001$
 and $p{<}.001$). The
 English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
-($-7$ and $-6$\,pp). Across the eight-language grid, languages whose
+($-7$ and $-6$\,pp). Compared directly, $c{+}16 \to \hat w$ is $+6$ and
+$+5$\,pp (7 fixed / 1 broken on Telugu, 9/4 on Bengali; each ns alone,
+$16/5$, $p{=}.027$ pooled over the two languages' independent items). Across the eight-language grid, languages whose
 trailing block already fits inside the default window stay within
 $3$\,pp of baseline; the one marginal exception, Vietnamese, loses $5$ at
 the default where it is not blind (ns) and recovers to $-2$ under
@@ -813,6 +818,18 @@ measurement on real prompts: for all eight Qwen languages the two agree
 within one token, the exception being a single token of Thai where the
 boundary falls inside a merged token.
 
+The instruction's second sentence exists only to make scoring
+deterministic, so \texttt{measure\_c.py --no-marker} also reports $c$
+without it, cutting at the last sentence-ending punctuation before the
+marker: $14/16/19/21$ for English, Chinese, Spanish and Vietnamese,
+$26$ for Swahili, $69$ for Bengali and $98$ for Telugu. Thai joins its
+two clauses with a conjunction and no punctuation, so it has no
+separable format sentence and we do not cut it on a guess. The headline
+cells do not rest on that clause: a minimal one-sentence instruction
+still leaves Bengali at $69$ and Telugu at $98$, past the default
+window, and at $w{=}32$ the minimal-instruction blind set is exactly
+those two.
+
 For a padded or schema-carrying instruction, \texttt{measure\_c\_schema.py}
 builds the instruction with the same padding routine the item builder
 uses and reports $c$ for the padded string, so the measured constant and
@@ -1072,9 +1089,10 @@ makes the caveat above a two-language observation rather than an artefact
 of one grid. Within items, 18 switchers are correct at high visibility
 against 1 in the opposite direction ($p{=}10^{-4}$), the cluster-robust
 logit on $V$ gives $+0.65$ ($z{=}2.95$, $p{=}.003$), and AIC prefers $V$
-($637.7$) to $(w{-}c)$ ($639.7$) and to $(w{-}c)+|Q|$ ($641.5$). An
-earlier run of this block was cut short at 43 items on its third rung and
-tied on that last comparison; the tie resolves once the ladder is
+($637.7$) to $(w{-}c)$ ($639.7$) and to $(w{-}c)+|Q|$ ($641.5$) --- again
+a gap of two, which is support rather than a discrimination. An earlier
+run of this block was cut short at 43 items on its third rung and tied on
+that last comparison; the tie resolves, narrowly, once the ladder is
 complete. Its numbers are superseded here, and the 343 generations the
 two runs share are byte-identical.
 

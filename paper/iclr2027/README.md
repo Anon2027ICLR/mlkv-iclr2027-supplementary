@@ -67,7 +67,7 @@ was previously found by accident.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 398 checks
+uv run python scripts/audit_paper_numbers.py    # 411 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
@@ -101,6 +101,7 @@ script, not by hand:
 uv run python scripts/determinism_ledger.py     # 3,243 same-stack, 300 cross
 uv run python scripts/decode_cap_ledger.py      # the appendix on the decode cap
 uv run python scripts/template_survey_measure.py  # the layout-in-the-wild appendix
+uv run python scripts/measure_c.py --models Qwen/Qwen3-4B --no-marker
 ```
 
 The determinism ledger separates repeats within one stack descriptor (the

@@ -335,6 +335,11 @@ for lang, (c1, c2, c3) in TEX_REM.items():
           cmp_pair(D[lang]["baseline"], Q[lang][f"snapkv@r0.75:w{TEX_AWA[lang][4]}"])["d"], c2)
     check(f"remedies {lang} question-last",
           cmp_pair(IF[lang]["baseline"], IF[lang]["snapkv@r0.75"])["d"], c3)
+    # Table 2's layout column now prints the accuracy beside the difference,
+    # so the recoveries quoted in section 6 can be reconstructed from it.
+    check(f"remedies {lang} question-last accuracy",
+          cmp_pair(IF[lang]["baseline"], IF[lang]["snapkv@r0.75"])["acc"],
+          {"en": 95, "bn": 70, "te": 51}[lang])
 check("remedies bn last-w64 star",
       cmp_pair(D["bn"]["baseline"], D["bn"]["snapkv@r0.75"])["star"], True)
 check("remedies te last-w64 star",
@@ -523,6 +528,28 @@ try:
         check(f"constants table c for {lang}", measured[lang], want)
     check("languages blinded at the research default of 64",
           sum(1 for c in measured.values() if c > 64), 2)
+    # The appendix reports c with the answer-format sentence removed. Import
+    # the cutting rule from measure_c.py rather than restating it -- Thai has
+    # no separable format sentence and must stay absent, not be guessed at.
+    _spec_c = importlib.util.spec_from_file_location(
+        "mc", ROOT / "scripts" / "measure_c.py")
+    _mc = importlib.util.module_from_spec(_spec_c)
+    _spec_c.loader.exec_module(_mc)
+    TEX_C_MIN = {"en": 14, "zh": 16, "es": 19, "vi": 21,
+                 "sw": 26, "bn": 69, "te": 98}
+    c_min = {}
+    for lang in TEX_C:
+        stripped = _mc.strip_marker_sentence(LANGUAGES[lang].qa_instruction)
+        if stripped is None:
+            check(f"no-marker c for {lang} is not separable", lang, "th")
+            continue
+        c_min[lang] = trailing(stripped)
+    for lang, want in TEX_C_MIN.items():
+        check(f"no-marker c for {lang}", c_min[lang], want)
+    check("languages still blinded at 64 without the format sentence",
+          sum(1 for c in c_min.values() if c > 64), 2)
+    check("languages still blinded at 32 without the format sentence",
+          sum(1 for c in c_min.values() if c > 32), 2)
     check("languages blinded at the shipped constant of 32",
           sum(1 for c in measured.values() if c > 32), 6)
     # The appendix says the agent template's static block is longer than the

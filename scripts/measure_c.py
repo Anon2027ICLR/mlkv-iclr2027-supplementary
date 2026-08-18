@@ -4,9 +4,16 @@
 c = tokens after the last critical content (the question, in instr-last).
 AutoWindow w = c + 16. Never copy these numbers from a doc — run this.
 
+--no-marker re-measures c with the answer-format sentence removed, which
+is what a deployment that scores some other way would carry. The format
+sentence is the one holding the '####' marker; it is separated at the
+last sentence-ending punctuation before that marker. Thai joins the two
+clauses with a conjunction and no punctuation, so it has no separable
+format sentence and is reported as such rather than cut on a guess.
+
 Usage:
   uv run python scripts/measure_c.py --models Qwen/Qwen3-4B --langs en,th,bn,te
-  UV_NO_SYNC=1 uv run python scripts/measure_c.py --models google/gemma-3-4b-it
+  uv run python scripts/measure_c.py --models Qwen/Qwen3-4B --no-marker
 """
 from __future__ import annotations
 
@@ -21,6 +28,26 @@ from mlkv.languages import LANGUAGES, resolve
 DELTA = 16
 PROBE_Q = "What is the capital?"
 PROBE_PASSAGE = "Some passage about a city."
+MARKER = "####"
+# Sentence enders across the eight languages' scripts. Latin/Telugu use ".",
+# Chinese "。", Bengali the danda "।". Thai uses none.
+SENTENCE_END = ".。।!?۔؟"
+
+
+def strip_marker_sentence(instr: str) -> str | None:
+    """The instruction without its answer-format sentence.
+
+    Returns None when the format clause is not separable by punctuation --
+    Thai joins it with a conjunction -- so callers report that rather than
+    inventing a cut.
+    """
+    at = instr.find(MARKER)
+    if at < 0:
+        return instr.strip()
+    cut = max((instr.rfind(ch, 0, at) for ch in SENTENCE_END), default=-1)
+    if cut < 0:
+        return None
+    return instr[: cut + 1].strip()
 
 
 def _n(tokenizer, text: str) -> int:
@@ -37,8 +64,8 @@ def _find_subseq(hay: list[int], needle: list[int]) -> int | None:
     return last
 
 
-def measure_one(tokenizer, lang: str) -> dict:
-    instr = LANGUAGES[lang].qa_instruction
+def measure_one(tokenizer, lang: str, instr: str | None = None) -> dict:
+    instr = LANGUAGES[lang].qa_instruction if instr is None else instr
     i_tok = _n(tokenizer, instr)
     user = f"{PROBE_PASSAGE}\n\n{PROBE_Q}\n\n{instr}"
     try:
@@ -87,6 +114,8 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--models", required=True)
     p.add_argument("--langs", default="en,zh,es,vi,th,sw,bn,te")
+    p.add_argument("--no-marker", action="store_true",
+                   help="measure c with the answer-format sentence removed")
     args = p.parse_args()
 
     from transformers import AutoTokenizer
@@ -95,7 +124,15 @@ def main() -> None:
     for model in args.models.split(","):
         tok = AutoTokenizer.from_pretrained(model.strip())
         for lang in resolve(args.langs):
-            m = measure_one(tok, lang.code)
+            instr = None
+            if args.no_marker:
+                instr = strip_marker_sentence(LANGUAGES[lang.code].qa_instruction)
+                if instr is None:
+                    print(f"{model.strip()[:27]:<28}{lang.code:<6}"
+                          f"{'—':>5}{'—':>5}{'—':>5}{'—':>5}  "
+                          f"no separable format sentence")
+                    continue
+            m = measure_one(tok, lang.code, instr=instr)
             print(
                 f"{model.strip()[:27]:<28}{m['lang']:<6}"
                 f"{m['I']:>5}{m['suffix']:>5}{m['c']:>5}{m['autowin']:>5}  {m['how']}"
