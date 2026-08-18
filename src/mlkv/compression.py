@@ -34,6 +34,11 @@ from dataclasses import dataclass, field
 # Verified against kvpress 0.5.4 on the CUDA box (2026-08-09).
 PRESS_NAMES = {
     "snapkv": "SnapKVPress",
+    # PyramidKVPress subclasses SnapKVPress and inherits window_size=64, so the
+    # ":w" override applies unchanged — same scorer inputs, different per-layer
+    # budget allocation. Second member of the windowed family for the
+    # press-generality claim (docs/iclr-pyramidkv-preregister.md).
+    "pyramidkv": "PyramidKVPress",
     "h2o": "ObservedAttentionPress",  # H2O-style; requires attn_implementation="eager"
     "streamingllm": "StreamingLLMPress",
     "tova": "TOVAPress",
@@ -61,7 +66,10 @@ _BYTEBUDGET_RE = re.compile(r"^(?P<name>[a-z0-9]+)@bb(?P<bytes>[1-9]\d*)$")
 # Presses with an observation window cannot compress prompts shorter than it
 # (kvpress asserts). Below the minimum the config runs uncompressed and the
 # recorded kv_ratio covariate is 0.0 — same semantics as a satisfied budget.
-PRESS_MIN_PREFILL = {"snapkv": 65}  # SnapKVPress default window_size=64
+PRESS_MIN_PREFILL = {
+    "snapkv": 65,     # SnapKVPress default window_size=64
+    "pyramidkv": 65,  # inherits SnapKVPress window_size=64
+}
 
 
 def budget_ratio(budget: int, prefill_len: int) -> float:
