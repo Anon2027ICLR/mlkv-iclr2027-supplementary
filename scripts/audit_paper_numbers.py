@@ -606,6 +606,29 @@ check("app:r2 marker-only depth CI",
       (-11.9, -6.5))
 
 # --------------------------------------------------------------------------
+print("## Appendix: the Gemma Telugu closure row, and Bengali's exhausted pool")
+# Gemma te is the cell Section 6 uses to say the shipped constant can already
+# pass, so tab:ci now carries it; the CI itself is closure_cis.py's.
+_GT = load("gemma_q90.db")
+_gt = cmp_pair(_GT["te"]["baseline"], _GT["te"]["snapkv@r0.75:w64"])
+check("gemma te closure delta", _gt["d"], -3)
+check("gemma te closure fixed/broken", _gt["fb"], (4, 7))
+# app:ci says Bengali's full-pool row adds no discordant item beyond the
+# original hundred -- the reason its interval cannot narrow however the pool
+# is read. Checked as: the pair on the first 100 equals the pair on all 113,
+# and the 13 new items contribute (0, 0).
+_bn_idx = lambda i: int(i.rsplit("-", 1)[1])
+_bn_base, _bn_hat = DP["bn"]["baseline"], DP["bn"]["snapkv@r0.75:w183"]
+_first = depth_pair({k: v for k, v in _bn_base.items() if _bn_idx(k) < 100},
+                    {k: v for k, v in _bn_hat.items() if _bn_idx(k) < 100})
+_new = depth_pair({k: v for k, v in _bn_base.items() if _bn_idx(k) >= 100},
+                  {k: v for k, v in _bn_hat.items() if _bn_idx(k) >= 100})
+check("bn full pool pair equals the n=100 pair",
+      depth_pair(_bn_base, _bn_hat)["fb"], _first["fb"])
+check("bn items beyond the original hundred are all concordant", _new["fb"], (0, 0))
+check("bn items beyond the original hundred", _new["n"], 13)
+
+# --------------------------------------------------------------------------
 print("## Section 4: the shipped-constant flip — store w32")
 # The store behind "moving from w=64 to w=32 costs Thai 4.5 and Swahili 6.5"
 # was in neither the store list nor this audit until wave 4. It is its own
