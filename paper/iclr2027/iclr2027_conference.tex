@@ -1632,11 +1632,11 @@ scorer is not an artefact of our construction.
 
 Most of what ships is safe, and that is the first half of the result.
 Single-shot retrieval-QA defaults leave 4--5 tokens after the question,
-and their chat variants leave none. Modern vendor structured-output and
+and their chat variants leave 0--4. Modern vendor structured-output and
 tool-use APIs carry the schema in an API field rather than in prompt
-text, so they leave nothing after the task at all --- which falsifies the
+text, so at most a token handful ($\le 6$) remains after the task --- which falsifies the
 guess we began with, that in-prompt response schemas would be where long
-trailing blocks live. Harness QA templates leave 3--5 tokens.
+trailing blocks live. Harness QA templates leave 3--5 tokens, bar one at 19/15 (T22).
 
 The blocks appear where a prompt is \emph{iterated}. LlamaIndex's shipped
 refine template puts the query first and, at its empty-placeholder floor,
