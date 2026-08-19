@@ -606,6 +606,23 @@ check("app:r2 marker-only depth CI",
       (-11.9, -6.5))
 
 # --------------------------------------------------------------------------
+print("## Section 7: the stuffed control — store stuffed")
+# The disconfirmation paragraph had no backing anywhere. This is the one of
+# its three claims that a shipped store can carry: mgsm-stuffed, scored live
+# by the numeric MGSM extractor, so the stored `correct` column is the rule
+# and R2 does not apply to it.
+_st = sqlite3.connect(f"file:{RES / 'stuffed.db'}?mode=ro", uri=True)
+_rows = defaultdict(lambda: defaultdict(dict))
+for _iid, _lang, _cfg, _corr in _st.execute(
+        "SELECT item_id, lang, config, correct FROM generations"):
+    _rows[_lang][_cfg][_iid] = bool(_corr)
+_st.close()
+_stuffed = cmp_pair(_rows["bn"]["baseline"], _rows["bn"]["snapkv@r0.75"])
+check("stuffed control bn delta", _stuffed["d"], -3)
+check("stuffed control bn fixed/broken", _stuffed["fb"], (7, 10))
+check("stuffed control bn not significant", _stuffed["star"], False)
+
+# --------------------------------------------------------------------------
 print("## Appendix: the 0.75<=V<1 band's per-rung membership — app:dose")
 # app:dose used to say the band "contains nine distinct items". It contains
 # 59: visibility rises with the window, so each item crosses into the band at

@@ -669,17 +669,19 @@ full comparison.
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
-(Bengali $-3$\,pp, ns): the failure needs a question matched against
+(Bengali $-3$\,pp, ns; store \texttt{stuffed}; audited): the failure needs a question matched against
 passages, not merely a long prompt. Two scorers
 designed never to look at the question \citep{devoto2025expected,
 oren2024transformers} fail differently and worse, costing even English
 $14$ and $8$\,pp at the ratio where no window we tested costs it
 anything (Appendix~\ref{app:rivals}).
-Four-bit KV quantization damages languages in an order that is not the
-fertility order. A capacity
+Four-bit KV quantization, in our early-stack pilots, damaged languages in
+an order that was not the fertility order; we did not re-run it on the
+campaign stack and claim only the observation. A capacity
 mechanism exists in a different regime --- at aggressive eviction even
-long-passage English items fail --- while at this paper's ratio Bengali
-damage shows no gradient across gold-length or retention strata. We do
+long-passage English items fail --- while at this paper's ratio we found no
+Bengali damage gradient across gold-length or retention strata in the runs
+we examined (not a certified absence). We do
 not use high-dose fertility slopes as evidence about the window.
 
 % =====================================================================
