@@ -98,7 +98,8 @@ and one that leaves an English-sized slack of sixteen tokens recovers
 most of the loss but not the last few points. What the scorer needs is
 enough \emph{of the question}, which suggests measuring the quantity
 directly. We define query visibility as the share of the question inside
-the window, $V = |W \cap Q| / |Q|$, computable from the tokenizer and the
+the window, $V = |W \cap Q| / |Q|$ (notation defined in
+Section~\ref{sec:setup}), computable from the tokenizer and the
 template with no forward pass; \citet{luo2026visibility} showed that
 question visibility changes method rankings and left exactly such a
 continuous measure open.
@@ -243,13 +244,15 @@ English, Chinese, Spanish, Vietnamese and Thai, and from TyDiQA-GoldP
 collections are not comparable and XQuAD is parallel only within
 itself, so we never compare accuracy across languages. Every number
 in this paper is a within-language, item-paired difference between two
-configurations evaluated on the same 100 items.
+configurations evaluated on the same items: 100 per cell, except where
+Section~\ref{sec:autowindow} pairs the entire validation pools (669
+Telugu, 113 Bengali) and marked supporting runs pair 200.
 
 \paragraph{Models and compression.}
 Qwen3-4B \citep{qwen32025} is the primary model; Qwen3-8B is a scale
 slice and Gemma-3-4b-it \citep{gemma32025} a tokenizer contrast. We
 compress with SnapKV \citep{li2024snapkv} through the kvpress
-implementation at a fixed eviction ratio of $0.75$ --- three quarters of
+implementation at a fixed eviction ratio $r{=}0.75$ --- three quarters of
 the prefill cache is discarded --- and expose the observation window as
 the treatment variable. SnapKV keeps the window inside the retained
 budget (Appendix~\ref{app:snapkv}), so every comparison below is at
@@ -267,10 +270,11 @@ here and is applied offline to raw generations; a stricter, marker-only
 variant leaves every conclusion in the paper unchanged
 (Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar
 tests, reported with their discordant counts (fixed/broken) so the
-reader sees what the $p$-value is made of. Every cell in the main text pairs 100
-items; the supporting runs in Appendix~\ref{app:levers} pair 200, being
-the same questions at two context budgets, and are marked where they
-appear.
+reader sees what the $p$-value is made of. Cells pair 100 items unless marked
+otherwise: the full-pool re-run in Section~\ref{sec:autowindow}, and the
+$n{=}200$ supporting comparisons (the same 100 questions at two context
+budgets), including the shipped-constant flip in
+Section~\ref{sec:threshold}.
 
 \paragraph{The quantities.}
 Prompts are instruction-last unless stated:
