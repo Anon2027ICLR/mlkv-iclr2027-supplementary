@@ -24,7 +24,7 @@ Token-Denominated Observation Windows Are Not Language-Neutral}
 Observation-window evictors such as SnapKV score the key--value cache
 using only the last $w$ tokens of the prompt. We show that this integer
 is a language-dependent threshold. In the common
-\texttt{passages\,+\,question\,+\,instruction} layout, an instruction
+\texttt{passages} + \texttt{question} + \texttt{instruction} layout, an instruction
 longer than $w$ hides the question from the scorer: on Qwen3-4B the block
 of tokens after the question is 25 tokens in English but 107 in Bengali
 and 167 in Telugu, and the library default $w{=}64$ costs the latter two
@@ -443,7 +443,7 @@ whose trailing block exceeds most tested windows are drawn in colour.
 \textbf{(b)}~English, four instruction pads, against the slack $w-c$:
 the conditions collapse onto one curve and the rule at $w{=}c$ separates
 every cell at most $90\%$ from every cell at least $91\%$.
-\textbf{(c)}~Telugu, same axis and scale as~(b): English is at its
+\textbf{(c)}~Telugu, same $x$-axis as~(b): English is at its
 ceiling within about ten tokens of slack, Telugu needs eighty.}
 \label{fig:triptych}
 \end{figure}
@@ -530,7 +530,7 @@ the schema in place. The last column is the layout remedy --- the same press
 and ratio with the question moved to the end of the prompt, so $V{=}1$ by
 construction --- measured against that layout's own baseline; not run
 for panel~(B) (the $c{+}16$ ablation: Appendix~\ref{app:grids}). The depth re-run on the full validation pools is
-reported in Section~\ref{sec:autowindow} and Appendix~\ref{app:ci}.}
+reported later in this section and in Appendix~\ref{app:ci}.}
 \label{tab:aw}
 \centering
 \small
@@ -561,8 +561,8 @@ and Telugu against the shipped default (16 fixed / 2 broken and 21/2;
 $p{=}.001$ and $p{<}.001$). The
 English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
-($-7$ and $-6$\,pp). Compared directly, $c{+}16 \to \hat w$ is $+6$ and
-$+5$\,pp (7 fixed / 1 broken on Telugu, 9/4 on Bengali; each ns alone,
+($-7$ and $-6$\,pp). Compared directly, $c{+}16 \to \hat w$ is $+5$ and
+$+6$\,pp (9 fixed / 4 broken on Bengali, 7/1 on Telugu; each ns alone,
 $16/5$, $p{=}.027$ pooled over the two languages' independent items). Across the eight-language grid, languages whose
 trailing block already fits inside the default window stay within
 $3$\,pp of baseline bar one marginal exception
@@ -785,7 +785,8 @@ comparisons never cross a stack boundary
 conditions for every arm are files that ship with the code, each written
 before its run; for nine of the twelve arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
-other three files entered version control in a later batch. The
+other three --- the $Q_{90}$ re-measurement, the 8B slice and the schema
+re-run --- entered version control in a later batch. The
 anonymized version history ships with the supplementary material, and the
 de-anonymized history becomes public with the code on publication.
 
@@ -1408,11 +1409,11 @@ accuracy on either method, repairs both.
 
 \begin{table}[h]
 \caption{Rival remedies, paired $\Delta$pp against each store's own
-uncompressed baseline, $n{=}100$ per cell; star: McNemar $p<.05$. Top:
+uncompressed baseline, $n{=}100$ per cell; star: McNemar $p<.05$. First block:
 two query-agnostic scorers at the ratio used throughout the paper, beside
-the windowed cells they would replace. Bottom: the heavy-ratio sweep,
-where $\hat w$ is $43$ for English and $183$ for Bengali. Third block:
-the constant and the no-ranking control at the headline ratio; fourth:
+the windowed cells they would replace. Second: the heavy-ratio sweep,
+where $\hat w$ is $43$ for English and $183$ for Bengali. Third: the
+constant and the no-ranking control at the headline ratio. Fourth:
 PyramidKV. Both ran on pods that did not reproduce the campaign stack,
 so their bracketed SnapKV values are context rather than comparators and
 are never pooled with them.}
