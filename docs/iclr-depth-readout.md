@@ -92,6 +92,28 @@ under the stricter marker-only scorer the residual is **−9.4\***
 (24/87, p=1.4×10⁻⁹): same sign, still certified — Appendix C's
 every-conclusion-unchanged claim extends to this arm.
 
+## A correction to the marker-only pair (2026-08-19, wave-3 adjudication)
+
+The QC paragraph above quotes the marker-only residual as −9.4\* at
+24/87 with p=1.4×10⁻⁹. The delta is right and the pair is not. The
+24/87 came from a leaky hybrid definition — "marker present, then
+`extract_span`" — and `extract_span`, on an output whose marker is
+followed only by debris, silently falls back to scoring the **whole
+text**, which is the exact leak marker-only scoring exists to close.
+The strict rule (span after the last marker that still has content;
+no marker scores wrong) is the rule the paper's Appendix C already
+uses — it reproduces the printed dose-ladder accuracies 50/35/47 —
+and under it the depth residual is **−9.4\* at 25/88, p=2.1×10⁻⁹,
+CI [−11.9, −6.5]**: same delta, same sign, still entirely below the
+gate. Every conclusion drawn from the QC paragraph stands; only the
+discordant pair and the p change. Found by the wave-3 executor's
+independent reproduction (it could produce −9.4 under every clean
+definition but never the 24/87 pair), adjudicated by re-deriving both
+numbers from `depth.db`; the scorer is now pinned as
+`qa_metrics.containment_match_marker_only` with unit tests, and the
+audit pins the ladder trio, the pair, the p and the interval. The
+paper quotes only the corrected pair.
+
 ## Integration memo (Opus wave 3; every number above binds)
 
 - **Abstract**: `meets its $\pm 3$\,pp gate on English, Bengali and
