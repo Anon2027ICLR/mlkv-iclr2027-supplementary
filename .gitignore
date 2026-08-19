@@ -5,8 +5,28 @@ __pycache__/
 *.egg-info/
 dist/
 
-# Experiment outputs
-results/
+# Experiment outputs. The generation stores that back the paper are
+# tracked by name; everything else in results/ is scratch.
+results/*
+!results/agnostic.db
+!results/autowin-final.db
+!results/autowin_8b.db
+!results/autowin_q90.db
+!results/cliff_en-final.db
+!results/cliff_gemma.db
+!results/cliff_multi-final.db
+!results/constant.db
+!results/e3-final.db
+!results/e3_384.db
+!results/gemma_q90.db
+!results/instr_first.db
+!results/llama.db
+!results/pyramidkv.db
+!results/ratio.db
+!results/schema-final.db
+!results/schema_fix.db
+!results/v_trace.db
+!results/v_trace_bn.db
 data/cache/
 
 # Environment

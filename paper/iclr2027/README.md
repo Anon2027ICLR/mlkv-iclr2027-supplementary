@@ -87,18 +87,23 @@ so their commit time does not precede the run.
 
 | preregister | commit | committed (UTC) | first generation (UTC) | commit precedes run |
 |---|---|---|---|---|
-| `iclr-autowin-q90-preregister.md` | `f3f635f` | 2026-08-17 07:28 | 2026-08-14 14:24 | no (later batch) |
-| `iclr-8b-preregister.md` | `f3f635f` | 2026-08-17 07:28 | 2026-08-15 04:14 | no (later batch) |
-| `iclr-schema-fix-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 01:20 | no (later batch) |
-| `iclr-gemma-q90-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 05:28 | yes |
-| `iclr-v-trace-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 03:13 | yes |
-| `iclr-llama-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 09:50 | yes |
-| `iclr-instr-first-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
-| `iclr-agnostic-baseline-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
-| `iclr-ratio-sweep-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
-| `iclr-pyramidkv-preregister.md` | `74840de` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
-| `iclr-template-survey-preregister.md` | `813bcad` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
-| `iclr-constant-and-ranking-preregister.md` | `e287172` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
+| `iclr-autowin-q90-preregister.md` | `efcae67` | 2026-08-17 07:28 | 2026-08-14 14:24 | no (later batch) |
+| `iclr-8b-preregister.md` | `efcae67` | 2026-08-17 07:28 | 2026-08-15 04:14 | no (later batch) |
+| `iclr-schema-fix-preregister.md` | `d41297c` | 2026-08-17 01:29 | 2026-08-17 01:20 | no (later batch) |
+| `iclr-gemma-q90-preregister.md` | `d41297c` | 2026-08-17 01:29 | 2026-08-17 05:28 | yes |
+| `iclr-v-trace-preregister.md` | `d41297c` | 2026-08-17 01:29 | 2026-08-17 03:13 | yes |
+| `iclr-llama-preregister.md` | `00bdf21` | 2026-08-17 09:00 | 2026-08-17 09:50 | yes |
+| `iclr-instr-first-preregister.md` | `00bdf21` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
+| `iclr-agnostic-baseline-preregister.md` | `36d5dfb` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
+| `iclr-ratio-sweep-preregister.md` | `36d5dfb` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
+| `iclr-pyramidkv-preregister.md` | `0605495` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
+| `iclr-template-survey-preregister.md` | `b4c7139` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
+| `iclr-constant-and-ranking-preregister.md` | `5ab864d` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
+
+**Hashes.** The table above uses the hashes of *this* history. The
+preregistrations and readouts in `docs/` are locked artifacts, were not
+edited, and therefore cite the pre-anonymisation hashes;
+`docs/commit-map.md` maps between the two.
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so
