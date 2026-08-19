@@ -108,7 +108,12 @@ narrower than the commit timestamp above: the anonymised push at
 2026-08-19T01:18:03Z precedes every Bengali row and the whole `[300:669]`
 Telugu extension on which predictions 2 and 5 rest, but not the first 300
 Telugu rows. Only that corrected form is claimed anywhere; see the release
-plan's status line.
+plan's status line. The pushed state is kept as the tag
+`v0-pre-depth-registration`, so the claim is checkable rather than asserted:
+that tree carries the registration and its first amendment and no
+`results/depth.db`, while the second amendment — whose own heading records
+that it predates every Telugu item past 300 — appears only in the current
+tree.
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so
