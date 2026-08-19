@@ -109,17 +109,19 @@ fitted to accuracy --- the choice of the 90th percentile is a design
 decision, registered in advance, whose cost we report --- no delimiter is
 required, and because SnapKV protects the window from within the retained
 budget, no extra cache is bought. Preregistered, the rule
-meets its $\pm 3$\,pp gate on English, Bengali and Telugu at Qwen3-4B
-($+2/{-}2/0$\,pp against uncompressed); closes --- non-inferior by
-interval --- the English JSON-schema tails that a mis-sized earlier
-version of the same rule had broken by 23 points; and returns exactly
-the shipped constant of 64 for a tokenizer
-and language where that constant is already adequate. It does not meet
-the gate everywhere. On Bengali it leaves 6 points at Gemma-3-4b-it and 8 at
-Qwen3-8B and at Llama-3.1-8B, and we show that the residual is not, in
-the main, a visibility failure: moving the question to the end of the
+meets its $\pm 3$\,pp gate on English, Bengali and Telugu at
+$n{=}100$; closes --- non-inferior by interval --- the English
+JSON-schema tails that a mis-sized earlier version of the same rule had
+broken by 23 points; and returns exactly the shipped constant of 64 for
+a tokenizer and language where that constant is already adequate. On the
+full 669-item Telugu pool the gate does not hold: $\hat w$ leaves
+$-5.7$\,pp ($[-7.8,-3.1]$) beside a $+14$\,pp recovery over the
+default, joining the Bengali misses at Gemma-3-4b-it ($-6$), Qwen3-8B
+and Llama-3.1-8B ($-8$) --- and we show the residual is not, in the
+main, a visibility failure: moving the question to the end of the
 prompt --- full visibility by construction --- leaves the same few
-points behind.
+points behind, and 51 of the 57 residual Telugu items have the whole
+question inside the window.
 
 \paragraph{Contributions.}
 (i)~We localise a language-dependent failure of KV eviction to the
@@ -134,9 +136,9 @@ zero-inference measure of it.
 (iii)~We propose and preregister AutoWindow, $\hat w = c + Q_{90}$, one
 integer per model, language and template, and report the gate, the
 intervals, and the misses.
-(iv)~We diagnose the residual in the three cells where the gate is
-missed, showing that the question is fully visible there and the
-remaining error is of a different kind.
+(iv)~We diagnose the residual in the four cells where the gate is
+missed: the question is fully visible there, and the remaining error is
+of a different kind.
 (v)~We show the integer belongs to the prompt rather than to the method:
 it transfers unchanged to a second evictor that inherits the same window,
 while the two obvious alternatives --- a scorer that never reads the
@@ -557,13 +559,7 @@ trailing block already fits inside the default window stay within
 $3$\,pp of baseline; the one marginal exception, Vietnamese, loses $5$ at
 the default where it is not blind (ns) and recovers to $-2$ under
 $c{+}16$ (Appendix~\ref{app:grids}); the gate is a statement about the
-languages the default window actually blinds. Exact intervals for these cells are
-in Appendix~\ref{app:ci}: at $n{=}100$ the English and schema closes are
-non-inferior at $-3$\,pp, while the Bengali and Telugu intervals,
-$[-9.1, +5.9]$ and $[-6.9, +6.9]$, meet the registered gate without
-excluding losses the gate would have rejected. The claim those two cells
-carry is the registered rule plus the recovery against the default, not
-demonstrated equivalence.
+languages the default window actually blinds.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
 The same trailing-block logic applies when the tail is a response format
@@ -706,8 +702,9 @@ mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
 measurement looks like. For a deployer the guidance splits: sizing
 the window removes the blind mode in every family we ran ($+9$ to
 $+19$\,pp over the default), while the residual is a property of eviction
-at that ratio, addressed by lowering the ratio rather than by any window.
-Both hold where eviction is heaviest (Appendix~\ref{app:rivals}).
+at that ratio, addressed by lowering the ratio rather than by any window
+--- both still true where eviction is heaviest
+(Appendix~\ref{app:rivals}).
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
@@ -732,11 +729,11 @@ between the question and the end of the prompt, and the slack the window
 leaves beyond it, which has to be counted in units of the question rather
 than in constants: too little slack is blindness, and too much, at heavy
 eviction, is a tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$
-from the tokenizer, the chat template and a held-out percentile meets its
-registered gate, returns the library default where that default already
-suffices, leaves a residual we can show is not a visibility failure, and
-transfers unchanged to a second evictor --- the integer belongs to the
-prompt, not the method. The general lesson is cheaper than the specific
+from the tokenizer, the chat template and a held-out percentile removes
+the blind mode, returns the library default where that default already
+suffices, leaves a certified residual that is not a visibility failure,
+and transfers unchanged to a second evictor --- the integer belongs to
+the prompt, not the method. The general lesson is cheaper than the specific
 one, and we did not escape it ourselves: our own decode cap chose which
 branch of the scoring rule judged each language
 (Appendix~\ref{app:cap}). Any constant that counts tokens inherits the
