@@ -477,6 +477,13 @@ for lang, (what, n_tex, base_tex, w64, hat, rec) in TEX_DEPTH.items():
         r = depth_pair(comp_base, comp)
         check(f"depth {lang} {label} delta", r["d"], d_tex)
         check(f"depth {lang} {label} fixed/broken", r["fb"], fb_tex)
+# The abstract and section 1 quote the default's cost at the full pools,
+# rounded to whole points: the triple -20/+14/-5.7 has to be the same sample
+# size end to end or it does not sum, which is what E1 repaired.
+check("abstract depth hole bn", round(depth_pair(
+    DP["bn"]["baseline"], DP["bn"]["snapkv@r0.75"])["d"]), -15)
+check("abstract depth hole te", round(depth_pair(
+    DP["te"]["baseline"], DP["te"]["snapkv@r0.75"])["d"]), -20)
 # The abstract and section 1 round the two recoveries to whole points.
 check("abstract depth recovery te", round(depth_pair(
     DP["te"]["snapkv@r0.75"], DP["te"]["snapkv@r0.75:w247"])["d"]), 14)

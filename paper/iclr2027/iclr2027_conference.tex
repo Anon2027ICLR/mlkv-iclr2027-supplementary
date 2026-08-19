@@ -28,7 +28,8 @@ is a language-dependent threshold. In the common
 longer than $w$ hides the question from the scorer: on Qwen3-4B the block
 of tokens after the question is 25 tokens in English but 107 in Bengali
 and 167 in Telugu, and the library default $w{=}64$ costs the latter two
-16 and 19 points of accuracy while leaving English untouched; at the
+15 and 20 points of accuracy on the full validation pools while leaving
+English untouched; at the
 stricter constant of 32 that one serving path ships, six of our eight
 languages leave the window no token of the question. The failure is not linguistic. Padding an English instruction reproduces it, a
 tokenizer that shortens the Bengali instruction moves the threshold with
@@ -42,10 +43,10 @@ retained cache, this removes the blind mode wherever it
 appears --- $+14$\,pp over the default on the full 669-item Telugu pool
 ($p{<}10^{-17}$), $+13$ on Bengali --- closes the schema tails
 (non-inferior at $-3$\,pp by interval), returns the library default where
-that default already suffices, and meets its $\pm 3$\,pp gate on all
+that default already meets the gate, and meets its $\pm 3$\,pp gate on all
 three languages at $n{=}100$; on the full pool, Telugu instead certifies a $-5.7$\,pp
 residual ($[-7.8,-3.1]$). The same integers transfer unchanged to a
-second evictor with the same window, removing its deeper holes
+second evictor with the same window, removing its own holes
 ($+26$/$+31$\,pp on its own baselines). Where the gate is missed ---
 Telugu at scale included --- the residual is not a visibility failure:
 the question is fully in view.
@@ -81,7 +82,8 @@ On Qwen3-4B, the tokens standing after the question --- a one-line QA
 instruction plus the chat suffix --- number 25 in English, 107 in Bengali
 and 167 in Telugu. At the shipped default,
 English prompts are safe while Bengali and Telugu prompts are blind, and
-they lose 16 and 19 points of accuracy. The mechanism, however, is not
+they lose 15 and 20 points on the full validation pools
+(Section~\ref{sec:autowindow}). The mechanism, however, is not
 about those languages: padding the English instruction until $c$ passes
 $w$ reproduces the cliff without leaving English; a JSON response schema
 does the same and puts its trailing block one token from Telugu's; and a
