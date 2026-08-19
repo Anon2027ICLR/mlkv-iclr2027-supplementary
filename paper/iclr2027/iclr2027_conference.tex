@@ -848,8 +848,9 @@ two clauses with a conjunction and no punctuation, so it has no
 separable format sentence and we do not cut it on a guess. The headline
 cells do not rest on that clause: a minimal one-sentence instruction
 still leaves Bengali at $69$ and Telugu at $98$, past the default
-window, and at $w{=}32$ the minimal-instruction blind set is exactly
-those two.
+window, and under minimal instructions the blind set at $w{=}32$ still
+holds Bengali and Telugu --- and Thai, whose instruction has no separable
+sentence to cut, remains blind there under its full $c{=}45$ either way.
 
 For a padded or schema-carrying instruction, \texttt{measure\_c\_schema.py}
 builds the instruction with the same padding routine the item builder
