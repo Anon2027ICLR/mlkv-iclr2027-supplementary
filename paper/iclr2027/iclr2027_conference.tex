@@ -479,12 +479,12 @@ Question length varies across items (34 to 122 tokens here), so a single
 window already spreads visibility across items, and each item passes
 through several values of $V$ as the window widens. Pooling the five
 treated cells and binning by per-item $V$: items with $V<0.25$ lose
-$16.1$\,pp ($n{=}118$, $p{<}10^{-3}$), while items with $V{=}1$ are flat
-($+0.7$\,pp, $n{=}135$). Within items, a cluster-robust logistic regression
-of correctness on $V$ across the ladder gives $+0.68$ ($z{=}3.35$,
-$p{<}.001$), and among the items whose correctness changes along the
-ladder, 21 are correct at high visibility and wrong at low against 2 in
-the opposite direction ($p{<}10^{-4}$). On treated rows, $V$ is also the
+$16.1$\,pp ($n{=}118$, $p{<}10^{-3}$), while items with $V{=}1$ show no
+detectable effect ($+0.7$\,pp, $n{=}135$; 9/8 discordant). Across the
+ladder, a logistic regression of correctness on $V$ with item-clustered
+standard errors gives $+0.68$ ($z{=}3.35$, $p{<}.001$); within items, 21
+switchers are correct at high visibility against 2 in the opposite
+direction ($p{<}10^{-4}$). On treated rows, $V$ is also the
 narrowly better one-parameter summary: AIC prefers $y\sim V$ ($689.8$)
 to $y\sim(w{-}c)$ ($692.1$) and to $y\sim(w{-}c)+|Q|$ ($692.2$) --- a gap
 of two is support, not a discrimination.
@@ -1119,12 +1119,13 @@ readout script and repeats the shape. Its bins are $V<0.25$, $n{=}129$,
 $-14.0$\,pp (5 fixed / 23 broken, $p{=}9\times10^{-4}$);
 $0.25 \le V < 0.5$, $n{=}95$, $-7.4$\,pp; $0.5 \le V < 0.75$, $n{=}70$,
 $-5.7$\,pp; $0.75 \le V < 1$, $n{=}59$, $-8.5$\,pp (2/7, ns); $V{=}1$,
-$n{=}147$, $0.0$\,pp (9/9). Both ends land where the account says they
+$n{=}147$, no detectable effect ($0.0$\,pp, 9/9). Both ends land where the account says they
 should, and the band that breaks monotonicity is the same one, which
 makes the caveat above a two-language observation rather than an artefact
-of one grid. Within items, 18 switchers are correct at high visibility
-against 1 in the opposite direction ($p{=}10^{-4}$), the cluster-robust
-logit on $V$ gives $+0.65$ ($z{=}2.95$, $p{=}.003$), and AIC prefers $V$
+of one grid. Across the ladder the cluster-robust logit on $V$ gives
+$+0.65$ ($z{=}2.95$, $p{=}.003$); within items, 18 switchers are correct
+at high visibility against 1 in the opposite direction ($p{=}10^{-4}$),
+and AIC prefers $V$
 ($637.7$) to $(w{-}c)$ ($639.7$) and to $(w{-}c)+|Q|$ ($641.5$) --- again
 a gap of two, which is support rather than a discrimination. An earlier
 run of this block was cut short at 43 items on its third rung and tied on
