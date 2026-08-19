@@ -506,9 +506,9 @@ construction, but it requires locating the question inside the prompt,
 which is exactly the assumption we are trying not to make
 \citep{corallo2024finch}. The language-level percentile is a
 deliberately weaker commitment: at $\hat w$ the window covers the entire
-question for $88$ of $100$ Bengali and $93$ of $100$ Telugu evaluation
-items, and the remaining decile is registered leftover rather than a
-claim.
+question for $98$ of $113$ Bengali and $611$ of $669$ Telugu evaluation
+items (the full validation pools), and the remaining decile is
+registered leftover rather than a claim.
 
 \begin{table}[t]
 \caption{AutoWindow at a fixed eviction ratio of $0.75$. Accuracy, with
@@ -545,21 +545,29 @@ JSON-200 & 213 & 231 & 94 & \blind{89 (${-}5$)} & \textbf{96} (${+}2$) & --- \\
 \end{table}
 
 \paragraph{The registered gate.}
-Panel~(A) of Table~\ref{tab:aw} is the preregistered test, whose success
-criterion was $|\Delta|\le 3$\,pp against the uncompressed baseline. The
-formula meets it, and gains $+14$ and $+19$\,pp on Bengali and Telugu
-against the shipped default (16 fixed / 2 broken and 21/2; $p{=}.001$
-and $p{<}.001$). The
+Panel~(A) of Table~\ref{tab:aw} is the preregistered test
+($|\Delta|\le 3$\,pp against the uncompressed baseline). The formula
+meets it at $n{=}100$, and gains $+14$ and $+19$\,pp on Bengali
+and Telugu against the shipped default (16 fixed / 2 broken and 21/2;
+$p{=}.001$ and $p{<}.001$). The
 English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
 ($-7$ and $-6$\,pp). Compared directly, $c{+}16 \to \hat w$ is $+6$ and
 $+5$\,pp (7 fixed / 1 broken on Telugu, 9/4 on Bengali; each ns alone,
 $16/5$, $p{=}.027$ pooled over the two languages' independent items). Across the eight-language grid, languages whose
 trailing block already fits inside the default window stay within
-$3$\,pp of baseline; the one marginal exception, Vietnamese, loses $5$ at
-the default where it is not blind (ns) and recovers to $-2$ under
-$c{+}16$ (Appendix~\ref{app:grids}); the gate is a statement about the
+$3$\,pp of baseline bar one marginal exception
+(Appendix~\ref{app:grids}); the gate is a statement about the
 languages the default window actually blinds.
+Re-run on the entire validation pools under the preregistered
+everything-there-is stopping rule (Appendix~\ref{app:ci}), Bengali holds
+the gate ($-1.8$, $n{=}113$) and Telugu does not: $-5.7$\,pp (19 fixed /
+57 broken, CI $[-7.8,-3.1]$), against a $-20.2$\,pp hole at the default
+($[-22.4,-17.3]$) and a $+14.5$\,pp recovery
+($p{=}7{\times}10^{-18}$). The original hundred items reproduce
+byte-identically and still sit at zero; the 569 new items sit at $-6.7$.
+The $n{=}100$ gate was sampling luck, and we report the full-pool number
+as the headline.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
 The same trailing-block logic applies when the tail is a response format
@@ -604,27 +612,22 @@ $+10$\,pp and leaves $-8$ ($p{=}.057$), the same residual as 8B; we do
 not claim it closes on either model (Appendix~\ref{app:llama}).
 
 \paragraph{What the residuals are not.}
-The three cells that miss the closure gate are all Bengali ($-6$ at
-Gemma, $-8$ at 8B and at Llama) --- also the only cell where a miss could
-appear, since English is at ceiling throughout and Telugu has no clear
-hole at Gemma or Llama. The diagnosis below was made after seeing the
-residuals; the measurement that anchors it was not. With the question last, every
+Four cells now miss the closure gate: Bengali at Gemma ($-6$), at 8B and
+at Llama ($-8$), and Telugu on the primary model's full pool ($-5.7$,
+certified). The diagnosis below was made after seeing the first three;
+the fourth, measured at 6.7$\times$ the sample, obeys it. With the question last, every
 window sees all of it by construction, and the same press at the same
-ratio still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns; CIs
-$[-8.7,+3.0]$ and $[-7.9,+0.4]$) while removing about three quarters of
+ratio still costs Bengali $4$\,pp and Telugu $6$\,pp (both ns) while
+removing about three quarters of
 the instruction-last hole (Table~\ref{tab:aw}). The missed cells
-look the same: at Gemma the gap is a plateau from 48 to 64, and at 8B all
+look the same: at Gemma the gap is a plateau from 48 to 64, at 8B all
 eight residual items and at Llama nine of eleven have their whole
-question inside the window (Appendices~\ref{app:gemma},
-\ref{app:8b} and~\ref{app:llama}).
+question inside the window, and on the full Telugu pool 51 of 57 do
+(Appendices~\ref{app:gemma}, \ref{app:8b} and~\ref{app:llama}).
 Widening the window turns off the blind mode; it does not remove the
 ordinary cost of discarding three quarters of the cache.
 
-The rule also buys no extra cache: SnapKV keeps the window inside the
-retained budget, so every comparison in Table~\ref{tab:aw} sits at one
-eviction ratio, and AutoWindow costs one offline percentile per (model,
-language, template). Nor is the integer a property of one method:
-dropped unchanged into
+Nor is the integer a property of one method: dropped unchanged into
 PyramidKV \citep{cai2024pyramidkv}, which inherits the same shipped
 window, it takes Bengali from $-28$ to $-2$ and Telugu from $-32$ to
 $-1$ against that method's own baselines (Appendix~\ref{app:rivals}).
