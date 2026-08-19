@@ -1191,8 +1191,8 @@ move down with the tokenizer, and the window sweep in
 Table~\ref{tab:gemmasweep} is consistent with that: Bengali is damaged at
 the two windows below its $c$ and drifts to a non-significant $-5$\,pp at
 the two above it, while Telugu --- whose Qwen counterpart loses 19 points
-at $w{=}64$ --- shows no comparable hole anywhere on the grid. English is
-flat to slightly positive throughout.
+at $w{=}64$ --- shows no comparable hole anywhere on the grid. English shows
+no detected damage anywhere on the grid.
 
 \begin{table}[h]
 \caption{Gemma-3-4b-it window sweep. Paired $\Delta$pp against the
@@ -1395,7 +1395,7 @@ PyramidKV \citep{cai2024pyramidkv} keeps the observation window and
 changes what is done with the retained budget, allocating more of it to
 lower layers; its kvpress implementation subclasses SnapKV and inherits
 $w{=}64$ unchanged. On its own pod and its own baselines, that inherited
-default digs holes of $-28$ and $-32$\,pp on its own baselines --- deeper
+default digs holes of $-28$ and $-32$\,pp --- deeper
 than the $-16$ and $-19$ the campaign pod recorded for SnapKV, a cross-pod
 contrast we quote as context, not as a test --- and the AutoWindow integers,
 used exactly as shipped, remove them: $-2$, $-1$ and $+0$ on Bengali,
