@@ -758,14 +758,16 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Seventeen generation stores back the tables:
-\texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
+corresponding data existed. Seventeen generation stores back the main
+arms --- \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
 \texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
 \texttt{gemma\_q90}, \texttt{schema}, \texttt{schema\_fix},
 \texttt{v\_trace}, \texttt{v\_trace\_bn}, \texttt{llama},
 \texttt{instr\_first}, \texttt{agnostic}, \texttt{ratio},
-\texttt{pyramidkv} and \texttt{constant}. Every table
-cell in this paper is recomputed from the raw generations in those stores
+\texttt{pyramidkv} and \texttt{constant} --- and
+Appendix~\ref{app:cap} draws on two further cap-128-era stores,
+\texttt{e3} and \texttt{e3\_384}. Every table cell in this paper is
+recomputed from the raw generations in those nineteen stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
