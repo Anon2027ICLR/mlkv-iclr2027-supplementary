@@ -4,10 +4,29 @@ Build — **the official artifact is the pdflatex build**:
 
 ```bash
 export PATH=/Library/TeX/texbin:$PATH    # BasicTeX + tlmgr install helvetic courier
+export FORCE_SOURCE_DATE=1 SOURCE_DATE_EPOCH=$(date -u +%s)   # see below
 pdflatex iclr2027_conference && bibtex iclr2027_conference \
   && pdflatex iclr2027_conference && pdflatex iclr2027_conference
 uv run python scripts/page_budget.py paper/iclr2027/iclr2027_conference.pdf  # must print 0
 ```
+
+**Why the two date variables.** Without them pdfTeX writes the builder's UTC
+offset into `/CreationDate`, and matplotlib does the same in the figures that
+get embedded here. `pdfinfo` renders that date in the *reader's* timezone, so
+it looks local to whoever checks and it survived a long time; the offset is in
+the file all the same, on every build, and under double-blind review it is a
+statement about where the author sits. `FORCE_SOURCE_DATE=1` makes pdfTeX
+honour `SOURCE_DATE_EPOCH` and stamp UTC. Check any PDF, and repair one that
+was built without them, with:
+
+```bash
+python scripts/utc_pdf_dates.py --check paper/iclr2027/*.pdf paper/iclr2027/figs/*.pdf
+python scripts/utc_pdf_dates.py paper/iclr2027/figs/*.pdf     # rewrites in place
+```
+
+The repair is byte-length preserving, so it never has to rebuild an xref table.
+The anonymised-release build applies the same conversion to every PDF blob in
+the history it exports, and refuses to produce a bundle if one gets through.
 
 **Font history, learned the expensive way.** Three different builds give
 three different page counts, and only one of them is the submission:
