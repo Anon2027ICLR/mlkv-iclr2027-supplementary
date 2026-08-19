@@ -713,11 +713,11 @@ Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
 length, instruction length, and language together, which is precisely the
 confound this paper has to hold fixed, but the price is that our absolute
-accuracies are not comparable to leaderboard numbers and that each cell
-rests on 100 items --- enough to detect the holes ($-16$ to $-19$\,pp at
-$p{<}.001$) but not to certify their absence: the closure intervals in
-Appendix~\ref{app:ci} span roughly $\pm 7$--$9$\,pp for Bengali and
-Telugu. Finally, one primary 4B model carries the headline
+accuracies are not comparable to leaderboard numbers. The headline cells
+now rest on the full validation pools --- 669 Telugu and 113 Bengali
+items, the pools' entire contents --- which is enough to certify the
+Telugu hole ($[-22.4,-17.3]$) and its residual ($[-7.8,-3.1]$), while
+Bengali's capped pool leaves its interval wide ($[-8.0,+5.2]$). Finally, one primary 4B model carries the headline
 result; the 8B slice shares its tokenizer, so it is a replication in
 scale rather than an independent sample, and a single contrast tokenizer
 cannot establish how the rule behaves across the space of tokenizers.
