@@ -720,6 +720,16 @@ try:
           sum(1 for c in c_min.values() if c > 64), 2)
     check("languages still blinded at 32 without the format sentence",
           sum(1 for c in c_min.values() if c > 32), 2)
+    # Scope and app:measure say THREE languages stay blind at 32 under
+    # minimal instructions. That is the count over all eight, using the
+    # minimal form where one exists and the full trailing block where none
+    # does: Thai has no separable answer-format sentence, so cutting is not
+    # available to it and its c=45 stands. The check above counts only the
+    # separable languages, which is why the two numbers differ and why both
+    # are pinned.
+    check("languages blinded at 32 under minimal instructions",
+          sum(1 for lang in TEX_C
+              if c_min.get(lang, measured[lang]) > 32), 3)
     check("languages blinded at the shipped constant of 32",
           sum(1 for c in measured.values() if c > 32), 6)
     # The appendix says the agent template's static block is longer than the
