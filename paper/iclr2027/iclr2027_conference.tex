@@ -149,7 +149,7 @@ matched ratios.
 We study a method family rather than a shipped production default: vLLM
 exposes no SnapKV-style evictor, the RocketKV path is opt-in, and
 \citet{nvidia2026efficient} argue that research evictors rarely ship as
-defaults. Our claim is narrower and more actionable than harm to
+defaults (Appendix~\ref{app:prod}). Our claim is narrower and more actionable than harm to
 low-resource languages in general:
 a token-denominated window blinds whichever prompts carry a trailing
 block longer than itself, and under today's tokenizers such prompts are
@@ -248,10 +248,8 @@ compress with SnapKV \citep{li2024snapkv} through the kvpress
 implementation at a fixed eviction ratio of $0.75$ --- three quarters of
 the prefill cache is discarded --- and expose the observation window as
 the treatment variable. SnapKV keeps the window inside the retained
-budget, so changing $w$ at a fixed ratio does not change how much cache
-survives; every comparison below is at matched retained KV
-(Appendix~\ref{app:snapkv} states the scoring step precisely, and
-Appendix~\ref{app:prod} the production scope). Decoding is
+budget (Appendix~\ref{app:snapkv}), so every comparison below is at
+matched retained KV. Decoding is
 greedy with a 384-token cap: the more common 128-token cap is itself a
 token-denominated constant, and Appendix~\ref{app:cap} reports what it
 did to our own measurements.
@@ -670,8 +668,7 @@ oren2024transformers} fail differently and worse, costing even English
 $14$ and $8$\,pp at the ratio where no window we tested costs it
 anything (Appendix~\ref{app:rivals}).
 Four-bit KV quantization damages languages in an order that is not the
-fertility order, and Qwen3-4B and 8B share a tokenizer, so the scale
-slice is a replication rather than an independent sample. A capacity
+fertility order. A capacity
 mechanism does exist, but in a different regime: at aggressive eviction,
 where the retained cache approaches the length of the gold passage, even
 English items with long passages fail, whereas at the ratio used
@@ -686,10 +683,7 @@ The failure needs a layout in which something long stands between the
 question and the end of the prompt. Instruction-last prompts and
 schema-after-content prompts are the biting cases; a chat deployment that
 puts the question last has $V{=}1$ by construction and nothing here
-applies to it. The production scope is likewise narrow: vLLM exposes no
-SnapKV-style evictor and the RocketKV path is opt-in, so we study a
-method family and one shipped opt-in constant rather than a default that
-most users are running today \citep{nvidia2026efficient}.
+applies to it.
 
 Two properties of the remedy are by design rather than by oversight. A
 language-level percentile leaves the longest decile of questions below
@@ -815,8 +809,8 @@ SnapKV forms $q_{\mathrm{obs}} = q[:,:,-w:]$, scores the prefix keys
 against that slice, keeps the highest-scoring entries under the
 compression ratio, and protects the window itself from eviction. The
 kvpress implementation defaults to $w{=}64$ with a pooling kernel of
-size~5. The TensorRT-LLM RocketKV path defaults to $w{=}32$ and skips
-sparse KV entirely when the sequence is shorter than its prompt budget.
+size~5, and the RocketKV path skips sparse KV entirely when the sequence
+is shorter than its prompt budget.
 Because the window is retained rather than added, raising $w$ at a fixed
 compression ratio does not increase the amount of cache that survives:
 it changes which entries are selected, not how many.
@@ -1559,8 +1553,7 @@ Two earlier interventions move the same quantity and are consistent with
 the account in the main text. Both were measured under the 128-token
 decode cap noted above, so we report them as supporting rather than as
 headline evidence; the layout swap has since been re-measured at the
-current cap and moved to the main text. The clean, current-cap version of the layout swap is
-Table~\ref{tab:aw} in the main text. The earlier cap-128
+current cap and moved to the main text. The earlier cap-128
 measurement is retained here only as provenance: Bengali $+14$\,pp at
 a fixed ratio (34/6, $p{<}10^{-5}$, $n{=}200$) and $+22$\,pp under an
 absolute cache budget (51/7, $p{<}10^{-8}$, $n{=}200$), with a Thai
