@@ -125,6 +125,10 @@ for pad, what in [("60", 90), ("120", 184), ("200", 231)]:
 
 G = load("gemma_q90.db")
 ci_row("Gemma bn", G["bn"]["baseline"], G["bn"]["snapkv@r0.75:w50"])
+# Gemma Telugu is the cell Section 6 uses to say the shipped constant can
+# already pass, so the paper needs its interval as much as any other closure
+# row. Here w-hat IS the default: Q90 puts Telugu's window back at 64.
+ci_row("Gemma te", G["te"]["baseline"], G["te"]["snapkv@r0.75:w64"])
 
 E = load("autowin_8b.db")
 ci_row("8B bn", E["bn"]["baseline"], E["bn"]["snapkv@r0.75:w183"])

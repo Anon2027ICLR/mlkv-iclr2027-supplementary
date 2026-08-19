@@ -569,8 +569,10 @@ $3$\,pp of baseline bar one marginal exception
 (Appendix~\ref{app:grids}); the gate is a statement about the
 languages the default window actually blinds.
 Re-run on the entire validation pools under the preregistered
-everything-there-is stopping rule (Appendix~\ref{app:ci}), Bengali holds
-the gate ($-1.8$, $n{=}113$) and Telugu does not: $-5.7$\,pp (19 fixed /
+everything-there-is stopping rule (Appendix~\ref{app:ci}), Bengali's
+capped pool adds no discordant item beyond the original hundred and holds
+the gate ($-1.8$, $n{=}113$), with a $+13.3$\,pp recovery of its own
+(18 fixed / 3 broken, $p{=}.0015$) and Telugu does not: $-5.7$\,pp (19 fixed /
 57 broken, CI $[-7.8,-3.1]$), against a $-20.2$\,pp hole at the default
 ($[-22.4,-17.3]$) and a $+14.5$\,pp recovery
 ($p{=}7{\times}10^{-18}$). The original hundred items reproduce
@@ -601,9 +603,10 @@ against Qwen's $102$, and its Bengali questions to a median of $11$
 tokens, so both inputs to the rule move: $c$ is $27/32/44$ and $Q_{90}$ is
 $18/18/20$ for English, Bengali and Telugu, giving $\hat w = 45/50/64$.
 For Telugu the rule returns exactly the constant that
-kvpress already ships, and Telugu is indeed flat there ($-3$\,pp against
-its own baseline): a window rule that is worth running should also be able
-to say that the default is adequate. For Bengali, $\hat w{=}50$ leaves
+kvpress already ships, and Telugu meets the gate there ($-3$\,pp against
+its own baseline; CI $[-8.6, +4.2]$, Appendix~\ref{app:ci}): a window rule
+that is worth running should also be able to say when the shipped constant
+already passes. For Bengali, $\hat w{=}50$ leaves
 $-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B cells met
 (Appendix~\ref{app:gemma} gives the full sweep on this tokenizer).
 
@@ -614,9 +617,8 @@ below baseline ($p{=}.008$); English is at ceiling and carries no
 information about either (Appendix~\ref{app:8b}). Llama-3.1-8B-Instruct
 is the same test on a third tokenizer family, with both inputs
 re-measured on its tokenizer --- $c{=}125$ and $Q_{90}{=}87$ for
-Bengali, so $\hat w{=}212$. The hole reproduces at $-18$\,pp ---
-the first interval in the paper entirely below the damage bound
-($[-21.5, -9.2]$). The formula recovers
+Bengali, so $\hat w{=}212$. The hole reproduces at $-18$\,pp, with an
+interval of $[-21.5, -9.2]$. The formula recovers
 $+10$\,pp and leaves $-8$ ($p{=}.057$), the same residual as 8B; we do
 not claim it closes on either model (Appendix~\ref{app:llama}).
 
@@ -632,7 +634,8 @@ the instruction-last hole (Table~\ref{tab:aw}). The missed cells
 look the same: at Gemma the gap is a plateau from 48 to 64, at 8B all
 eight residual items and at Llama nine of eleven have their whole
 question inside the window, and on the full Telugu pool 51 of 57 do
-(Appendices~\ref{app:gemma}, \ref{app:8b} and~\ref{app:llama}).
+(Appendices~\ref{app:gemma}, \ref{app:8b} and~\ref{app:llama}; the
+full-pool audit is in Appendix~\ref{app:ci}).
 Widening the window turns off the blind mode; it does not remove the
 ordinary cost of discarding three quarters of the cache.
 
@@ -674,12 +677,10 @@ $14$ and $8$\,pp at the ratio where no window we tested costs it
 anything (Appendix~\ref{app:rivals}).
 Four-bit KV quantization damages languages in an order that is not the
 fertility order. A capacity
-mechanism does exist, but in a different regime: at aggressive eviction,
-where the retained cache approaches the length of the gold passage, even
-English items with long passages fail, whereas at the ratio used
-throughout this paper Bengali damage is flat across gold-length and
-retention strata. We do not use high-dose fertility slopes as evidence
-about the window.
+mechanism exists in a different regime --- at aggressive eviction even
+long-passage English items fail --- while at this paper's ratio Bengali
+damage shows no gradient across gold-length or retention strata. We do
+not use high-dose fertility slopes as evidence about the window.
 
 % =====================================================================
 \section{Limitations}
