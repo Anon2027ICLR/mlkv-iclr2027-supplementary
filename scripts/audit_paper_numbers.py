@@ -436,6 +436,114 @@ for label, base, comp, d_tex, fb_tex in [
     check(f"{label} fixed/broken", r["fb"], fb_tex)
 
 # --------------------------------------------------------------------------
+print("## Section 6 and tab:ci: the depth arm on the full validation pools")
+# The two headline closure cells re-run on the entire TyDiQA validation pools
+# under the preregistered everything-there-is stopping rule. Self-contained:
+# own baselines, own stack, pairs only within depth.db. These cells print one
+# decimal in the paper, so they are checked to one decimal rather than through
+# cmp_pair's integer rounding.
+DP = load("depth.db")
+
+
+def depth_pair(base, comp):
+    common = sorted(set(base) & set(comp))
+    n = len(common)
+    f = sum(1 for i in common if not base[i] and comp[i])
+    b = sum(1 for i in common if base[i] and not comp[i])
+    return dict(n=n, fb=(f, b), d=round(100 * (f - b) / n, 1),
+                acc=round(100 * sum(comp[i] for i in common) / n, 1),
+                p=mcnemar_p(f, b))
+
+
+TEX_DEPTH = {  # lang: (w-hat, n, baseline acc, (w64 d, fb), (hat d, fb), (rec d, fb))
+    "te": (247, 669, 62.6, (-20.2, (19, 154)), (-5.7, (19, 57)), (14.5, (117, 20))),
+    "bn": (183, 113, 71.7, (-15.0, (3, 20)), (-1.8, (6, 8)), (13.3, (18, 3))),
+}
+for lang, (what, n_tex, base_tex, w64, hat, rec) in TEX_DEPTH.items():
+    base = DP[lang]["baseline"]
+    d64 = DP[lang]["snapkv@r0.75"]
+    dw = DP[lang][f"snapkv@r0.75:w{what}"]
+    check(f"depth {lang} pool size", len(base), n_tex)
+    check(f"depth {lang} baseline accuracy",
+          round(100 * sum(base.values()) / len(base), 1), base_tex)
+    for label, comp_base, comp, (d_tex, fb_tex) in [
+        ("default window", base, d64, w64),
+        ("w-hat", base, dw, hat),
+        ("recovery", d64, dw, rec),
+    ]:
+        r = depth_pair(comp_base, comp)
+        check(f"depth {lang} {label} delta", r["d"], d_tex)
+        check(f"depth {lang} {label} fixed/broken", r["fb"], fb_tex)
+# The abstract and section 1 round the two recoveries to whole points.
+check("abstract depth recovery te", round(depth_pair(
+    DP["te"]["snapkv@r0.75"], DP["te"]["snapkv@r0.75:w247"])["d"]), 14)
+check("abstract depth recovery bn", round(depth_pair(
+    DP["bn"]["snapkv@r0.75"], DP["bn"]["snapkv@r0.75:w183"])["d"]), 13)
+# The strongest significance the paper quotes, as printed: p = 7e-18.
+_p = depth_pair(DP["te"]["snapkv@r0.75"], DP["te"]["snapkv@r0.75:w247"])["p"]
+check("depth te recovery p exponent", math.floor(math.log10(_p)), -18)
+check("depth te recovery p mantissa", round(_p / 10 ** math.floor(math.log10(_p))), 7)
+
+# The decomposition section 6 and app:ci both print: the original hundred
+# items reproduce byte-identically and still sit at zero, the 569 new ones at
+# -6.7. Item index comes from the id suffix, which mrag assigns from the
+# question-pool position.
+_idx = lambda i: int(i.rsplit("-", 1)[1])
+for label, keep, d_tex in [("original 100", lambda i: _idx(i) < 100, 0.0),
+                           ("new 569", lambda i: _idx(i) >= 100, -6.7)]:
+    r = depth_pair({k: v for k, v in DP["te"]["baseline"].items() if keep(k)},
+                   {k: v for k, v in DP["te"]["snapkv@r0.75:w247"].items() if keep(k)})
+    check(f"depth te decomposition, {label}", r["d"], d_tex)
+
+# --------------------------------------------------------------------------
+print("## Section 6: coverage and the residual visibility audit, full pools")
+# "The window covers the entire question for 98 of 113 Bengali and 611 of 669
+# Telugu items" and "on the full Telugu pool 51 of 57 do" are properties of
+# the questions, not of any store, so they are recomputed from the TyDiQA
+# validation split and the run tokenizer. Skipped loudly where either is
+# missing -- the same rule as the constants block above.
+try:
+    import json as _json
+
+    from datasets import load_dataset  # noqa: E402
+    from transformers import AutoTokenizer  # noqa: E402
+
+    _tok = AutoTokenizer.from_pretrained("Qwen/Qwen3-4B")
+    _q90 = {r["lang"]: r["Q90"] for r in _json.loads(
+        (RES / "q_percentiles.json").read_text()) if r["model"] == "Qwen/Qwen3-4B"}
+    check("Q90 used for the Telugu window", _q90["te"], 80)
+    check("Q90 used for the Bengali window", _q90["bn"], 76)
+    _tydi = load_dataset("google-research-datasets/tydiqa", "secondary_task")
+    TEX_COVER = {  # lang: (w-hat, coverage, residual fully visible)
+        "te": (247, (611, 669), (51, 57)),
+        "bn": (183, (98, 113), (7, 8)),
+    }
+    for lang, (what, cover_tex, resid_tex) in TEX_COVER.items():
+        name = {"te": "telugu", "bn": "bengali"}[lang]
+        rows = [r for r in _tydi["validation"] if r["id"].startswith(name + "-")]
+        qlen = [len(_tok(r["question"], add_special_tokens=False)["input_ids"])
+                for r in rows]
+        base, dw = DP[lang]["baseline"], DP[lang][f"snapkv@r0.75:w{what}"]
+        # The store's own qid must agree with the split position, or indexing
+        # by the item-id suffix would silently score the wrong question.
+        con = sqlite3.connect(f"file:{RES / 'depth.db'}?mode=ro", uri=True)
+        mism = sum(1 for iid, meta in con.execute(
+            "SELECT item_id, meta FROM generations WHERE lang=? AND config='baseline'",
+            (lang,)) if _json.loads(meta)["qid"] != rows[_idx(iid)]["id"])
+        con.close()
+        check(f"depth {lang} qid alignment with the validation split", mism, 0)
+        visible = [i for i in range(len(rows)) if qlen[i] <= _q90[lang]]
+        check(f"depth {lang} coverage at w-hat",
+              (len(visible), len(rows)), cover_tex)
+        residual = [i for i in range(len(rows))
+                    if base[f"mrag-{lang}-8k-{i}"] and not dw[f"mrag-{lang}-8k-{i}"]]
+        check(f"depth {lang} residual items fully visible",
+              (sum(1 for i in residual if qlen[i] <= _q90[lang]), len(residual)),
+              resid_tex)
+except Exception as exc:  # tokenizer or dataset unavailable
+    print(f"  SKIPPED (no tokenizer or dataset: {type(exc).__name__})")
+
+# --------------------------------------------------------------------------
 print("## Appendix: PyramidKV, the second member of the family — tab:rivals")
 # Its pod did not reproduce the campaign stack, so every comparison here is
 # within this store; the SnapKV values printed beside it in the table are

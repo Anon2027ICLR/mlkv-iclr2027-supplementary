@@ -305,7 +305,7 @@ CUDA, torch, kvpress); cells from different stacks, models or tokenizers
 are never pooled, even when they carry the same configuration name. The
 follow-up runs reported in Sections~\ref{sec:dose}
 and~\ref{sec:autowindow} re-ran cells that earlier stores already
-contained; across all 3{,}243 such generations the new text is
+contained; across all 3{,}843 such generations the new text is
 byte-identical to the old (Appendix~\ref{app:provenance}), which is what
 licenses reading the earlier and later tables as describing one system.
 
@@ -521,7 +521,8 @@ and ratio with the question moved to the end of the prompt, so $V{=}1$ by
 construction --- measured against that layout's own baseline (accuracy
 printed beside the difference); it was not
 run for panel~(B), and the $c{+}16$ ablation it replaces is in
-Appendix~\ref{app:grids}.}
+Appendix~\ref{app:grids}. The depth re-run on the full validation pools is
+reported in Section~\ref{sec:autowindow} and Appendix~\ref{app:ci}.}
 \label{tab:aw}
 \centering
 \small
@@ -762,21 +763,21 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Seventeen generation stores back the main
+corresponding data existed. Eighteen generation stores back the main
 arms --- \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
 \texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
 \texttt{gemma\_q90}, \texttt{schema}, \texttt{schema\_fix},
 \texttt{v\_trace}, \texttt{v\_trace\_bn}, \texttt{llama},
 \texttt{instr\_first}, \texttt{agnostic}, \texttt{ratio},
-\texttt{pyramidkv} and \texttt{constant} --- and
+\texttt{pyramidkv}, \texttt{constant} and \texttt{depth} --- and
 Appendix~\ref{app:cap} draws on two further cap-128-era stores,
 \texttt{e3} and \texttt{e3\_384}. Every table cell in this paper is
-recomputed from the raw generations in those nineteen stores
+recomputed from the raw generations in those twenty stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
 conditions for every arm are files that ship with the code, each written
-before its run; for eight of the eleven arms the version-history timestamp
+before its run; for nine of the twelve arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three files entered version control in a later batch. The
 anonymized version history ships with the supplementary material, and the
@@ -1522,8 +1523,8 @@ later ladder shares with an earlier one. We do not count these by hand:
 \texttt{determinism\_ledger.py} keys every generation by model, task,
 language, treatment, item and prompt version, takes the earliest run of
 each key as the original, and compares every later run against it. It
-finds $3{,}243$ generations produced a second time in a later store, and
-all $3{,}243$ reproduce the original text byte for byte. This is what
+finds $3{,}843$ generations produced a second time in a later store, and
+all $3{,}843$ reproduce the original text byte for byte. This is what
 allows us to treat the re-measured constants and the earlier tables as
 describing the same system. Three hundred of those pairs also cross a
 naming difference --- one store requests the default window implicitly
@@ -1531,7 +1532,7 @@ and the other names $w{=}64$ explicitly --- and agree token for token, as
 they should. The two drifted pods bought a measurement we had not
 planned: the $600$ uncompressed baselines they share with the AutoWindow
 store are byte-identical \emph{across} those boundaries. The
-ledger counts same-descriptor repeats ($3{,}243$, the figure above) and
+ledger counts same-descriptor repeats ($3{,}843$, the figure above) and
 cross-descriptor ones ($600$) separately, and the argument that the
 earlier and later tables describe one system rests only on the former.
 

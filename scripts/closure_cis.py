@@ -15,6 +15,12 @@ Vocabulary the paper uses, fixed here:
   "meets the registered gate"  point |delta| <= 3pp
   "non-inferior at -3pp"       CI lower bound >= -3pp
   "confirmed residual"         CI entirely below 0
+  "certified residual"         CI entirely below -3pp, i.e. below the gate
+                               itself and not merely below zero. Strictly
+                               stronger than "confirmed"; the depth arm is
+                               the first cell in the paper to reach it, and
+                               the distinction is why app:ci now prints two
+                               different words for two different readings.
 
   UV_NO_SYNC=1 uv run python scripts/closure_cis.py
 """
@@ -97,6 +103,7 @@ def ci_row(label, base, comp):
     d_lo = 100.0 * (2 * lo_p - 1) * N / n
     d_hi = 100.0 * (2 * hi_p - 1) * N / n
     verdict = ("non-inferior at -3pp" if d_lo >= -3
+               else "certified residual" if d_hi < -3
                else "confirmed residual" if d_hi < 0
                else "interval too wide for +-3pp")
     print(f"{label:26} d={d:+5.1f}  f/b={f}/{b}  "
@@ -125,6 +132,13 @@ ci_row("8B bn", E["bn"]["baseline"], E["bn"]["snapkv@r0.75:w183"])
 L = load("llama.db")
 for lang, what in [("en", 43), ("bn", 212), ("te", 284)]:
     ci_row(f"Llama {lang}", L[lang]["baseline"], L[lang][f"snapkv@r0.75:w{what}"])
+
+# The depth arm: the same two headline cells re-run on the entire validation
+# pools under the preregistered stopping rule. Own baselines, own store, so
+# these pair only within depth.db and are never mixed with the n=100 rows.
+DP = load("depth.db")
+for lang, what in [("te", 247), ("bn", 183)]:
+    ci_row(f"full pool {lang}", DP[lang]["baseline"], DP[lang][f"snapkv@r0.75:w{what}"])
 
 # The instruction-first cells are mechanism-gate cells, not w-hat closures:
 # the treatment is the default window with the question last (V=1 by

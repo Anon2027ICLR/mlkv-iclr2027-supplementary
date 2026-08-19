@@ -76,7 +76,7 @@ was previously found by accident.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 434 checks
+uv run python scripts/audit_paper_numbers.py    # 464 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations
@@ -99,6 +99,16 @@ so their commit time does not precede the run.
 | `iclr-pyramidkv-preregister.md` | `74840de` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
 | `iclr-template-survey-preregister.md` | `813bcad` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
 | `iclr-constant-and-ranking-preregister.md` | `e287172` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
+| `iclr-depth-preregister.md` | `43049d1` | 2026-08-18 16:32 | 2026-08-18 23:54 | yes [^depth] |
+
+[^depth]: Two dated amendments, `8f3adf5` (the guard mis-specification) and
+`cfc95ce` (the mid-run harness cap), each committed before the rows it
+governs. This registration also has an *external* timestamp, and it is
+narrower than the commit timestamp above: the anonymised push at
+2026-08-19T01:18:03Z precedes every Bengali row and the whole `[300:669]`
+Telugu extension on which predictions 2 and 5 rest, but not the first 300
+Telugu rows. Only that corrected form is claimed anywhere; see the release
+plan's status line.
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so
@@ -108,7 +118,7 @@ does not add a row.
 script, not by hand:
 
 ```bash
-uv run python scripts/determinism_ledger.py     # 3,243 same-stack, 300 cross
+uv run python scripts/determinism_ledger.py     # 3,843 same-stack, 600 cross
 uv run python scripts/decode_cap_ledger.py      # the appendix on the decode cap
 uv run python scripts/template_survey_measure.py  # the layout-in-the-wild appendix
 uv run python scripts/measure_c.py --models Qwen/Qwen3-4B --no-marker
