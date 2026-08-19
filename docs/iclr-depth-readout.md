@@ -59,13 +59,16 @@ full (capped) pool; its interval stays wide, as always stated.
 
 The push record (`6e833be`) said the depth registration was externally
 timestamped "before any of its data". Too strong: pod generation began
-23:54Z on the 18th; the GitHub push landed 01:18Z on the 19th. What is
-true and stays valuable: the preregister **commit** (≈16:26Z) precedes
-all generation in author-controlled history; the **external** timestamp
-precedes amendment 2, the entire [300:669] extension block, and the
-majority of rows — including all of the extension on which predictions
-2 and 5 rest. The release-plan status line is corrected alongside this
-readout, and the paper may claim only the corrected form.
+at 23:54Z on the 18th (Grok reran immediately after the guard amendment
+at 23:30Z, before the push-first plan existed at 00:10Z — no instruction
+was violated), and the GitHub push landed at 01:18Z on the 19th. What is
+true and stays valuable: the preregister **commit** (16:32Z) precedes
+all generation by 7.4 hours in author-controlled history, and the
+**external** timestamp precedes every Bengali row (01:43Z onward), the
+entire [300:669] Telugu extension (post-02:21Z) on which predictions 2
+and 5 rest, and amendment 2 — 1,446 of 2,346 rows. The release-plan
+status line carries the same correction, and the paper may claim only
+this form.
 
 ## Integration memo (Opus wave 3; every number above binds)
 
