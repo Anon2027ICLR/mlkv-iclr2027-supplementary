@@ -158,9 +158,8 @@ a token-denominated window blinds whichever prompts carry a trailing
 block longer than itself, and under today's tokenizers such prompts are
 non-English. Which languages qualify depends on the constant: at the
 research default of 64 tokens, two of our eight languages are blinded; at
-the stricter shipped constant of 32, six are (three even under minimal
-one-sentence instructions; Appendix~\ref{app:measure}); English never is,
-at either shipped constant. That last clause is why the number goes unaudited: at
+the stricter shipped constant of 32, six are; English never is, at
+either shipped constant. That last clause is why the number goes unaudited: at
 this ratio no tested window costs English anything --- $w{=}32$ and
 $w{=}64$ differ by $2$\,pp (ns) on our items --- so an English-validated
 benchmark cannot tell those two constants apart, and nothing in standard
@@ -327,9 +326,8 @@ last $w{=}64$ tokens, the only part of the prompt a SnapKV-style scorer
 reads. English leaves 25 tokens after the question, so the window covers
 it for all 100 English items (questions of 6--24 tokens); Bengali leaves
 107 and an English prompt carrying a JSON schema leaves 166, and in both
-the scorer ranks the passages having seen none of the question. Question
-widths are item medians; the passages run on leftwards for about 8k
-tokens.}
+the scorer ranks the passages having seen none of the question. Widths
+are item medians; passages continue leftwards ($\sim$8k tokens).}
 \label{fig:schematic}
 \end{figure}
 
@@ -524,10 +522,8 @@ Qwen3-4B on three of the eight languages measured; panel~(B) is Qwen3-4B
 on English prompts carrying a JSON schema tail, where $c$ is measured with
 the schema in place. The last column is the layout remedy --- the same press
 and ratio with the question moved to the end of the prompt, so $V{=}1$ by
-construction --- measured against that layout's own baseline (accuracy
-printed beside the difference); it was not
-run for panel~(B), and the $c{+}16$ ablation it replaces is in
-Appendix~\ref{app:grids}. The depth re-run on the full validation pools is
+construction --- measured against that layout's own baseline; not run
+for panel~(B) (the $c{+}16$ ablation: Appendix~\ref{app:grids}). The depth re-run on the full validation pools is
 reported in Section~\ref{sec:autowindow} and Appendix~\ref{app:ci}.}
 \label{tab:aw}
 \centering
@@ -648,24 +644,19 @@ regressing correctness on a compression indicator and a blindness
 indicator $\mathbf{1}[w<c]$, with standard errors clustered by item, gives
 $+0.09$ log-odds for compression when the question is visible
 (95\% CI $[-0.05, 0.23]$, $p{=}.21$) and $-1.06$ for blindness
-($z{=}{-}9.4$, $p{<}.001$). Uncompressed rows are never blind, so the
-interaction term equals the blindness term; we report the operational
-form. We cannot distinguish the compression cost from zero when the scorer
+($z{=}{-}9.4$, $p{<}.001$). (Uncompressed rows are never blind, so the interaction equals the
+blindness term.) We cannot distinguish the compression cost from zero when the scorer
 sees the question --- which is not showing it is zero: the interval
 admits a small effect either way. What it excludes is anything
 resembling the blindness term.
 
-We also compared one-parameter descriptions of the compressed rows, and
-the comparison does not fully favour us. AIC prefers language fixed
-effects ($2744$) over the distance to the threshold $(w{-}c)$ ($3046$),
-the binary blindness indicator ($3075$), and the raw window $w$ ($3220$).
-The mechanism's prediction that $(w{-}c)$ beats raw $w$ holds. But on a
-five-language grid $(w{-}c)$ is nearly collinear with language identity,
-and the sweep alone therefore cannot separate a threshold from a
-per-language constant. That separation comes from the experiments that hold
-language fixed while $c$ moves (Sections~\ref{sec:threshold}
-and~\ref{sec:autowindow}) and from the dose ladder within one language
-(Section~\ref{sec:dose}).
+On the sweep alone, AIC prefers language fixed effects to the distance
+$(w{-}c)$: five languages cannot separate a threshold from a per-language
+constant, and $(w{-}c)$ beating raw $w$ is the only part the sweep
+certifies. The separation comes from the experiments that hold language
+fixed and from the dose ladder (Sections~\ref{sec:threshold},
+\ref{sec:dose}, \ref{sec:autowindow}); Appendix~\ref{app:dose} has the
+full comparison.
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
@@ -1133,6 +1124,16 @@ run of this block was cut short at 43 items on its third rung and tied on
 that last comparison; the tie resolves, narrowly, once the ladder is
 complete. Its numbers are superseded here, and the 343 generations the
 two runs share are byte-identical.
+
+\paragraph{One-parameter descriptions of the sweep.}
+We also compared one-parameter descriptions of the compressed rows, and
+the comparison does not fully favour us. AIC prefers language fixed
+effects ($2744$) over the distance to the threshold $(w{-}c)$ ($3046$),
+the binary blindness indicator ($3075$), and the raw window $w$ ($3220$).
+The mechanism's prediction that $(w{-}c)$ beats raw $w$ holds. But on a
+five-language grid $(w{-}c)$ is nearly collinear with language identity,
+and the sweep alone therefore cannot separate a threshold from a
+per-language constant.
 
 \section{Schema tails: the mis-sized run and the rerun}
 \label{app:schema}
