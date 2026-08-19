@@ -70,6 +70,28 @@ and 5 rest, and amendment 2 — 1,446 of 2,346 rows. The release-plan
 status line carries the same correction, and the paper may claim only
 this form.
 
+## QC — checked rather than assumed (2026-08-19, second pass)
+
+Cell integrity: ids contiguous 0..668/0..112, no duplicates, all six
+cells full. No degeneracy: zero empty outputs, one repetition loop in
+2,346 rows, at-cap 8.5–11% on te (vs 96–100% when generation actually
+collapses — the random control's signature); prompt-token medians are
+identical across the pre-fix and post-fix blocks (8185/8187/8186), the
+resume invariant visible in the data itself. Markers healthy (te
+83–87%, bn 96%; the Llama-te pathology does not appear on Qwen). Drift
+flags: 2 rows, both in te w64.
+
+**The certified residual is genuine, not a scoring artifact.** Of the
+57 residual items, the gold string appears anywhere in the ŵ output for
+only 5; the rest are true content misses or fidelity degradations the
+frozen metric counts by design (sampled: a partial answer listing one
+crop of three; a city-name variant "విశాఖపురం" for "విశాఖపట్నం"; a
+paraphrase that drops the exact span). Only 10/57 ran to the decode
+cap and 19/57 lack the marker — neither failure mode dominates. And
+under the stricter marker-only scorer the residual is **−9.4\***
+(24/87, p=1.4×10⁻⁹): same sign, still certified — Appendix C's
+every-conclusion-unchanged claim extends to this arm.
+
 ## Integration memo (Opus wave 3; every number above binds)
 
 - **Abstract**: `meets its $\pm 3$\,pp gate on English, Bengali and
