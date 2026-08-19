@@ -704,11 +704,12 @@ $\hat w$ is one integer per trailing-block variant, so mixed traffic
 needs either per-family measurement or the maximum over families, and the
 mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
 measurement looks like. For a deployer the guidance splits: sizing
-the window removes the blind mode in every family we ran ($+9$ to
-$+19$\,pp over the default), while the residual is a property of eviction
-at that ratio, addressed by lowering the ratio rather than by any window
---- both still true where eviction is heaviest
-(Appendix~\ref{app:rivals}).
+the window removes the blind mode in every model family where the default
+digs one ($+9$ to $+19$\,pp over it at $n{=}100$, $+13$ and $+14$ at the
+full pools; Gemma's compact tokenizer leaves no default hole to remove),
+while the residual is a property of eviction at that ratio, which no window
+we tested removes --- the lever left is retaining more cache, not resizing
+the window (Appendix~\ref{app:rivals}).
 
 Our items are constructed rather than drawn from a standard long-context
 suite, and this is a deliberate trade. Published suites vary question
@@ -718,7 +719,9 @@ accuracies are not comparable to leaderboard numbers. The headline cells
 now rest on the full validation pools --- 669 Telugu and 113 Bengali
 items, the pools' entire contents --- which is enough to certify the
 Telugu hole ($[-22.4,-17.3]$) and its residual ($[-7.8,-3.1]$), while
-Bengali's capped pool leaves its interval wide ($[-8.0,+5.2]$). Finally, one primary 4B model carries the headline
+Bengali's capped pool leaves its interval wide ($[-8.0,+5.2]$). Every
+other cell rests on 100 items; those closure intervals span roughly
+$\pm 7$--$9$\,pp (Appendix~\ref{app:ci}). Finally, one primary 4B model carries the headline
 result; the 8B slice shares its tokenizer, so it is a replication in
 scale rather than an independent sample, and a single contrast tokenizer
 cannot establish how the rule behaves across the space of tokenizers.
