@@ -606,6 +606,36 @@ check("app:r2 marker-only depth CI",
       (-11.9, -6.5))
 
 # --------------------------------------------------------------------------
+print("## Section 4: the shipped-constant flip — store w32")
+# The store behind "moving from w=64 to w=32 costs Thai 4.5 and Swahili 6.5"
+# was in neither the store list nor this audit until wave 4. It is its own
+# pod (stack 485513693f0a), decode cap 384, n=200 per language as the same
+# 100 questions at two context budgets, so every pairing here is within the
+# store and within a language.
+W32 = load("w32.db")
+# The text prints one decimal here (4.5, 6.5), so the check carries one:
+# cmp_pair rounds to whole points and -4.5 rounds to -4, which is a real
+# disagreement with the page rather than a tolerance to widen.
+# English on this second pod replicates the Scope sentence's point rather
+# than contradicting it. The sentence's -2 pp is a within-stack pairing of
+# w=32 (cliff_multi) against w=64 (autowin) on stack d7368e8bd94a, whose
+# English baselines are byte-identical across the two stores -- pinned
+# above, with the baseline-agreement guard that makes it legal. w32.db is a
+# different pod (485513693f0a), and there the same contrast is 0.0 pp
+# (2/2, n=200): two pods, neither able to tell the shipped constants apart.
+_w32_en = depth_pair(W32["en"]["snapkv@r0.75"], W32["en"]["snapkv@r0.75:w32"])
+check("w32 second-pod replication, en w32-vs-w64 delta", _w32_en["d"], 0.0)
+check("w32 second-pod replication, en pair", _w32_en["fb"], (2, 2))
+check("w32 second-pod replication, en not significant",
+      mcnemar_p(*_w32_en["fb"]) < 0.05, False)
+
+for lang, (d_tex, fb_tex) in {"th": (-4.5, (2, 11)), "sw": (-6.5, (1, 14))}.items():
+    r = depth_pair(W32[lang]["snapkv@r0.75"], W32[lang]["snapkv@r0.75:w32"])
+    check(f"w32 flip {lang} delta", r["d"], d_tex)
+    check(f"w32 flip {lang} fixed/broken", r["fb"], fb_tex)
+    check(f"w32 flip {lang} n", r["n"], 200)
+
+# --------------------------------------------------------------------------
 print("## Appendix: PyramidKV, the second member of the family — tab:rivals")
 # Its pod did not reproduce the campaign stack, so every comparison here is
 # within this store; the SnapKV values printed beside it in the table are

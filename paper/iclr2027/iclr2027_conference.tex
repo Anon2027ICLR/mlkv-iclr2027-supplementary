@@ -339,9 +339,9 @@ as soon as we lengthen the tail; and it appears at a constant that is
 already shipped.
 
 \paragraph{A window sweep across five languages.}
-Table~\ref{tab:cliff} reports paired damage against the uncompressed
-baseline for five languages at five windows, at a fixed eviction ratio of
-$0.75$. The predictions were registered before the sweep: \textsc{blind}
+Table~\ref{tab:cliff} and Figure~\ref{fig:triptych}a report paired damage
+against the uncompressed baseline for five languages at five windows, at a
+fixed eviction ratio of $0.75$. The predictions were registered before the sweep: \textsc{blind}
 when $w<c$, \textsc{safe} when $w>c$, with an allowed refinement that the
 step sits somewhat above $c$ rather than exactly at it.
 
@@ -352,7 +352,7 @@ $0.75$. Shaded cells are those the registered rule called \textsc{blind}
 before the run, meaning $w<c$; stars mark McNemar $p<.05$. Shading
 is a property of the design and stars of the outcome, so the table is the
 comparison between the two. The library default $w{=}64$ sits between
-the third and fourth columns; its effect is Table~\ref{tab:aw}.}
+the 56 and 88 columns; its effect is Table~\ref{tab:aw}.}
 \label{tab:cliff}
 \centering
 \small
@@ -371,19 +371,23 @@ te & 167 & 56 & \blind{${-}19^{*}$} & \blind{${-}21^{*}$} & \blind{${-}18^{*}$} 
 \end{tabular}
 \end{table}
 
-English never moves: its trailing block is 25 tokens, so every tested
-window contains the whole question. Bengali is damaged in every blind cell ($-13$ to $-21$\,pp, all
+English never moves --- not because every tested window holds its whole
+question (at $w{=}32$ the slack past its block is seven tokens, against
+questions of 6--24) but empirically: partial visibility without damage
+recurs on Gemma (Appendix~\ref{app:gemma}). Bengali is damaged in every blind cell ($-13$ to $-21$\,pp, all
 $p<.01$) and comes back to $-3$\,pp only at $w{=}176$, which is $c{+}69$.
 Telugu is damaged in all five cells, including $w{=}176$ --- for Telugu
 that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$, uncorrected;
 Appendix~\ref{app:r2}). Thai
 and Swahili, whose trailing blocks are 45 and 47 tokens, dip at the one
 tested window below their $c$ and are within noise elsewhere; we do not
-headline Swahili, whose baseline is $56\%$.
+headline Swahili, whose trailing block fits inside the default window
+($c{=}47$), so it carries no default-window hole.
 
 Two features matter more than the average effect. Damage follows the
-ordering of $c$, not of baseline accuracy: Swahili has the weakest
-baseline of the five and close to the smallest loss, while Bengali and
+ordering of $c$, not of baseline accuracy: Swahili and Telugu share the
+lowest baseline of the five ($56\%$), and one loses at most 7 points at a
+single window while the other loses double digits everywhere; Bengali and
 Telugu have the longest trailing blocks and the largest losses. And
 clearing $c$ is evidently not sufficient --- Telugu at $c{+}9$ is still
 down 13 points --- which is what Section~\ref{sec:dose} takes up.
@@ -413,7 +417,9 @@ changed.
 kvpress ships $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships
 $w{=}32$. Moving from the first constant to the second, on matched items,
 costs Thai $4.5$\,pp (2/11, $p{=}.022$) and Swahili $6.5$\,pp (1/14,
-$p{=}.001$; $n{=}200$ each, as in Appendix~\ref{app:levers}). Both languages sit safely above the threshold at $w{=}64$
+$p{=}.001$; $n{=}200$ per language --- the same 100 questions at two
+context budgets, so we lean on the discordant counts rather than the
+$p$-values --- store \texttt{w32}). Both languages sit safely above the threshold at $w{=}64$
 ($c{=}45$ and $47$) and below it at $w{=}32$. The failure is therefore not
 confined to the two scripts with the longest instructions: it reaches any
 language whose trailing block outgrows whichever constant is in force.
@@ -756,16 +762,17 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Eighteen generation stores back the main
-arms --- \texttt{cliff\_multi}, \texttt{cliff\_en}, \texttt{autowin},
-\texttt{autowin\_q90}, \texttt{autowin\_8b}, \texttt{cliff\_gemma},
-\texttt{gemma\_q90}, \texttt{schema}, \texttt{schema\_fix},
-\texttt{v\_trace}, \texttt{v\_trace\_bn}, \texttt{llama},
-\texttt{instr\_first}, \texttt{agnostic}, \texttt{ratio},
-\texttt{pyramidkv}, \texttt{constant} and \texttt{depth} --- and
+corresponding data existed. Twenty generation stores back the main arms
+and their controls --- \texttt{cliff\_multi}, \texttt{cliff\_en},
+\texttt{autowin}, \texttt{autowin\_q90}, \texttt{autowin\_8b},
+\texttt{cliff\_gemma}, \texttt{gemma\_q90}, \texttt{schema},
+\texttt{schema\_fix}, \texttt{v\_trace}, \texttt{v\_trace\_bn},
+\texttt{llama}, \texttt{instr\_first}, \texttt{agnostic},
+\texttt{ratio}, \texttt{pyramidkv}, \texttt{constant},
+\texttt{depth}, \texttt{w32} and \texttt{stuffed} --- and
 Appendix~\ref{app:cap} draws on two further cap-128-era stores,
 \texttt{e3} and \texttt{e3\_384}. Every table cell in this paper is
-recomputed from the raw generations in those twenty stores
+recomputed from the raw generations in those twenty-two stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
