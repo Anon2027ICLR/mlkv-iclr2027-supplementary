@@ -929,6 +929,19 @@ that residual. The recovery claims against the default window ($+9$ to
 $+19$\,pp, $p{\le}.022$) are unaffected: they are significance claims
 and carry their own tests.
 
+Two of those cells were then re-run at depth. The stopping rule was fixed
+before any of it existed: final $n$ is the entire validation pool, 669
+Telugu and 113 Bengali items, a rule with no free parameter and therefore
+nothing to stop early on. Telugu's interval now lies entirely below the
+gate rather than merely below zero --- the stronger reading the table
+calls a certified residual --- and the decomposition is exact: the
+original hundred items reproduce byte-identically and still sit at $0.0$,
+while the 569 new ones sit at $-6.7$. Bengali meets the gate on a pool
+its own size caps at 113, so its interval stays wide, as the
+preregistration said it would. The 8B Bengali cell is consequently no
+longer the only residual in this paper that an interval confirms; the
+primary model now carries one too, measured at $6.7\times$ the sample.
+
 \begin{table}[h]
 \caption{Exact-conditional 95\% intervals for the paired difference at
 $\hat w$; \texttt{closure\_cis.py}. The instruction-first rows are
@@ -944,6 +957,9 @@ cell & $\Delta$pp & fixed/broken & 95\% CI & reading \\
 4B en & ${+}2$ & 2/0 & $[-1.4, +2.0]$ & non-inferior at $-3$\,pp \\
 4B bn & ${-}2$ & 6/8 & $[-9.1, +5.9]$ & interval too wide for $\pm 3$\,pp \\
 4B te & $0$ & 6/6 & $[-6.9, +6.9]$ & interval too wide for $\pm 3$\,pp \\
+\addlinespace
+full pool: te & ${-}5.7$ & 19/57 & $[-7.8, -3.1]$ & certified residual \\
+full pool: bn & ${-}1.8$ & 6/8 & $[-8.0, +5.2]$ & gate met; interval wide \\
 \addlinespace
 JSON-60 & ${+}2$ & 3/1 & $[-2.4, +3.9]$ & non-inferior at $-3$\,pp \\
 JSON-120 & ${+}1$ & 1/0 & $[-0.9, +1.0]$ & non-inferior at $-3$\,pp \\
