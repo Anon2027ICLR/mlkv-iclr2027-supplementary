@@ -1,0 +1,99 @@
+# Depth arm — readout — 2026-08-19
+
+**Author: Fable (Claude).** R2 from raw output, paired within
+`results/depth.db`, McNemar + exact CIs. Preregister:
+`docs/iclr-depth-preregister.md` (`43049d1`) with two dated amendments
+(guard mis-specification `8f3adf5`; mid-run harness-cap fix `cfc95ce`).
+Stack: **`d7368e8bd94a` — the campaign stack, reproduced a fifth time.**
+The 400 rows shared with `autowin-final` (te/bn baselines and default
+windows) are byte-identical; same-stack determinism rises to
+**3,843/3,843** and the ledger now counts `depth.db`.
+
+## The headline: the changes-the-paper branch fired, as preregistered
+
+| cell | full pool | n=100 history |
+|---|---|---|
+| te baseline (n=669) | 62.6 | 56 |
+| te w64 | **−20.2\*** (19/154, CI [−22.4,−17.3]) | −19\* |
+| te ŵ=247 | **−5.7\*** (19/57, p=1.5×10⁻⁵, **CI [−7.8,−3.1]**) | 0 |
+| te recovery w64→ŵ | **+14.5\*** (117/20, p=7×10⁻¹⁸) | +19\* |
+| bn baseline (n=113) | 71.7 | 73 |
+| bn w64 | −15.0\* (3/20, CI [−19.2,−6.7]) | −16\* |
+| bn ŵ=183 | **−1.8** (6/8, CI [−8.0,+5.2]) — gate met | −2 |
+| bn recovery | +13.3\* (18/3, p=.0015) | +14\* |
+
+**Prediction 5 fires.** Telugu at ŵ on the full pool is −5.7 with an
+interval entirely below −3: the full pool does not merely miss the
+gate, it **certifies the residual**. The decomposition is exact: the
+original 100 items reproduce byte-identically and still sit at 0.0
+(6/6); the 569 new items sit at −6.7\* (13/51). The n=100 gate-met was
+sampling luck, and the preregister's own words apply: the full-pool
+number becomes the headline, the abstract's gate sentence is
+requalified, and we do not wordsmith around it.
+
+## Scorecard
+
+| # | Prediction | Result | |
+|---|---|---|---|
+| 1 | te ŵ within ±3 on the full pool | −5.7\* | **miss** |
+| 2 | blind hole replicates on the new items alone | [100:669] at w64: −20.4\* | **hold** |
+| 3 | te interval non-inferior at −3 | interval [−7.8,−3.1] — certifies the *miss* instead | **inverted** |
+| 4 | bn full-pool within 2pp of n=100 | 71.7/−15.0/−1.8 vs 73/−16/−2 | **hold** |
+| 5 | changes-the-paper | **fires** | binding |
+
+## Why this makes the paper more coherent, not less
+
+The certified Telugu residual is **not a visibility failure**: of its 57
+residual items, **51 have the entire question inside the window**
+(|Q| ≤ Q₉₀ = 80), and coverage on the full pool is 611/669 (bn: 98/113;
+bn residual 7/8 fully visible). That is the same diagnosis as every
+other missing cell — Gemma-bn (plateau), 8B-bn (8/8), Llama-bn (9/11) —
+now measured on the primary model at 6.7× the sample. The paper's
+residual story stops having an exception: **the rule removes the blind
+mode everywhere (te recovery +14.5\* at p=7×10⁻¹⁸, the strongest
+significance in the campaign) and leaves a few-point eviction residual
+that visibility cannot explain.** Bengali still meets the gate on its
+full (capped) pool; its interval stays wide, as always stated.
+
+## An honesty correction to our own external-timestamp claim
+
+The push record (`6e833be`) said the depth registration was externally
+timestamped "before any of its data". Too strong: pod generation began
+23:54Z on the 18th; the GitHub push landed 01:18Z on the 19th. What is
+true and stays valuable: the preregister **commit** (≈16:26Z) precedes
+all generation in author-controlled history; the **external** timestamp
+precedes amendment 2, the entire [300:669] extension block, and the
+majority of rows — including all of the extension on which predictions
+2 and 5 rest. The release-plan status line is corrected alongside this
+readout, and the paper may claim only the corrected form.
+
+## Integration memo (Opus wave 3; every number above binds)
+
+- **Abstract**: `meets its $\pm 3$\,pp gate on English, Bengali and
+  Telugu ($+2/{-}2/0$\,pp)` and the `+14/+19` recovery clause are
+  requalified: gate at n=100, full-pool Telugu certifies −5.7
+  [−7.8,−3.1] beside +14.5 recovery (p<10⁻¹⁷); "Where the gate is
+  missed, the residual is not a visibility failure" now carries Telugu
+  too. Page-1 budget protocol applies.
+- **§6 gate paragraph**: full-pool sentence; recoveries +14/+19 →
+  +13/+14 (full-pool values); coverage `88 of 100 … 93 of 100` →
+  `98 of 113 … 611 of 669`.
+- **§6 residuals paragraph**: `The three cells that miss the closure
+  gate are all Bengali` is now false — four cells, one of them the
+  primary model's Telugu at n=669; add its 51/57 audit; drop "also the
+  only cell where a miss could appear".
+- **Limitations**: `each cell rests on 100 items` → the headline cells
+  now rest on the full validation pools (669/113); Telugu's interval
+  certifies its residual; Bengali's pool is structurally capped.
+- **app:ci**: full-pool rows (te ŵ [−7.8,−3.1] *certified residual*;
+  bn ŵ [−8.0,+5.2] gate met); 8B-bn's "confirmed residual" has company.
+- **Bookkeeping**: store list +`depth` (eighteen main + two cap-era);
+  prereg table row (`43049d1`, first generation 23:54Z, yes) + both
+  amendments noted; determinism 3,843; external-timestamp claim in its
+  corrected form only.
+- **Audit**: depth loader; the eight table cells above; coverage counts
+  via the tokenizer-gated block; recovery f/b pairs.
+- **Never write**: "closes" for bn full pool (CI wide); any use of the
+  n=100 Telugu 0 as current (history only, labelled); any averaging of
+  n=100 with full-pool numbers; the uncorrected external-timestamp
+  claim.
