@@ -195,14 +195,20 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
           tail: str = "prose") -> list[dict]:
     """Items for all budgets; `pool` injectable for tests (else loaded)."""
     questions, distractors = pool if pool is not None else load_pool(lang)
-    if len(questions) < n_questions:
+    # max_items, when given, governs outright: the n_questions default is a
+    # working-set cap, not a ceiling on explicit requests. (The depth arm
+    # asked for the full 669-item Telugu pool and the old order of slices --
+    # [:n_questions] before [:max_items] -- silently cut it to 300.) Item
+    # construction is keyed on the item index alone, so extending the slice
+    # never changes the items before the old boundary; the regression test
+    # pins that invariant, which is what makes mid-store resumes safe.
+    limit = max_items if max_items else n_questions
+    if len(questions) < limit:
         logger.warning(
             "mrag[%s]: only %d questions available (wanted %d)",
-            lang, len(questions), n_questions,
+            lang, len(questions), limit,
         )
-    questions = questions[:n_questions]
-    if max_items:
-        questions = questions[:max_items]
+    questions = questions[:limit]
 
     logger.info("mrag[%s]: building %d questions × %s tokens (layout=%s pad=%s tail=%s)",
                 lang, len(questions), ctx_tokens_list, layout, instr_pad_tokens, tail)

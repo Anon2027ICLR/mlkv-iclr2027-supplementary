@@ -101,6 +101,27 @@ class TestBuild:
         assert items[0]["item_id"] == "mrag-en-1k-0"
         assert items[9]["item_id"] == "mrag-en-2k-0"
 
+    def test_max_items_governs_over_n_questions(self):
+        # The depth arm asked for the full pool and the old slice order --
+        # [:n_questions] before [:max_items] -- silently cut it to the
+        # n_questions default. max_items, when given, governs outright.
+        items = mrag.build("en", self.tokenizer, [1024], pool=self.pool,
+                           n_questions=3, max_items=7)
+        assert len(items) == 7
+
+    def test_extending_max_items_never_changes_earlier_items(self):
+        # Item construction is keyed on the item index alone, so a larger
+        # max_items must reproduce the earlier items byte-for-byte. This is
+        # the invariant that makes resuming a partially built store safe.
+        short = mrag.build("en", self.tokenizer, [1024], pool=self.pool,
+                           max_items=5)
+        full = mrag.build("en", self.tokenizer, [1024], pool=self.pool,
+                          max_items=9)
+        for a, b in zip(short, full):
+            assert a["item_id"] == b["item_id"]
+            assert a["prompt"] == b["prompt"]
+            assert a["meta"]["position"] == b["meta"]["position"]
+
     def test_position_rotation_by_question_index(self):
         items = mrag.build("en", self.tokenizer, [1024], pool=self.pool)
         positions = [it["meta"]["position"] for it in items]

@@ -66,6 +66,27 @@ swallowed the FATAL exit code — fixed in `533ca26` (`set -uo pipefail`)
 before any generation; the same latent pattern exists in the earlier
 drivers `e_iclr4–6`, where it never bit because their guards passed.
 
+## Amendment 2, 2026-08-19 — mid-run, before any Telugu item past 300 exists
+
+The chain ran and stopped short: Bengali completed its full pool
+(113×3), but Telugu stopped at 300×3 of 669×3. Cause: a harness cap,
+not a decision — `mrag.build` sliced the question pool to its
+`n_questions` working-set default of 300 *before* applying
+`--max-items`, so the request for the full pool was silently truncated.
+The fix makes an explicit `max_items` govern outright.
+
+Why the partial store survives unchanged: item construction is keyed on
+the item index alone (per-item seed `f"{SEED}:{lang}:{ctx}:{i}"`,
+position `i % 3`), so extending the slice cannot alter any item before
+the old boundary. That invariant is now pinned by a regression test
+(`test_extending_max_items_never_changes_earlier_items`), and the runner
+resumes by (model, task, lang, config, item), skipping the 1,239
+existing rows. Telugu resumes on the same store for items [300:669];
+nothing is discarded, nothing re-generated. The stopping rule (the
+entire pool), every prediction, and the paper consequences are
+unchanged. This cap never touched any published number: every earlier
+arm used n ≤ 200.
+
 ## Predictions (fixed)
 
 1. **Main:** Telugu at $\hat w{=}247$ meets the ±3 point gate on the
