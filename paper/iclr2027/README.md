@@ -76,7 +76,7 @@ was previously found by accident.
 in this paper from the generation stores and fails on any drift:
 
 ```bash
-uv run python scripts/audit_paper_numbers.py    # 464 checks
+uv run python scripts/audit_paper_numbers.py    # 472 checks
 ```
 
 **Preregistration timestamps.** Reviewers asked whether the registrations

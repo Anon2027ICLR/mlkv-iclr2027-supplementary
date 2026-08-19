@@ -42,8 +42,8 @@ retained cache, this removes the blind mode wherever it
 appears --- $+14$\,pp over the default on the full 669-item Telugu pool
 ($p{<}10^{-17}$), $+13$ on Bengali --- closes the schema tails
 (non-inferior at $-3$\,pp by interval), returns the library default where
-that default already suffices, and meets its $\pm 3$\,pp gate everywhere
-at $n{=}100$; on the full pool, Telugu instead certifies a $-5.7$\,pp
+that default already suffices, and meets its $\pm 3$\,pp gate on all
+three languages at $n{=}100$; on the full pool, Telugu instead certifies a $-5.7$\,pp
 residual ($[-7.8,-3.1]$). The same integers transfer unchanged to a
 second evictor with the same window, removing its deeper holes
 ($+26$/$+31$\,pp on its own baselines). Where the gate is missed ---
@@ -110,7 +110,7 @@ decision, registered in advance, whose cost we report --- no delimiter is
 required, and because SnapKV protects the window from within the retained
 budget, no extra cache is bought. Preregistered, the rule
 meets its $\pm 3$\,pp gate on English, Bengali and Telugu at
-$n{=}100$; closes --- non-inferior by interval --- the English
+Qwen3-4B ($n{=}100$); closes --- non-inferior by interval --- the English
 JSON-schema tails that a mis-sized earlier version of the same rule had
 broken by 23 points; and returns exactly the shipped constant of 64 for
 a tokenizer and language where that constant is already adequate. On the
@@ -877,7 +877,10 @@ The choice does not carry the results. Under a stricter marker-only rule
 the Telugu dose ladder still shows the same shape: the uncompressed
 baseline scores 50\% rather than 56\%, $c{+}4$ scores 35\% and
 $c{+}Q_{90}$ scores 47\%, so the hole is $-15$\,pp instead of $-18$\,pp
-and the $c{+}Q_{90}$ cell is $-3$\,pp instead of $0$\,pp. Table~\ref{tab:8brobust}
+and the $c{+}Q_{90}$ cell is $-3$\,pp instead of $0$\,pp. Applied to the
+full-pool Telugu re-run of Appendix~\ref{app:ci}, the same rule leaves
+the certified residual in place: $-9.4$\,pp (25 fixed / 88 broken,
+$p{=}2.1{\times}10^{-9}$, interval $[-11.9,-6.5]$). Table~\ref{tab:8brobust}
 repeats the 8B Bengali cells under two further scorers.
 
 Table~\ref{tab:cliff} reports 25 paired tests. Under a Holm correction
