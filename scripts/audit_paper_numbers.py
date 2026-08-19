@@ -22,7 +22,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from mlkv.qa_metrics import containment_match_lenient  # noqa: E402
+from mlkv.qa_metrics import (  # noqa: E402
+    containment_match_lenient,
+    containment_match_marker_only,
+)
 
 RES = ROOT / "results"
 FAILS: list[str] = []
@@ -49,14 +52,14 @@ def mcnemar_p(b, c):
     return min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2**n)
 
 
-def load(db, key=None):
+def load(db, key=None, scorer=containment_match_lenient):
     con = sqlite3.connect(f"file:{RES / db}?mode=ro", uri=True)
     out = defaultdict(lambda: defaultdict(dict))
     for iid, lang, cfg, o, g in con.execute(
         "SELECT item_id, lang, config, output, answer_gold FROM generations"
     ):
         k = key(iid) if key else lang
-        out[k][cfg][iid] = bool(containment_match_lenient(o or "", golds(g), lang))
+        out[k][cfg][iid] = bool(scorer(o or "", golds(g), lang))
     con.close()
     return out
 
@@ -542,6 +545,58 @@ try:
               resid_tex)
 except Exception as exc:  # tokenizer or dataset unavailable
     print(f"  SKIPPED (no tokenizer or dataset: {type(exc).__name__})")
+
+# --------------------------------------------------------------------------
+print("## Appendix app:r2: the stricter marker-only rule, both places it is quoted")
+# app:r2 quotes one stricter rule twice -- the Telugu dose ladder and the
+# depth arm's residual -- and both must come from the same scorer, pinned in
+# qa_metrics.containment_match_marker_only. The 2026-08-19 depth readout
+# briefly carried a 24/87 pair from a leaky hybrid (marker present, then
+# extract_span, whose whole-text fallback credits marker-debris rows); that
+# hybrid agrees with the strict rule on the ladder and diverges on depth,
+# which is why this block pins the pair and not just the delta.
+VT_MO = load("v_trace.db", scorer=containment_match_marker_only)
+for cfg, want in [("baseline", 50), ("snapkv@r0.75:w171", 35),
+                  ("snapkv@r0.75:w247", 47)]:
+    cell = VT_MO["te"][cfg]
+    check(f"app:r2 marker-only ladder, te {cfg}",
+          round(100 * sum(cell.values()) / len(cell)), want)
+DP_MO = load("depth.db", scorer=containment_match_marker_only)
+r = depth_pair(DP_MO["te"]["baseline"], DP_MO["te"]["snapkv@r0.75:w247"])
+check("app:r2 marker-only depth residual delta", r["d"], -9.4)
+check("app:r2 marker-only depth residual fixed/broken", r["fb"], (25, 88))
+check("app:r2 marker-only depth p exponent", math.floor(math.log10(r["p"])), -9)
+check("app:r2 marker-only depth p mantissa",
+      round(r["p"] / 10 ** math.floor(math.log10(r["p"])), 1), 2.1)
+
+
+def _binom_cdf(k, n, p):
+    return sum(math.comb(n, i) * p**i * (1 - p) ** (n - i) for i in range(k + 1))
+
+
+def _clopper_pearson(k, n, alpha=0.05):
+    # Same method as closure_cis.py, which owns the CI vocabulary; kept here
+    # only so the app:r2 interval is recomputed rather than transcribed.
+    def solve(fn, lo=0.0, hi=1.0):
+        for _ in range(200):
+            mid = (lo + hi) / 2
+            if fn(mid):
+                lo = mid
+            else:
+                hi = mid
+        return (lo + hi) / 2
+
+    lower = 0.0 if k == 0 else solve(lambda p: 1 - _binom_cdf(k - 1, n, p) < alpha / 2)
+    upper = 1.0 if k == n else solve(lambda p: _binom_cdf(k, n, p) >= alpha / 2)
+    return lower, upper
+
+
+_f, _b = r["fb"]
+_N, _n = _f + _b, 669
+_lo, _hi = _clopper_pearson(_f, _N)
+check("app:r2 marker-only depth CI",
+      (round(100 * (2 * _lo - 1) * _N / _n, 1), round(100 * (2 * _hi - 1) * _N / _n, 1)),
+      (-11.9, -6.5))
 
 # --------------------------------------------------------------------------
 print("## Appendix: PyramidKV, the second member of the family — tab:rivals")

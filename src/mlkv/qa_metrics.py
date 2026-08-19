@@ -173,6 +173,25 @@ def containment_match_lenient(output: str, golds: list[str], lang: str) -> bool:
     )
 
 
+def containment_match_marker_only(output: str, golds: list[str], lang: str) -> bool:
+    """The stricter marker-only rule quoted by the robustness appendix.
+
+    Containment against the span after the LAST marker that still has
+    content; an output with no marker (or only marker debris) scores wrong.
+    Deliberately NOT extract_span, whose whole-text fallback would credit a
+    gold string echoed in quoted passage prose --- the exact leak marker-only
+    scoring exists to close. Reproduces the appendix's dose-ladder accuracies
+    (50/35/47) and the frozen live rule differs from this on fallback rows."""
+    positions = [m.end() for m in MARKER_RE.finditer(output)]
+    for p in reversed(positions):
+        region = _PLACEHOLDER_RE.sub(" ", output[p:])
+        region = _BRACKET_RE.sub(" ", region)
+        region = re.sub(r"[#\s]+$", "", region).strip()
+        if re.search(r"\w", region):
+            return containment_match(region, golds, lang)
+    return False
+
+
 def span_scores(output: str, golds: list[str], lang: str) -> dict:
     """Score a raw model output against gold answer spans.
 

@@ -2,6 +2,7 @@ import pytest
 
 from mlkv.qa_metrics import (
     containment_match_lenient,
+    containment_match_marker_only,
     exact_match,
     extract_span,
     f1,
@@ -167,3 +168,31 @@ class TestContainmentLenient:
     def test_first_sentence_stops_at_marker(self):
         assert first_sentence("#### 42") == ""
         assert first_sentence("The answer is 42. More text. #### 42") == "The answer is 42."
+
+
+class TestContainmentMarkerOnly:
+    """The stricter rule the robustness appendix quotes: last contentful
+    marker span only, and no whole-text fallback. The fallback distinction is
+    the one that produced the 2026-08-19 depth-readout pair slip."""
+
+    def test_marker_span_scores(self):
+        assert containment_match_marker_only("Prose here. #### 308", ["308"], "en") is True
+
+    def test_no_marker_scores_wrong_even_when_prose_is_right(self):
+        out = "The Panthers gave up 308 points."
+        assert containment_match_marker_only(out, ["308"], "en") is False
+
+    def test_marker_debris_does_not_fall_back_to_whole_text(self):
+        # extract_span would fall back to the full text here and credit the
+        # gold echoed in the prose; the strict rule must not.
+        out = "The Panthers gave up 308 points. #### <exact answer span>####"
+        assert containment_match_marker_only(out, ["308"], "en") is False
+
+    def test_last_contentful_marker_wins(self):
+        out = "#### 400 #### 308 ####"
+        assert containment_match_marker_only(out, ["308"], "en") is True
+
+    def test_prose_only_answer_is_the_lenient_rules_job(self):
+        out = "Josh Norman intercepted four passes. #### <exact answer span>4####"
+        assert containment_match_marker_only(out, ["four"], "en") is False
+        assert containment_match_lenient(out, ["four"], "en") is True
