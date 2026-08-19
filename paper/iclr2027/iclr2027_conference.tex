@@ -38,13 +38,17 @@ blinded in exactly the same way. Recovery needs question-sized
 slack: a window four tokens past the instruction recovers nothing. We
 therefore set $w = c + Q_{90}$ from the tokenizer, the chat template and
 a held-out question-length percentile. Preregistered and at matched
-retained cache, this meets its $\pm 3$\,pp gate on English, Bengali and
-Telugu ($+2/{-}2/0$\,pp), closes the schema tails (non-inferior at
-$-3$\,pp by interval), returns the library default where that default
-already suffices, and recovers $+14$/$+19$\,pp over it ($p{\le}.001$).
-The same integers transfer unchanged to a second evictor with the same
-window, removing its deeper holes ($+26$/$+31$\,pp on its own baselines).
-Where the gate is missed, the residual is not a visibility failure.
+retained cache, this removes the blind mode wherever it
+appears --- $+14$\,pp over the default on the full 669-item Telugu pool
+($p{<}10^{-17}$), $+13$ on Bengali --- closes the schema tails
+(non-inferior at $-3$\,pp by interval), returns the library default where
+that default already suffices, and meets its $\pm 3$\,pp gate everywhere
+at $n{=}100$; on the full pool, Telugu instead certifies a $-5.7$\,pp
+residual ($[-7.8,-3.1]$). The same integers transfer unchanged to a
+second evictor with the same window, removing its deeper holes
+($+26$/$+31$\,pp on its own baselines). Where the gate is missed ---
+Telugu at scale included --- the residual is not a visibility failure:
+the question is fully in view.
 \end{abstract}
 
 % =====================================================================
