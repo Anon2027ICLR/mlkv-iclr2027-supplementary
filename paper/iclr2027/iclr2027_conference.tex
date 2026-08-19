@@ -266,8 +266,8 @@ normalization and language-aware tokenization, either inside the marked
 answer span or inside the first sentence of the prose. No LLM judge is
 used anywhere in this paper. The rule was fixed before the runs reported
 here and is applied offline to raw generations; a stricter, marker-only
-variant leaves every conclusion in the paper unchanged
-(Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar
+variant leaves every conclusion it re-scores unchanged (the dose ladder,
+the full-pool re-run and the 8B cells; Appendix~\ref{app:r2}). Paired comparisons are two-sided McNemar
 tests, reported with their discordant counts (fixed/broken) so the
 reader sees what the $p$-value is made of. Cells pair 100 items unless marked
 otherwise: the full-pool re-run in Section~\ref{sec:autowindow}, and the
