@@ -660,12 +660,11 @@ admits a small effect either way. What it excludes is anything
 resembling the blindness term.
 
 On the sweep alone, AIC prefers language fixed effects to the distance
-$(w{-}c)$: five languages cannot separate a threshold from a per-language
-constant, and $(w{-}c)$ beating raw $w$ is the only part the sweep
-certifies. The separation comes from the experiments that hold language
-fixed and from the dose ladder (Sections~\ref{sec:threshold},
-\ref{sec:dose}, \ref{sec:autowindow}); Appendix~\ref{app:dose} has the
-full comparison.
+$(w{-}c)$: five languages cannot separate a threshold from a
+per-language constant. The separation comes from the experiments that
+hold language fixed and from the dose ladder
+(Sections~\ref{sec:threshold}, \ref{sec:dose}, \ref{sec:autowindow});
+Appendix~\ref{app:dose} has the full comparison.
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
@@ -675,9 +674,9 @@ designed never to look at the question \citep{devoto2025expected,
 oren2024transformers} fail differently and worse, costing even English
 $14$ and $8$\,pp at the ratio where no window we tested costs it
 anything (Appendix~\ref{app:rivals}).
-Four-bit KV quantization, in our early-stack pilots, damaged languages in
-an order that was not the fertility order; we did not re-run it on the
-campaign stack and claim only the observation. A capacity
+Four-bit KV quantization, in our early-stack pilots, damaged languages
+in an order that was not the fertility order (not re-run on the campaign
+stack; an observation only). A capacity
 mechanism exists in a different regime --- at aggressive eviction even
 long-passage English items fail --- while at this paper's ratio we found no
 Bengali damage gradient across gold-length or retention strata in the runs
@@ -697,15 +696,15 @@ Two properties of the remedy are by design rather than by oversight. A
 language-level percentile leaves the longest decile of questions below
 $V{=}1$; and because SnapKV also protects the window it scores from, a
 very large $w$ at a very aggressive eviction ratio would begin to tax the
-content budget. At the ratio used here that tax is small relative to the
-gold passage, which is why we did not need to separate scoring from
-protection to meet the gate; at $r{=}0.9375$ we measure it instead of
-predicting it (Appendix~\ref{app:rivals}).
+content budget. At the ratio used here that tax is small relative to
+the gold passage --- we did not need to separate scoring from protection
+to meet the gate --- and at $r{=}0.9375$ we measure it rather than
+predict it (Appendix~\ref{app:rivals}).
 Deploying the rule also assumes the prompt family is known:
 $\hat w$ is one integer per trailing-block variant, so mixed traffic
-needs either per-family measurement or the maximum over families, and the
-mis-sized schema run in Appendix~\ref{app:schema} is what skipping that
-measurement looks like. For a deployer the guidance splits: sizing
+needs per-family measurement or the maximum over families --- the
+mis-sized schema run (Appendix~\ref{app:schema}) is what skipping it
+looks like. For a deployer the guidance splits: sizing
 the window removes the blind mode in every model family where the default
 digs one ($+9$ to $+19$\,pp over it at $n{=}100$, $+13$ and $+14$ at the
 full pools; Gemma's compact tokenizer leaves no default hole to remove),
@@ -714,10 +713,10 @@ we tested removes --- the lever left is retaining more cache, not resizing
 the window (Appendix~\ref{app:rivals}).
 
 Our items are constructed rather than drawn from a standard long-context
-suite, and this is a deliberate trade. Published suites vary question
-length, instruction length, and language together, which is precisely the
-confound this paper has to hold fixed, but the price is that our absolute
-accuracies are not comparable to leaderboard numbers. The headline cells
+suite --- a deliberate trade: published suites vary question length,
+instruction length and language together, precisely the confound this
+paper has to hold fixed, at the price that our absolute accuracies are
+not comparable to leaderboard numbers. The headline cells
 now rest on the full validation pools --- 669 Telugu and 113 Bengali
 items, the pools' entire contents --- which is enough to certify the
 Telugu hole ($[-22.4,-17.3]$) and its residual ($[-7.8,-3.1]$), while
@@ -732,22 +731,21 @@ cannot establish how the rule behaves across the space of tokenizers.
 \section{Conclusion}
 
 A token-denominated observation window is not language-neutral, because
-trailing instructions are not. Two quantities decide the outcome and both
-can be computed before any inference: $c$, the number of tokens standing
-between the question and the end of the prompt, and the slack the window
-leaves beyond it, which has to be counted in units of the question rather
-than in constants: too little slack is blindness, and too much, at heavy
-eviction, is a tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$
-from the tokenizer, the chat template and a held-out percentile removes
-the blind mode, returns the library default where that default already
-meets the gate, leaves a certified residual that is not a visibility failure,
-and transfers unchanged to a second evictor --- the integer belongs to
-the prompt, not the method. The general lesson is cheaper than the specific
-one, and we did not escape it ourselves: our own decode cap chose which
-branch of the scoring rule judged each language
-(Appendix~\ref{app:cap}). Any constant that counts tokens inherits the
-tokenizer; when it gates what a model may look at, it should be derived
-from the tokenizer and the template, not shipped as a number.
+trailing instructions are not. Two quantities decide the outcome, both
+computable before any inference: the trailing block $c$, and the slack
+the window leaves beyond it, which must be counted in units of the
+question --- too little is blindness, and too much, at heavy eviction, a
+tax (Appendix~\ref{app:rivals}). Setting $w = c + Q_{90}$ from the
+tokenizer, the chat template and a held-out percentile removes the blind
+mode, returns the library default where that default already meets the
+gate, leaves a certified residual that is not a visibility failure, and
+transfers unchanged to a second evictor --- the integer belongs to the
+prompt, not the method. The general lesson is cheaper than the specific
+one --- our own decode cap chose which branch of the scoring rule judged
+each language (Appendix~\ref{app:cap}) --- and any constant that counts
+tokens inherits the tokenizer: when it gates what a model may look at,
+it should be derived from the tokenizer and the template, not shipped as
+a number.
 
 % =====================================================================
 \section*{Ethics statement}
