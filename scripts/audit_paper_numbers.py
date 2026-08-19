@@ -606,6 +606,50 @@ check("app:r2 marker-only depth CI",
       (-11.9, -6.5))
 
 # --------------------------------------------------------------------------
+print("## Appendix: the 0.75<=V<1 band's per-rung membership — app:dose")
+# app:dose used to say the band "contains nine distinct items". It contains
+# 59: visibility rises with the window, so each item crosses into the band at
+# exactly one rung and the 59 observations cannot be fewer than 59 items.
+# Nine is the broken count. The rung histogram is pinned so the corrected
+# sentence cannot drift back.
+try:
+    from datasets import load_dataset  # noqa: E402
+    from transformers import AutoTokenizer  # noqa: E402
+
+    _tk = AutoTokenizer.from_pretrained("Qwen/Qwen3-4B")
+    _te_rows = [r for r in load_dataset(
+        "google-research-datasets/tydiqa", "secondary_task")["validation"]
+        if r["id"].startswith("telugu-")]
+    VT = load("v_trace.db")["te"]
+    _C_TE = 167
+    _ql = {}
+
+    def _qlen(i):
+        if i not in _ql:
+            _ql[i] = len(_tk(_te_rows[i]["question"],
+                             add_special_tokens=False)["input_ids"])
+        return _ql[i]
+
+    _base = {int(k.rsplit("-", 1)[1]): v for k, v in VT["baseline"].items()}
+    _rungs, _broken = {}, set()
+    for _cfg in sorted(c for c in VT if c != "baseline"):
+        _slack = int(_cfg.rsplit("w", 1)[1]) - _C_TE
+        _cells = {int(k.rsplit("-", 1)[1]): v for k, v in VT[_cfg].items()}
+        _mem = [i for i in _cells if 0.75 <= min(_slack, _qlen(i)) / _qlen(i) < 1.0]
+        _rungs[_slack] = len(_mem)
+        _broken |= {i for i in _mem if _base[i] and not _cells[i]}
+    check("dose band size equals its distinct item count", sum(_rungs.values()), 59)
+    check("dose band membership by rung",
+          {k: v for k, v in _rungs.items() if v}, {32: 14, 48: 40, 80: 5})
+    check("dose band distinct broken items", len(_broken), 9)
+    check("dose band broken items recovered at V=1",
+          sum(1 for i in _broken
+              if {int(k.rsplit("-", 1)[1]): v
+                  for k, v in VT["snapkv@r0.75:w247"].items()}[i]), 4)
+except Exception as exc:
+    print(f"  SKIPPED (no tokenizer or dataset: {type(exc).__name__})")
+
+# --------------------------------------------------------------------------
 print("## Appendix: the Gemma Telugu closure row, and Bengali's exhausted pool")
 # Gemma te is the cell Section 6 uses to say the shipped constant can already
 # pass, so tab:ci now carries it; the CI itself is closure_cis.py's.
