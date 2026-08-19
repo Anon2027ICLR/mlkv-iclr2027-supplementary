@@ -1,6 +1,6 @@
 # mlkv — What Does KV-Cache Compression Break Across Languages?
 
-Experiment harness for the ICML 2027 project: measuring per-language damage of
+Experiment harness for the ICLR 2027 submission: measuring per-language damage of
 KV-cache compression (quantization, eviction) and weight PTQ in LLMs, with
 tokenizer fertility as the mechanism covariate.
 
