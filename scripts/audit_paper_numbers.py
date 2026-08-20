@@ -606,6 +606,84 @@ check("app:r2 marker-only depth CI",
       (-11.9, -6.5))
 
 # --------------------------------------------------------------------------
+print("## app:rivals: the constant at scale — store constant_depth")
+# The ninth arm store and the last one the campaign produces. Everything
+# app:rivals prints about it is recomputed here, including the guard that
+# makes two of the four comparisons legal at all.
+
+
+def _ci(fb, n):
+    """The interval, to the one decimal app:rivals prints."""
+    f, b = fb
+    N = f + b
+    lo, hi = _clopper_pearson(f, N)
+    return (round(100 * (2 * lo - 1) * N / n, 1),
+            round(100 * (2 * hi - 1) * N / n, 1))
+
+
+CDP = load("constant_depth.db")
+# The guard first: the head-to-heads below pair w=256 cells from this store
+# against w-hat cells from depth.db, which is only sound because the two
+# stores ran the same items on the same stack and their baselines agree byte
+# for byte. Compared as raw output, not as scored booleans -- a scoring
+# agreement would survive two different generations that both happen to be
+# right.
+_c1 = sqlite3.connect(f"file:{RES / 'constant_depth.db'}?mode=ro", uri=True)
+_c2 = sqlite3.connect(f"file:{RES / 'depth.db'}?mode=ro", uri=True)
+_q = "SELECT item_id, lang, output FROM generations WHERE config='baseline'"
+_a = {(l, i): o for i, l, o in _c1.execute(_q)}
+_b2 = {(l, i): o for i, l, o in _c2.execute(_q)}
+_c1.close()
+_c2.close()
+_shared = sorted(set(_a) & set(_b2))
+check("constant_depth shares every baseline row with depth", len(_shared), 782)
+check("constant_depth baselines byte-identical to depth",
+      sum(1 for k in _shared if _a[k] == _b2[k]), 782)
+
+for _lang, _acc in (("te", 62.6), ("bn", 71.7)):
+    _bl = CDP[_lang]["baseline"]
+    check(f"constant_depth {_lang} baseline accuracy",
+          round(100 * sum(_bl.values()) / len(_bl), 1), _acc)
+
+# w=256 against its own baseline: a closure cell, one per pool.
+TEX_W256 = {"te": (-6.9, (20, 66), (-9.0, -4.2)),
+            "bn": (-3.5, (6, 10), (-9.9, 4.1))}
+for _lang, (_d, _fb, _ci_tex) in TEX_W256.items():
+    _r = depth_pair(CDP[_lang]["baseline"], CDP[_lang]["snapkv@r0.75:w256"])
+    check(f"w256 {_lang} full-pool delta", _r["d"], _d)
+    check(f"w256 {_lang} full-pool fixed/broken", _r["fb"], _fb)
+    check(f"w256 {_lang} full-pool CI", _ci(_r["fb"], _r["n"]), _ci_tex)
+# The Telugu residual is the one app:rivals calls certified, so its
+# significance is pinned as printed: p = 6.7e-7.
+_pte = depth_pair(CDP["te"]["baseline"], CDP["te"]["snapkv@r0.75:w256"])["p"]
+check("w256 te p exponent", math.floor(math.log10(_pte)), -7)
+check("w256 te p mantissa", round(_pte / 10 ** math.floor(math.log10(_pte)), 1), 6.7)
+
+# The head-to-heads. base = w256, comp = w-hat, so a positive delta favours
+# the computed integer. This is the pairing the byte-identity above licenses.
+TEX_H2H = {"te": (247, 1.2, (16, 8), (-0.4, 2.5)),
+           "bn": (183, 1.8, (5, 3), (-3.6, 5.9))}
+for _lang, (_w, _d, _fb, _ci_tex) in TEX_H2H.items():
+    _r = depth_pair(CDP[_lang]["snapkv@r0.75:w256"],
+                    DP[_lang][f"snapkv@r0.75:w{_w}"])
+    check(f"head-to-head {_lang} delta", _r["d"], _d)
+    check(f"head-to-head {_lang} fixed/broken", _r["fb"], _fb)
+    check(f"head-to-head {_lang} CI", _ci(_r["fb"], _r["n"]), _ci_tex)
+# The tie rests on zero being inside the Telugu interval by four tenths of a
+# point, which is the number app:rivals is required to print rather than
+# round. Pin the sign of the bound, not just its value.
+check("head-to-head te interval contains zero",
+      _ci(depth_pair(CDP["te"]["snapkv@r0.75:w256"],
+                     DP["te"]["snapkv@r0.75:w247"])["fb"], 669)[0] < 0, True)
+
+# Robustness: the same residual under the stricter marker-only scorer.
+CDP_MO = load("constant_depth.db", scorer=containment_match_marker_only)
+_rmo = depth_pair(CDP_MO["te"]["baseline"], CDP_MO["te"]["snapkv@r0.75:w256"])
+check("w256 te marker-only delta", _rmo["d"], -9.3)
+check("w256 te marker-only fixed/broken", _rmo["fb"], (26, 88))
+check("w256 te marker-only p exponent", math.floor(math.log10(_rmo["p"])), -9)
+
+# --------------------------------------------------------------------------
 print("## Section 7: the stuffed control — store stuffed")
 # The disconfirmation paragraph had no backing anywhere. This is the one of
 # its three claims that a shipped store can carry: mgsm-stuffed, scored live
