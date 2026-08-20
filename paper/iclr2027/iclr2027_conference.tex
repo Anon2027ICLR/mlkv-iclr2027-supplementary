@@ -766,25 +766,29 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, which was committed before the
-corresponding data existed. Twenty generation stores back the main arms
+corresponding data existed. Twenty-one generation stores back the main arms
 and their controls --- \texttt{cliff\_multi}, \texttt{cliff\_en},
 \texttt{autowin}, \texttt{autowin\_q90}, \texttt{autowin\_8b},
 \texttt{cliff\_gemma}, \texttt{gemma\_q90}, \texttt{schema},
 \texttt{schema\_fix}, \texttt{v\_trace}, \texttt{v\_trace\_bn},
 \texttt{llama}, \texttt{instr\_first}, \texttt{agnostic},
 \texttt{ratio}, \texttt{pyramidkv}, \texttt{constant},
-\texttt{depth}, \texttt{w32} and \texttt{stuffed} --- and
+\texttt{depth}, \texttt{constant\_depth}, \texttt{w32} and
+\texttt{stuffed} --- and
 Appendix~\ref{app:cap} draws on two further cap-128-era stores,
 \texttt{e3} and \texttt{e3\_384}. Every table cell in this paper is
-recomputed from the raw generations in those twenty-two stores
+recomputed from the raw generations in those twenty-three stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
 conditions for every arm are files that ship with the code, each written
-before its run; for nine of the twelve arms the version-history timestamp
+before its run; for ten of the thirteen arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three --- the $Q_{90}$ re-measurement, the 8B slice and the schema
-re-run --- entered version control in a later batch. The
+re-run --- entered version control in a later batch; for the final arm,
+the anonymised release carrying its registration was pushed 48 minutes
+before its first generation, so the external timestamp precedes every row
+it governs. The
 anonymized version history ships with the supplementary material, and the
 de-anonymized history becomes public with the code on publication.
 

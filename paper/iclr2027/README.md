@@ -100,6 +100,7 @@ so their commit time does not precede the run.
 | `iclr-template-survey-preregister.md` | `813bcad` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
 | `iclr-constant-and-ranking-preregister.md` | `e287172` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
 | `iclr-depth-preregister.md` | `43049d1` | 2026-08-18 16:32 | 2026-08-18 23:54 | yes [^depth] |
+| `iclr-constant-depth-preregister.md` | `1690413` | 2026-08-19 10:33 | 2026-08-19 11:55 | yes [^const] |
 
 [^depth]: Two dated amendments, `8f3adf5` (the guard mis-specification) and
 `cfc95ce` (the mid-run harness cap), each committed before the rows it
@@ -114,6 +115,12 @@ that tree carries the registration and its first amendment and no
 `results/depth.db`, while the second amendment — whose own heading records
 that it predates every Telugu item past 300 — appears only in the current
 tree.
+
+[^const]: No amendments. The external timestamp is fully clean for this arm:
+the anonymised push at 2026-08-19T11:07:07Z (`6819299`, reconstructable from
+the repository's public events feed) precedes the first generation by 48
+minutes and therefore every row in the store — the first registration in the
+campaign with complete external precedence.
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so
