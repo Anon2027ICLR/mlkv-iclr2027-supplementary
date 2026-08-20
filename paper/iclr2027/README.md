@@ -130,7 +130,7 @@ does not add a row.
 script, not by hand:
 
 ```bash
-uv run python scripts/determinism_ledger.py     # 3,843 same-stack, 600 cross
+uv run python scripts/determinism_ledger.py     # 4,625 same-stack, 800 cross
 uv run python scripts/decode_cap_ledger.py      # the appendix on the decode cap
 uv run python scripts/template_survey_measure.py  # the layout-in-the-wild appendix
 uv run python scripts/measure_c.py --models Qwen/Qwen3-4B --no-marker

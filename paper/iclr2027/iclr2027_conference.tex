@@ -310,7 +310,7 @@ CUDA, torch, kvpress); cells from different stacks, models or tokenizers
 are never pooled, even when they carry the same configuration name. The
 follow-up runs reported in Sections~\ref{sec:dose}
 and~\ref{sec:autowindow} re-ran cells that earlier stores already
-contained; across all 3{,}843 such generations the new text is
+contained; across all 4{,}625 such generations the new text is
 byte-identical to the old (Appendix~\ref{app:provenance}), which is what
 licenses reading the earlier and later tables as describing one system.
 
@@ -1591,17 +1591,19 @@ later ladder shares with an earlier one. We do not count these by hand:
 \texttt{determinism\_ledger.py} keys every generation by model, task,
 language, treatment, item and prompt version, takes the earliest run of
 each key as the original, and compares every later run against it. It
-finds $3{,}843$ generations produced a second time in a later store, and
-all $3{,}843$ reproduce the original text byte for byte. This is what
+finds $4{,}625$ generations produced a second time in a later store, and
+all $4{,}625$ reproduce the original text byte for byte. This is what
 allows us to treat the re-measured constants and the earlier tables as
 describing the same system. Three hundred of those pairs also cross a
 naming difference --- one store requests the default window implicitly
 and the other names $w{=}64$ explicitly --- and agree token for token, as
-they should. The two drifted pods bought a measurement we had not
-planned: the $600$ uncompressed baselines they share with the AutoWindow
-store are byte-identical \emph{across} those boundaries. The
-ledger counts same-descriptor repeats ($3{,}843$, the figure above) and
-cross-descriptor ones ($600$) separately, and the argument that the
+they should. The drifted pods bought a measurement we had not
+planned: $800$ uncompressed baselines are shared across stack boundaries
+--- the PyramidKV and constant-control pods each share baselines with the
+campaign stack, the latter now at two sample sizes --- and every one is
+byte-identical across the boundary it crosses. The
+ledger counts same-descriptor repeats ($4{,}625$, the figure above) and
+cross-descriptor ones ($800$) separately, and the argument that the
 earlier and later tables describe one system rests only on the former.
 
 \paragraph{Decode cap.}
