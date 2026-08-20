@@ -34,7 +34,7 @@ STORES = [
     "autowin_q90.db", "autowin_8b.db", "cliff_gemma.db", "gemma_q90.db",
     "schema-final.db", "schema_fix.db", "v_trace.db", "v_trace_bn.db",
     "llama.db", "instr_first.db", "agnostic.db", "ratio.db",
-    "pyramidkv.db", "constant.db", "depth.db",
+    "pyramidkv.db", "constant.db", "depth.db", "constant_depth.db",
 ]
 
 DEFAULT_W = 64
