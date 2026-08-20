@@ -95,14 +95,19 @@ def clopper_pearson(k, n, alpha=0.05):
     return lower, upper
 
 
-def ci_row(label, base, comp):
+def ci_row(label, base, comp, closure=True):
+    """closure=False for a head-to-head between two rivals: the verdict
+    vocabulary above is defined against an uncompressed baseline, and
+    "non-inferior at -3pp" would mean something entirely different when the
+    comparator is another window. Those rows print the interval and stop."""
     f, b, n = discordants(base, comp)
     N = f + b
     d = 100.0 * (f - b) / n
     lo_p, hi_p = clopper_pearson(f, N)
     d_lo = 100.0 * (2 * lo_p - 1) * N / n
     d_hi = 100.0 * (2 * hi_p - 1) * N / n
-    verdict = ("non-inferior at -3pp" if d_lo >= -3
+    verdict = ("" if not closure
+               else "non-inferior at -3pp" if d_lo >= -3
                else "certified residual" if d_hi < -3
                else "confirmed residual" if d_hi < 0
                else "interval too wide for +-3pp")
@@ -143,6 +148,25 @@ for lang, what in [("en", 43), ("bn", 212), ("te", 284)]:
 DP = load("depth.db")
 for lang, what in [("te", 247), ("bn", 183)]:
     ci_row(f"full pool {lang}", DP[lang]["baseline"], DP[lang][f"snapkv@r0.75:w{what}"])
+
+# The constant at scale (app:rivals, "The constant at scale"). Two things
+# are being measured and they are not the same test: w=256 against its own
+# uncompressed baseline, which is a closure cell like the rest of this
+# table, and w=256 against w-hat, which is a head-to-head between rivals.
+# The head-to-heads pair across two stores -- the w-hat cells live in
+# depth.db -- which is legal here and only here because the two stores'
+# baselines are byte-identical on all 782 shared rows, the guard the driver
+# checked and the audit re-checks. Direction: base = w256, comp = w-hat, so
+# "fixed" counts items the constant gets wrong and the computed integer
+# gets right.
+CD = load("constant_depth.db")
+DPT = load("depth.db")
+for lang in ("te", "bn"):
+    ci_row(f"full pool {lang} w256", CD[lang]["baseline"],
+           CD[lang]["snapkv@r0.75:w256"])
+for lang, what in (("te", 247), ("bn", 183)):
+    ci_row(f"h2h {lang} what-vs-w256", CD[lang]["snapkv@r0.75:w256"],
+           DPT[lang][f"snapkv@r0.75:w{what}"], closure=False)
 
 # The instruction-first cells are mechanism-gate cells, not w-hat closures:
 # the treatment is the default window with the question last (V=1 by
