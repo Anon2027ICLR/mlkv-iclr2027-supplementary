@@ -1378,6 +1378,32 @@ on one pod, the constant trails the rule on both languages ($-9$ vs $-1$
 on English, $-28$ vs $-24$ on Bengali) and beats it nowhere they share a
 pod.
 
+\paragraph{The constant at scale.}
+The grid above is bounded by its pod and its hundred items, so we
+preregistered a re-run at the full validation pools
+(\texttt{iclr-constant-depth-preregister.md}; registered and externally
+timestamped before any row existed): $w{=}256$ beside the shipped
+$\hat w$ integers, on the campaign stack, with baselines byte-identical
+to the depth arm's (782/782) --- so unlike the bracketed cells above,
+every comparison here pairs within one stack.
+The registration fixed the Telugu reading in advance: the constant sits
+nine tokens above the computed integer ($256 = \hat w_{\mathrm{te}} + 9$),
+so no separation was expected there, and none was found --- the
+head-to-head is $+1.2$\,pp in $\hat w$'s favour (16 fixed / 8 broken,
+CI $[-0.4, +2.5]$): a tie, with zero inside the interval by four tenths
+of a point. Where the two windows genuinely differ, Bengali, the gate
+splits: $\hat w$ meets it ($-1.8$) and the constant misses it ($-3.5$,
+CI $[-9.9, +4.1]$), with an uncertified head-to-head ($+1.8$,
+CI $[-3.6, +5.9]$) on a pool its size caps at 113. Against its own
+baseline the constant's Telugu residual is certified at $-6.9$
+($[-9.0, -4.2]$), deeper than $\hat w$'s $-5.7$: a 256-token protected
+tail costs slightly more than a 247-token one and recovers nothing. We
+claim no certified separation at this ratio. What the full pools
+support: the constant misses both of its gates where the rule misses
+one, its point estimate trails the rule's in both languages, and it
+comes closest exactly where it reproduces the rule's own integer plus
+nine.
+
 \paragraph{No ranking at all.}
 The same store carries the control the registry always reserved:
 \texttt{random@r0.75}, eviction with no scorer. It does not lose
