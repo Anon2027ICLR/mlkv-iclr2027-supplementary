@@ -196,6 +196,58 @@ class TestLayoutIntervention:
         assert a[0]["meta"]["layout"] == "instr-last"
 
 
+class TestCrossLanguageInstruction:
+    """xinstr arm (docs/iclr-xinstr-preregister.md): English instruction with
+    non-English items, so c is set by the instruction language while the
+    questions stay in the item language."""
+
+    def test_english_instruction_on_bengali_items(self):
+        from mlkv.languages import LANGUAGES
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        items = mrag.build("bn", tok, [512], pool=pool, instr_lang="en")
+        en_instr = LANGUAGES["en"].qa_instruction
+        bn_instr = LANGUAGES["bn"].qa_instruction
+        for it in items:
+            assert it["prompt"].endswith(en_instr)
+            assert bn_instr not in it["prompt"]
+            assert it["lang"] == "bn"
+            assert it["meta"]["instr_lang"] == "en"
+            assert it["item_id"].startswith("mragXen-bn-")
+
+    def test_ids_cannot_collide_and_passages_invariant(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        a = mrag.build("bn", tok, [512], pool=pool)
+        b = mrag.build("bn", tok, [512], pool=pool, instr_lang="en")
+        assert a[0]["item_id"].startswith("mrag-bn-")
+        assert b[0]["item_id"].startswith("mragXen-bn-")
+        # same seed -> same distractor selection; only the last block
+        # (the instruction) differs
+        for x, y in zip(a, b):
+            assert x["prompt"].split("\n\n")[:-1] == y["prompt"].split("\n\n")[:-1]
+            assert x["prompt"].split("\n\n")[-1] != y["prompt"].split("\n\n")[-1]
+            assert x["meta"]["n_passages"] == y["meta"]["n_passages"]
+
+    def test_same_language_instr_lang_is_identity_prompt(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        a = mrag.build("en", tok, [512], pool=pool)
+        b = mrag.build("en", tok, [512], pool=pool, instr_lang="en")
+        assert [x["prompt"] for x in a] == [x["prompt"] for x in b]
+        assert b[0]["item_id"].startswith("mragXen-en-")
+
+    def test_rejects_padding_and_instr_first(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=1)
+        with pytest.raises(ValueError):
+            mrag.build("bn", tok, [512], pool=pool, instr_lang="en",
+                       instr_pad_tokens=64)
+        with pytest.raises(ValueError):
+            mrag.build("bn", tok, [512], pool=pool, instr_lang="en",
+                       layout="instr-first")
+
+
 class TestInstructionPadding:
     """Padded-instruction dose-response (same-language window causal test)."""
 

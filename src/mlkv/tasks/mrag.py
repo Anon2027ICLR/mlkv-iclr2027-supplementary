@@ -136,13 +136,21 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
              ctx_tokens: int, position: str, rng: random.Random,
              lang: str, layout: str = "instr-last",
              instr_pad_tokens: int | None = None,
-             tail: str = "prose") -> tuple[str, dict]:
+             tail: str = "prose",
+             instr_lang: str | None = None) -> tuple[str, dict]:
     """One prompt. layout "instr-last" (frozen Main A order): passages +
     question + instruction. layout "instr-first" (E1 intervention, see
     docs/mrag-mechanism-pivot.md): instruction + passages + question, so the
     question is always inside a press's observation window. Token accounting
-    and distractor selection are layout-invariant: same seed, same passages."""
-    instruction = LANGUAGES[lang].qa_instruction
+    and distractor selection are layout-invariant: same seed, same passages.
+    instr_lang (xinstr arm, docs/iclr-xinstr-preregister.md): use another
+    language's frozen instruction with this language's items, so c is set by
+    the instruction language while the questions stay in `lang`."""
+    if instr_lang and instr_pad_tokens:
+        raise ValueError("instr_lang cannot be combined with instr_pad_tokens")
+    if instr_lang and layout != "instr-last":
+        raise ValueError("instr_lang is only defined for the instr-last layout")
+    instruction = LANGUAGES[instr_lang or lang].qa_instruction
     if instr_pad_tokens:
         instruction = _pad_instruction(
             instruction, lang, tokenizer, instr_pad_tokens, tail=tail,
@@ -192,7 +200,8 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
           pool: tuple[list[dict], list[str]] | None = None,
           layout: str = "instr-last",
           instr_pad_tokens: int | None = None,
-          tail: str = "prose") -> list[dict]:
+          tail: str = "prose",
+          instr_lang: str | None = None) -> list[dict]:
     """Items for all budgets; `pool` injectable for tests (else loaded)."""
     questions, distractors = pool if pool is not None else load_pool(lang)
     # max_items, when given, governs outright: the n_questions default is a
@@ -210,8 +219,10 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
         )
     questions = questions[:limit]
 
-    logger.info("mrag[%s]: building %d questions × %s tokens (layout=%s pad=%s tail=%s)",
-                lang, len(questions), ctx_tokens_list, layout, instr_pad_tokens, tail)
+    logger.info("mrag[%s]: building %d questions × %s tokens "
+                "(layout=%s pad=%s tail=%s instr_lang=%s)",
+                lang, len(questions), ctx_tokens_list, layout,
+                instr_pad_tokens, tail, instr_lang)
     items = []
     for ctx_tokens in ctx_tokens_list:
         for i, q in enumerate(questions):
@@ -220,17 +231,22 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
             prompt, meta = assemble(
                 q, distractors, tokenizer, ctx_tokens, position, rng, lang,
                 layout=layout, instr_pad_tokens=instr_pad_tokens, tail=tail,
+                instr_lang=instr_lang,
             )
             meta["ctx_tokens"] = ctx_tokens
             meta["layout"] = layout
             if instr_pad_tokens:
                 meta["instr_pad_tokens"] = instr_pad_tokens
                 meta["tail"] = tail
-            # Distinct id prefix per layout/padding: run_keys must never
-            # collide with the frozen rows.
+            if instr_lang:
+                meta["instr_lang"] = instr_lang
+            # Distinct id prefix per layout/padding/instruction-language:
+            # run_keys must never collide with the frozen rows.
             prefix = "mragIF" if layout == "instr-first" else "mrag"
             if instr_pad_tokens:
                 prefix = f"{TAIL_PREFIX[tail]}{instr_pad_tokens}"
+            if instr_lang:
+                prefix = f"mragX{instr_lang}"
             items.append({
                 "item_id": f"{prefix}-{lang}-{ctx_tokens // 1024}k-{i}",
                 "prompt": prompt,

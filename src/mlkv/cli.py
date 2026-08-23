@@ -140,6 +140,7 @@ def cmd_run(args: argparse.Namespace) -> None:
                 layout=args.mrag_layout,
                 instr_pad_tokens=args.mrag_instr_pad,
                 tail=args.mrag_tail,
+                instr_lang=args.mrag_instr_lang,
             )
         score_fn = mrag.score
     elif args.task == "mgsm-stuffed":
@@ -252,6 +253,10 @@ def build_parser() -> argparse.ArgumentParser:
                        choices=["instr-last", "instr-first"],
                        help="mrag prompt order; instr-first is the E1 "
                             "window-visibility intervention")
+    p_run.add_argument("--mrag-instr-lang", default=None,
+                       help="use this language's frozen instruction with the "
+                            "item language's questions (xinstr arm; item ids "
+                            "get a mragX<code> prefix, instr-last only)")
     p_run.add_argument("--ctx", default="8k,16k,32k",
                        help="mrag context budgets, e.g. 8k,16k,32k")
     p_run.add_argument("--nfd", action="store_true",
