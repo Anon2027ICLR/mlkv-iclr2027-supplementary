@@ -54,3 +54,49 @@ pre-accepted unfavourable branch.
 
 Scoring: offline, audit section `thsw` added before any number enters
 the tex.
+
+## Amendment, 2026-08-24 — after the guard fired, before any generation
+
+The chain's first pod run aborted in `run_guards()` after 31 seconds,
+with zero generations produced (log preserved at
+`docs/iclr9-guards-failed-2026-08-24.md`);
+no accuracy of any arm has been seen, so this amendment is written from
+the same epistemic position as the original. What the guard found:
+TyDiQA-GoldP Swahili's raw train and validation splits share **two
+exact duplicate examples** (identical id, question and context):
+`swahili--1339720473726915592-0` and `swahili-1422153578110398972-3`,
+at validation positions 133 and 300. Unlike Bengali's three documented
+duplicates — which sit inside `validation[:100]` and are therefore
+removed from the Q90 source by construction — these two sit outside
+`[:100]`, so they remain inside the Q90 estimation set. The full-pool
+invariant `eval(full pool) ∩ Q90-source = ∅` is genuinely violated for
+Swahili: the guard caught what it was built to catch.
+
+Decision, taken at this level and not in the script: **the arm keeps
+Swahili and the guard is keyed to the eval set each arm registers.**
+The invariant this preregistration depends on is that no *evaluated*
+item contributes to the Q90 estimation set. This arm evaluates
+`validation[:100]` (`--max-items 100`, registered above), and
+`val[:100] ∩ Q90-source = ∅` holds — re-verified locally on 2026-08-24.
+The guard therefore asserts, per language: full-pool disjointness for
+Telugu and Bengali (unchanged in strength — both hold), and
+first-100 disjointness for Swahili (the registered eval set). The two
+Swahili ids are recorded as documented raw-split duplicates so that any
+*new* overlap still aborts; they are **not** an allowlist for full-pool
+use. Any future arm that evaluates the Swahili pool beyond
+`validation[:100]` must re-register and either exclude these two ids
+from its Q90 source or disclose them.
+
+Consequences accepted with the decision:
+
+- Shipped `Q90[sw]=20` is unchanged and untouched. Recomputed on
+  2026-08-24 with the two duplicate ids removed from the source, the
+  percentile is identical (20, n=2753 vs n=2755): the wart cannot move
+  the constant, and the constant is not re-tuned. `ŵ_sw = 67` stands
+  as registered.
+- The paper's measurement appendix discloses the Swahili raw-split
+  duplicates next to the Bengali ones (the depth-arm amendment
+  precedent), stating that no evaluated item sits in any Q90 source
+  and that the sw eval set is `validation[:100]`.
+- The Swahili validation pool size (499) is now pinned in the guard,
+  as the other pools are.

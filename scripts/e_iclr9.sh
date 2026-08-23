@@ -91,16 +91,29 @@ PY
 }
 
 run_guards() {
-  say "=== guards: TyDiQA pools + id disjointness (depth-arm guard, sw added)"
+  say "=== guards: TyDiQA pools + id disjointness, keyed to each arm's eval set"
   UV_NO_SYNC=1 uv run python - <<'PY' 2>&1 | tee -a "$LOG"
 import sys
 from datasets import load_dataset
 ds = load_dataset("google-research-datasets/tydiqa", "secondary_task")
-EXPECT = {"bengali": 113, "telugu": 669, "swahili": None}  # sw size recorded, not gated
-KNOWN_DUPES = {
+# Pool sizes, pinned. Eval slice = the eval set the chain registers per
+# language: full pool for te (b1, b4) and bn (its pool is its cap), and
+# validation[:100] for sw (b3 runs --max-items 100). See the 2026-08-24
+# amendment in docs/iclr-thsw-preregister.md.
+EXPECT = {"bengali": 113, "telugu": 669, "swahili": 499}
+EVAL_SLICE = {"bengali": None, "telugu": None, "swahili": 100}  # None = full pool
+# Documented raw-split duplicates (identical id, question and context in
+# train and validation). The Bengali three sit inside validation[:100] and
+# so never reach any Q90 source; the Swahili two sit OUTSIDE [:100] and DO
+# sit in the Q90 source -- tolerable only because sw's registered eval set
+# is validation[:100] (amendment above). They are documentation, not an
+# allowlist: a full-pool Swahili arm must re-register.
+KNOWN_RAW_DUPES = {
     "bengali-3322578321529024800-0",
     "bengali-7245461333310589730-8",
     "bengali-7443250538964255015-1",
+    "swahili--1339720473726915592-0",
+    "swahili-1422153578110398972-3",
 }
 for name, want in EXPECT.items():
     val = [r["id"] for r in ds["validation"] if r["id"].startswith(f"{name}-")]
@@ -108,23 +121,32 @@ for name, want in EXPECT.items():
     raw_overlap = set(val) & tr_ids
     print(f"{name}: validation={len(val)} train={len(tr_ids)} "
           f"raw-overlap={len(raw_overlap)}")
-    if want is not None and len(val) != want:
+    if len(val) != want:
         print(f"FATAL: {name} validation pool is {len(val)}, preregister says {want}")
         sys.exit(2)
-    if raw_overlap - KNOWN_DUPES:
+    if raw_overlap - KNOWN_RAW_DUPES:
         print(f"FATAL: unexpected raw split overlap beyond the documented "
-              f"duplicates: {sorted(raw_overlap - KNOWN_DUPES)}")
+              f"duplicates: {sorted(raw_overlap - KNOWN_RAW_DUPES)}")
         sys.exit(2)
-    # Strongest invariant, covering both the n=100 and the full-pool arms:
-    # no validation item at all may sit inside the Q90 estimation set
-    # (train minus the ids of validation[:100] -- measure_q.py's split).
+    # The invariant every arm depends on: no EVALUATED item may sit inside
+    # the Q90 estimation set (train minus the ids of validation[:100] --
+    # measure_q.py's split), where "evaluated" is what the chain registers
+    # for that language.
     q90_source = tr_ids - set(val[:100])
-    viol = set(val) & q90_source
+    n = EVAL_SLICE[name]
+    eval_ids = set(val) if n is None else set(val[:n])
+    scope = "full pool" if n is None else f"val[:{n}]"
+    viol = eval_ids & q90_source
     if viol:
         print(f"FATAL: {len(viol)} eval ids inside the Q90 source: "
               f"{sorted(viol)[:5]}")
         sys.exit(2)
-    print("  eval(full pool) ∩ Q90-source = 0: the held-out discipline holds")
+    print(f"  eval({scope}) ∩ Q90-source = 0: the held-out discipline holds")
+    leftover = (set(val) - eval_ids) & q90_source
+    if leftover:
+        print(f"  note: {len(leftover)} non-evaluated validation ids remain in "
+              f"the Q90 source ({sorted(leftover)}) -- documented duplicates; "
+              f"a wider {name} eval set must re-register")
 print("guards OK")
 PY
   rc=$?
