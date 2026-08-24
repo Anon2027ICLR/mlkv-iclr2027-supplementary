@@ -857,11 +857,16 @@ conditions for every arm are files that ship with the code, each written
 before its run; for fourteen of the seventeen arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three --- the $Q_{90}$ re-measurement, the 8B slice and the schema
-re-run --- entered version control in a later batch; for the final five
-arms, the anonymised releases carrying their registrations were pushed
-before their first generations (48 minutes for the constant-at-scale
-arm; over nine hours for the four fourth-review arms), so the external
-timestamp precedes every row those arms govern. The
+re-run --- entered version control in a later batch. For the
+constant-at-scale arm, the public anonymised release carrying its
+registration was pushed 48 minutes before its first generation, so a
+publicly visible external timestamp precedes every row it governs. For
+the four fourth-review arms the registrations were pushed to the
+hosting server more than nine hours before the first generation ---
+a third-party server timestamp that precedes every row --- but to the
+private working repository: the public anonymised release that carries
+them was rebuilt only after their results existed, and we state that
+distinction rather than blur it. The
 anonymized version history ships with the supplementary material, and the
 de-anonymized history becomes public with the code on publication.
 
