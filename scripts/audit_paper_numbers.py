@@ -999,6 +999,237 @@ for (cap, lang), (t_tex, m_tex) in TEX_CAP.items():
     check(f"cap{cap} {lang} marker", round(100 * d["mark"] / d["n"]), m_tex)
 
 # --------------------------------------------------------------------------
+print("## ICLR9 B1: the slack ablation at depth — slack_depth.db")
+# Self-contained store; every pair inside it. One decimal, like depth.
+SL = load("slack_depth.db")
+
+
+def _dpair(base, comp):
+    common = sorted(set(base) & set(comp))
+    n = len(common)
+    f = sum(1 for i in common if not base[i] and comp[i])
+    b = sum(1 for i in common if base[i] and not comp[i])
+    return dict(n=n, fb=(f, b), d=round(100 * (f - b) / n, 1),
+                acc=round(100 * sum(comp[i] for i in common) / n, 1),
+                p=mcnemar_p(f, b))
+
+
+check("slack te pool size", len(SL["te"]["baseline"]), 669)
+check("slack te baseline accuracy",
+      round(100 * sum(SL["te"]["baseline"].values()) / 669, 1), 62.6)
+for w, d_tex, fb_tex in [(183, -10.3, (24, 93)), (199, -7.8, (18, 70)),
+                         (247, -5.7, (19, 57))]:
+    r = _dpair(SL["te"]["baseline"], SL["te"][f"snapkv@r0.75:w{w}"])
+    check(f"slack te w{w} delta", r["d"], d_tex)
+    check(f"slack te w{w} fixed/broken", r["fb"], fb_tex)
+r = _dpair(SL["te"]["snapkv@r0.75:w183"], SL["te"]["snapkv@r0.75:w247"])
+check("slack h2h what-vs-c+16 delta", r["d"], 4.6)
+check("slack h2h what-vs-c+16 fixed/broken", r["fb"], (55, 24))
+check("slack h2h what-vs-c+16 p", round(r["p"], 4), 0.0006)
+r = _dpair(SL["te"]["snapkv@r0.75:w199"], SL["te"]["snapkv@r0.75:w247"])
+check("slack h2h what-vs-c+32 delta", r["d"], 2.1)
+check("slack h2h what-vs-c+32 fixed/broken", r["fb"], (36, 22))
+# byte-identity with the depth arm, quoted in section 5 and app:provenance
+_c1 = sqlite3.connect(f"file:{RES / 'depth.db'}?mode=ro", uri=True)
+_c2 = sqlite3.connect(f"file:{RES / 'slack_depth.db'}?mode=ro", uri=True)
+_same = 0
+for cfg in ("baseline", "snapkv@r0.75:w247"):
+    a = dict(_c1.execute(
+        "SELECT item_id, output FROM generations WHERE lang='te' AND config=?",
+        (cfg,)))
+    b = dict(_c2.execute(
+        "SELECT item_id, output FROM generations WHERE lang='te' AND config=?",
+        (cfg,)))
+    _same += sum(1 for i in set(a) & set(b) if a[i] == b[i])
+_c1.close(); _c2.close()
+check("slack/depth shared generations byte-identical", _same, 1338)
+# marker-only robustness quoted in app:ci
+SLM = load("slack_depth.db", scorer=containment_match_marker_only)
+check("slack marker-only baseline",
+      round(100 * sum(SLM["te"]["baseline"].values()) / 669, 1), 55.0)
+for w, acc_tex in [(183, 43.9), (199, 45.1), (247, 45.6)]:
+    check(f"slack marker-only acc w{w}",
+          round(100 * sum(SLM["te"][f"snapkv@r0.75:w{w}"].values()) / 669, 1),
+          acc_tex)
+r = _dpair(SLM["te"]["snapkv@r0.75:w183"], SLM["te"]["snapkv@r0.75:w247"])
+check("slack marker-only h2h delta", r["d"], 1.6)
+check("slack marker-only h2h fixed/broken", r["fb"], (46, 35))
+
+# --------------------------------------------------------------------------
+print("## ICLR9 B4: instruction-first at depth — if_depth.db")
+IFD = load("if_depth.db")
+check("if_depth pool size", len(IFD["te"]["baseline"]), 669)
+check("if_depth baseline accuracy",
+      round(100 * sum(IFD["te"]["baseline"].values()) / 669, 1), 59.8)
+r = _dpair(IFD["te"]["baseline"], IFD["te"]["snapkv@r0.75"])
+check("if_depth w64 delta", r["d"], -3.4)
+check("if_depth w64 fixed/broken", r["fb"], (16, 39))
+check("if_depth w64 p", round(r["p"], 4), 0.0027)
+_c1 = sqlite3.connect(f"file:{RES / 'instr_first.db'}?mode=ro", uri=True)
+_c2 = sqlite3.connect(f"file:{RES / 'if_depth.db'}?mode=ro", uri=True)
+_same = 0
+for cfg in ("baseline", "snapkv@r0.75"):
+    a = dict(_c1.execute(
+        "SELECT item_id, output FROM generations WHERE lang='te' AND config=?",
+        (cfg,)))
+    b = dict(_c2.execute(
+        "SELECT item_id, output FROM generations WHERE lang='te' AND config=?",
+        (cfg,)))
+    _same += sum(1 for i in set(a) & set(b) if a[i] == b[i])
+_c1.close(); _c2.close()
+check("if_depth/instr_first shared generations byte-identical", _same, 200)
+
+# --------------------------------------------------------------------------
+print("## ICLR9 B3: Thai and Swahili at their own w-hat — thsw.db")
+TS = load("thsw.db")
+for lang, what, b_tex, hat, w64 in [
+    ("th", 91, 85, (-1, (1, 2)), (0, (1, 1))),
+    ("sw", 67, 56, (-3, (2, 5)), (-3, (2, 5))),
+]:
+    base = TS[lang]["baseline"]
+    check(f"thsw {lang} baseline",
+          round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, TS[lang][f"snapkv@r0.75:w{what}"])
+    check(f"thsw {lang} w-hat delta", r["d"], hat[0])
+    check(f"thsw {lang} w-hat fixed/broken", r["fb"], hat[1])
+    check(f"thsw {lang} gate met", abs(r["d"]) <= 3, True)
+    r = cmp_pair(base, TS[lang]["snapkv@r0.75"])
+    check(f"thsw {lang} w64 delta", r["d"], w64[0])
+    check(f"thsw {lang} w64 fixed/broken", r["fb"], w64[1])
+
+# --------------------------------------------------------------------------
+print("## ICLR9 B2: English instruction, non-English questions — xinstr.db")
+XI = load("xinstr.db")
+for lang, what, b_tex, w64, hat in [
+    ("bn", 101, 79, (-3, (3, 6)), (-2, (3, 5))),
+    ("te", 105, 62, (-4, (2, 6)), (-4, (0, 4))),
+]:
+    base = XI[lang]["baseline"]
+    check(f"xinstr {lang} baseline",
+          round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, XI[lang]["snapkv@r0.75"])
+    check(f"xinstr {lang} w64 delta", r["d"], w64[0])
+    check(f"xinstr {lang} w64 fixed/broken", r["fb"], w64[1])
+    check(f"xinstr {lang} w64 not significant", r["star"], False)
+    r = cmp_pair(base, XI[lang][f"snapkv@r0.75:w{what}"])
+    check(f"xinstr {lang} w-hat delta", r["d"], hat[0])
+    check(f"xinstr {lang} w-hat fixed/broken", r["fb"], hat[1])
+
+# --------------------------------------------------------------------------
+print("## Table 1: the w=64 column (AutoWindow store, same stack)")
+# The default-window column added to tab:cliff comes from autowin-final,
+# whose baselines are byte-identical to the sweep's; each cell pairs
+# against its own store's baseline.
+AWD = load("autowin-final.db")
+for lang, d_tex, star_tex in [("en", 0, False), ("th", 0, False),
+                              ("sw", -3, False), ("bn", -16, True),
+                              ("te", -19, True)]:
+    r = cmp_pair(AWD[lang]["baseline"], AWD[lang]["snapkv@r0.75"])
+    check(f"cliff w64 column {lang} delta", r["d"], d_tex)
+    check(f"cliff w64 column {lang} star", r["star"], star_tex)
+
+# --------------------------------------------------------------------------
+print("## Fourth-review prose: proportion-form residual audits (tokenizer)")
+# The 8B / Llama / Gemma / IF-depth / xinstr / Vietnamese sentences that
+# need a tokenizer and the raw datasets. Skipped loudly if unavailable.
+try:
+    import json as _json
+
+    from datasets import load_dataset as _ld  # noqa: E402
+    from transformers import AutoTokenizer as _AT  # noqa: E402
+
+    def _qlens(model, lang):
+        tok = _AT.from_pretrained(model)
+        if lang in ("bn", "te", "sw"):
+            name = {"bn": "bengali", "te": "telugu", "sw": "swahili"}[lang]
+            ds = _ld("google-research-datasets/tydiqa", "secondary_task")
+            rows = [r for r in ds["validation"] if r["id"].startswith(name + "-")]
+        else:
+            rows = list(_ld("google/xquad", f"xquad.{lang}", split="validation"))
+        return {r["id"]: len(tok.encode(r["question"], add_special_tokens=False))
+                for r in rows}
+
+    def _qid_map(db, lang):
+        con = sqlite3.connect(f"file:{RES / db}?mode=ro", uri=True)
+        m = {iid: _json.loads(meta)["qid"] for iid, meta in con.execute(
+            "SELECT item_id, meta FROM generations WHERE lang=? "
+            "AND config='baseline'", (lang,))}
+        con.close()
+        return m
+
+    # 8B bn: 8 of 8 broken fully visible, pool 88 of 100 (Q90=76)
+    E8 = load("autowin_8b.db")
+    _ql = _qlens("Qwen/Qwen3-8B", "bn")
+    _qm = _qid_map("autowin_8b.db", "bn")
+    base, comp = E8["bn"]["baseline"], E8["bn"]["snapkv@r0.75:w183"]
+    broken = [i for i in base if base[i] and not comp[i]]
+    check("8B residual fully visible",
+          (sum(1 for i in broken if _ql[_qm[i]] <= 76), len(broken)), (8, 8))
+    check("8B pool fully visible",
+          sum(1 for i in base if _ql[_qm[i]] <= 76), 88)
+
+    # Llama bn: 10 of 11 within Q90=87, one beyond
+    _ql = _qlens("meta-llama/Llama-3.1-8B-Instruct", "bn")
+    _qm = _qid_map("llama.db", "bn")
+    base, comp = LL["bn"]["baseline"], LL["bn"]["snapkv@r0.75:w212"]
+    broken = [i for i in base if base[i] and not comp[i]]
+    check("llama residual fully visible",
+          (sum(1 for i in broken if _ql[_qm[i]] <= 87), len(broken)), (10, 11))
+    check("llama pool fully visible",
+          sum(1 for i in base if _ql[_qm[i]] <= 87), 88)
+
+    # Gemma bn: 7 of 9 broken fully visible, pool 86 of 100 (Q90=18)
+    _ql = _qlens("google/gemma-3-4b-it", "bn")
+    _qm = _qid_map("gemma_q90.db", "bn")
+    base, comp = GQ["bn"]["baseline"], GQ["bn"]["snapkv@r0.75:w50"]
+    broken = [i for i in base if base[i] and not comp[i]]
+    check("gemma residual fully visible",
+          (sum(1 for i in broken if _ql[_qm[i]] <= 18), len(broken)), (7, 9))
+    check("gemma pool fully visible",
+          sum(1 for i in base if _ql[_qm[i]] <= 18), 86)
+
+    # xinstr V<1 composition at w=64 (c=25, slack 39) and the broken counts
+    _ql_qwen = {lang: _qlens("Qwen/Qwen3-4B", lang) for lang in ("bn", "te", "vi")}
+    for lang, v_tex, brk_tex in [("bn", 70, 6), ("te", 93, 6)]:
+        _qm = _qid_map("xinstr.db", lang)
+        base, comp = XI[lang]["baseline"], XI[lang]["snapkv@r0.75"]
+        check(f"xinstr {lang} items with V<1 at w64",
+              sum(1 for i in base if _ql_qwen[lang][_qm[i]] > 39), v_tex)
+        check(f"xinstr {lang} broken count",
+              sum(1 for i in base if base[i] and not comp[i]), brk_tex)
+
+    # Vietnamese: held-out percentiles and the w=64 cell composition
+    _tok = _AT.from_pretrained("Qwen/Qwen3-4B")
+    _rows = list(_ld("google/xquad", "xquad.vi", split="validation"))[100:]
+    _ls = sorted(len(_tok.encode(r["question"], add_special_tokens=False))
+                 for r in _rows)
+    check("vi held-out Q50/Q90/Qmax",
+          (_ls[len(_ls) // 2], _ls[int(0.9 * len(_ls))], _ls[-1]), (17, 26, 46))
+    _qm = _qid_map("autowin-final.db", "vi")
+    base, comp = AWD["vi"]["baseline"], AWD["vi"]["snapkv@r0.75"]
+    check("vi items with V<1 at w64",
+          sum(1 for i in base if _ql_qwen["vi"][_qm[i]] > 25), 3)
+    _brk = [i for i in base if base[i] and not comp[i]]
+    check("vi broken at w64, all fully visible",
+          (sum(1 for i in _brk if _ql_qwen["vi"][_qm[i]] <= 25), len(_brk)),
+          (5, 5))
+
+    # if_depth item audit: broken shares by gold position (no enrichment)
+    _pos = {}
+    _c = sqlite3.connect(f"file:{RES / 'if_depth.db'}?mode=ro", uri=True)
+    for iid, meta in _c.execute(
+            "SELECT item_id, meta FROM generations WHERE config='baseline'"):
+        _pos[iid] = _json.loads(meta)["position"]
+    _c.close()
+    base, comp = IFD["te"]["baseline"], IFD["te"]["snapkv@r0.75"]
+    broken = [i for i in base if base[i] and not comp[i]]
+    check("if_depth broken by position (front/middle/back)",
+          tuple(sum(1 for i in broken if _pos[i] == p)
+                for p in ("front", "middle", "back")), (10, 17, 12))
+except Exception as exc:  # tokenizer or dataset unavailable
+    print(f"  SKIPPED (no tokenizer or dataset: {type(exc).__name__})")
+
+# --------------------------------------------------------------------------
 print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")
 if FAILS:
     print("\n".join(FAILS))
