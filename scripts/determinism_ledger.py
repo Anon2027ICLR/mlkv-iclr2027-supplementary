@@ -35,6 +35,7 @@ STORES = [
     "schema-final.db", "schema_fix.db", "v_trace.db", "v_trace_bn.db",
     "llama.db", "instr_first.db", "agnostic.db", "ratio.db",
     "pyramidkv.db", "constant.db", "depth.db", "constant_depth.db",
+    "slack_depth.db", "xinstr.db", "if_depth.db", "thsw.db",
 ]
 
 DEFAULT_W = 64

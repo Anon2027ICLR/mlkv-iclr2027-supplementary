@@ -168,6 +168,38 @@ for lang, what in (("te", 247), ("bn", 183)):
     ci_row(f"h2h {lang} what-vs-w256", CD[lang]["snapkv@r0.75:w256"],
            DPT[lang][f"snapkv@r0.75:w{what}"], closure=False)
 
+# ICLR9 Group B (fourth review). slack_depth: the dose ladder at depth plus
+# the decisive head-to-heads (rival rows, closure=False). if_depth: the
+# instruction-first residual at power — a mechanism-gate cell like the IF
+# n=100 rows below. thsw: the rule's closure gate on the two languages it
+# was never run on. All four stores are self-contained; pairs stay inside
+# each store.
+SD = load("slack_depth.db")
+for w, name in [(183, "c+16"), (199, "c+32"), (247, "w-hat")]:
+    ci_row(f"full pool te {name} (w{w})", SD["te"]["baseline"],
+           SD["te"][f"snapkv@r0.75:w{w}"])
+ci_row("h2h te what-vs-c+16", SD["te"]["snapkv@r0.75:w183"],
+       SD["te"]["snapkv@r0.75:w247"], closure=False)
+ci_row("h2h te what-vs-c+32", SD["te"]["snapkv@r0.75:w199"],
+       SD["te"]["snapkv@r0.75:w247"], closure=False)
+
+FD = load("if_depth.db")
+ci_row("IF te @w64 full pool", FD["te"]["baseline"], FD["te"]["snapkv@r0.75"])
+
+TS = load("thsw.db")
+for lang, what in [("th", 91), ("sw", 67)]:
+    ci_row(f"4B {lang} (thsw)", TS[lang]["baseline"],
+           TS[lang][f"snapkv@r0.75:w{what}"])
+    ci_row(f"{lang} @w64 (thsw)", TS[lang]["baseline"],
+           TS[lang]["snapkv@r0.75"])
+
+XI = load("xinstr.db")
+for lang, what in [("bn", 101), ("te", 105)]:
+    ci_row(f"xinstr {lang} @w64", XI[lang]["baseline"],
+           XI[lang]["snapkv@r0.75"])
+    ci_row(f"xinstr {lang} w-hat (w{what})", XI[lang]["baseline"],
+           XI[lang][f"snapkv@r0.75:w{what}"])
+
 # The instruction-first cells are mechanism-gate cells, not w-hat closures:
 # the treatment is the default window with the question last (V=1 by
 # construction), judged by the same |delta| <= 3pp gate and CI vocabulary.
