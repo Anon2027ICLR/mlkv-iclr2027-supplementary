@@ -5,6 +5,8 @@
 #   docs/iclr-32b-preregister.md      (b3: Qwen3-32B, bn/te, n=100 -- OWN
 #                                      80GB pod; not part of `chain`)
 #   docs/iclr-ctx16k-preregister.md   (b4: te at ctx 16k, n=100)
+#   docs/iclr-32b-depth-preregister.md (b5: 32B te FULL POOL -- own 80GB
+#                                      pod, the closing arm)
 #
 # Four self-contained stores; every constant re-derived on-pod with FATAL
 # mismatch; the TyDiQA disjointness guard runs keyed to each arm's eval set.
@@ -13,14 +15,14 @@
 #
 # Usage:
 #   e_iclr10.sh chain          # guards, then b1, b2, b4
-#   e_iclr10.sh guards|b1|b2|b3|b4
+#   e_iclr10.sh guards|b1|b2|b3|b4|b5
 #
 # UV_NO_SYNC is not optional -- docs/runpod-api-guide.md §7.
 set -uo pipefail
 export HF_HOME=/workspace/hf PATH=$HOME/.local/bin:$PATH UV_NO_SYNC=1
 export HF_HUB_DISABLE_XET=1
 cd /workspace/mlkv
-BLOCK=${1:?usage: e_iclr10.sh chain|guards|b1|b2|b3|b4}
+BLOCK=${1:?usage: e_iclr10.sh chain|guards|b1|b2|b3|b4|b5}
 LOG=/workspace/iclr10_${BLOCK}.log
 QWEN=Qwen/Qwen3-4B
 QWEN32=Qwen/Qwen3-32B
@@ -226,6 +228,17 @@ run_b4() {
   say B4_DONE
 }
 
+run_b5() {
+  say "=== b5 qwen32b_depth: 32B te full pool 669 x {baseline,w64,w247}"
+  run_guards "$QWEN32"
+  UV_NO_SYNC=1 uv run mlkv run --model "$QWEN32" --task mrag --langs te \
+    --ctx 8k --configs "baseline,snapkv@r0.75,snapkv@r0.75:w247" \
+    --max-items 669 --max-new-tokens "$CAP" \
+    --db results/qwen32b_depth.db 2>&1 | tee -a "$LOG"
+  snap qwen32b_depth
+  say B5_DONE
+}
+
 run_b3() {
   say "=== b3 qwen32b: bn/te x {baseline,w64,w-hat}, n=100 (own 80GB pod)"
   run_guards "$QWEN32"
@@ -249,6 +262,7 @@ case "$BLOCK" in
   b2) run_b2 ;;
   b4) run_b4 ;;
   b3) run_b3 ;;
+  b5) run_b5 ;;
   chain) run_guards "$QWEN"; run_b1; run_b2; run_b4; say ALL_ICLR10_CHAIN_DONE ;;
   *) say "unknown block: $BLOCK"; exit 1 ;;
 esac
