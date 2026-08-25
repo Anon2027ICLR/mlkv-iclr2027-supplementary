@@ -1339,6 +1339,50 @@ for lang, want in (("bn", 0), ("te", 1)):
           round(100 * sum(QBM[lang]["baseline"].values()) / 100), want)
 
 # --------------------------------------------------------------------------
+print("## ICLR10 B5: 32B Telugu at depth — qwen32b_depth.db")
+QDD = load("qwen32b_depth.db")
+base = QDD["te"]["baseline"]
+check("32B-depth pool size", len(base), 669)
+check("32B-depth baseline accuracy",
+      round(100 * sum(base.values()) / 669, 1), 62.9)
+r = _dpair(base, QDD["te"]["snapkv@r0.75"])
+check("32B-depth hole delta", r["d"], -10.2)
+check("32B-depth hole fixed/broken", r["fb"], (35, 103))
+check("32B-depth hole p exponent",
+      math.floor(math.log10(r["p"])), -9)
+r = _dpair(base, QDD["te"]["snapkv@r0.75:w247"])
+check("32B-depth gate delta", r["d"], -1.6)
+check("32B-depth gate fixed/broken", r["fb"], (16, 27))
+r = _dpair(QDD["te"]["snapkv@r0.75"], QDD["te"]["snapkv@r0.75:w247"])
+check("32B-depth recovery delta", r["d"], 8.5)
+check("32B-depth recovery fixed/broken", r["fb"], (86, 29))
+# the replicated position fingerprint quoted in section 5 and app:scale16k
+_c = sqlite3.connect(f"file:{RES / 'qwen32b_depth.db'}?mode=ro", uri=True)
+_pos5 = {iid: _json2.loads(meta)["position"] for iid, meta in _c.execute(
+    "SELECT item_id, meta FROM generations WHERE config='baseline'")}
+_c.close()
+comp = QDD["te"]["snapkv@r0.75"]
+_brk5 = [i for i in base if base[i] and not comp[i]]
+check("32B-depth broken middle count",
+      sum(1 for i in _brk5 if _pos5[i] == "middle"), 48)
+check("32B-depth broken total", len(_brk5), 103)
+# cross-stack byte-identity with the n=100 slice (app:provenance)
+_c1 = sqlite3.connect(f"file:{RES / 'qwen32b.db'}?mode=ro", uri=True)
+_c2 = sqlite3.connect(f"file:{RES / 'qwen32b_depth.db'}?mode=ro", uri=True)
+_same = 0
+for cfg in ("baseline", "snapkv@r0.75", "snapkv@r0.75:w247"):
+    a = dict(_c1.execute("SELECT item_id, output FROM generations "
+                         "WHERE lang='te' AND config=?", (cfg,)))
+    b = dict(_c2.execute("SELECT item_id, output FROM generations "
+                         "WHERE lang='te' AND config=?", (cfg,)))
+    _same += sum(1 for i in set(a) & set(b) if a[i] == b[i])
+_st5 = {r[0] for r in _c1.execute("SELECT DISTINCT stack_id FROM generations")} \
+    & {r[0] for r in _c2.execute("SELECT DISTINCT stack_id FROM generations")}
+_c1.close(); _c2.close()
+check("32B-depth/32B-slice shared generations byte-identical", _same, 300)
+check("32B-depth and 32B-slice stacks are distinct", len(_st5), 0)
+
+# --------------------------------------------------------------------------
 print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")
 if FAILS:
     print("\n".join(FAILS))
