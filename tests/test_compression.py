@@ -118,3 +118,43 @@ def test_malformed_window_rejected():
     for bad in ("snapkv@r0.75:w0", "snapkv@r0.75:w", "snapkv@r0.75w128"):
         with pytest.raises(ValueError):
             parse(bad)
+
+
+class TestPerItemOracleWindow:
+    """":wq<c>" — the per-item oracle window w_i = c + |Q_i|
+    (docs/iclr-oracle-preregister.md)."""
+
+    def test_parse(self):
+        cfg = parse("snapkv@r0.75:wq167")
+        assert cfg.kind == "press"
+        assert cfg.params == {"press": "snapkv", "ratio": 0.75, "wq_c": 167}
+
+    def test_window_is_c_plus_q(self):
+        cfg = parse("snapkv@r0.75:wq167")
+        assert cfg.resolved_window(q_tokens=53) == 220
+        assert cfg.resolved_window(q_tokens=170) == 337
+
+    def test_needs_q_tokens(self):
+        cfg = parse("snapkv@r0.75:wq167")
+        with pytest.raises(ValueError):
+            cfg.resolved_window()
+        with pytest.raises(ValueError):
+            cfg.effective_ratio(8192)
+
+    def test_min_prefill_moves_per_item(self):
+        cfg = parse("snapkv@r0.75:wq167")
+        # prompts at or under the per-item window run uncompressed
+        assert cfg.effective_ratio(220, q_tokens=53) == 0.0
+        assert cfg.effective_ratio(221, q_tokens=53) == 0.75
+        assert cfg.effective_ratio(8192, q_tokens=53) == 0.75
+
+    def test_fixed_window_unaffected(self):
+        cfg = parse("snapkv@r0.75:w247")
+        assert cfg.resolved_window() == 247
+        assert cfg.resolved_window(q_tokens=99) == 247
+        assert cfg.effective_ratio(8192) == 0.75
+
+    def test_rejects_malformed(self):
+        for bad in ("snapkv@r0.75:wq0", "snapkv@r0.75:wq", "snapkv@r0.75:wq167:w64"):
+            with pytest.raises(ValueError):
+                parse(bad)

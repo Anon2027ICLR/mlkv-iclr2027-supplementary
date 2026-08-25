@@ -123,7 +123,8 @@ def _count_new_tokens(new_ids, pad_id: int) -> int:
 
 @torch.inference_mode()
 def generate_one(model, tokenizer, prompt_text: str, config: CompressionConfig,
-                 device: str, max_new_tokens: int) -> tuple[str, int, int]:
+                 device: str, max_new_tokens: int,
+                 q_tokens: int | None = None) -> tuple[str, int, int]:
     inputs = tokenizer(prompt_text, return_tensors="pt").to(device)
     n_prompt_tokens = inputs["input_ids"].shape[1]
     gen_kwargs = dict(
@@ -133,7 +134,8 @@ def generate_one(model, tokenizer, prompt_text: str, config: CompressionConfig,
         **config.generate_kwargs(),
     )
     press = config.press(prefill_len=n_prompt_tokens,
-                         prompt_bytes=len(prompt_text.encode("utf-8")))
+                         prompt_bytes=len(prompt_text.encode("utf-8")),
+                         q_tokens=q_tokens)
     if press is not None:
         with press(model):
             out = model.generate(**inputs, **gen_kwargs)
@@ -220,7 +222,8 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
             # bb configs the press used templated bytes; the covariate drift
             # is negligible and documented here.
             "kv_ratio": config.effective_ratio(
-                n_prompt, prompt_bytes=len(item["prompt"].encode("utf-8"))),
+                n_prompt, prompt_bytes=len(item["prompt"].encode("utf-8")),
+                q_tokens=item.get("meta", {}).get("q_tokens")),
         })
         store.save(
             conn, key,
@@ -253,7 +256,9 @@ def run_matrix(model_name: str, task_name: str, items_by_lang: dict[str, list[di
                     start = time.perf_counter()
                     try:
                         output, n_tokens, n_prompt = generate_one(
-                            model, tokenizer, prompt_text, config, device, max_new_tokens
+                            model, tokenizer, prompt_text, config, device,
+                            max_new_tokens,
+                            q_tokens=item.get("meta", {}).get("q_tokens"),
                         )
                     except Exception:
                         logger.exception("generation failed: %s %s %s",

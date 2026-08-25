@@ -1,7 +1,8 @@
-# Qwen3-32B slice (B3) — preregister DRAFT
+# Qwen3-32B slice (B3) — preregister
 
-**Author: Fable (Claude).** Drafted 2026-08-25, *before* any generation
-of this arm exists; DRAFT until the lock commit. Driver:
+**Author: Fable (Claude).** Written 2026-08-25, *before* any generation
+of this arm exists; locked at the F19 commit, which also carries the
+harness changes and their tests. Driver:
 `scripts/e_iclr10.sh b3` on its own 80GB pod. Store:
 `results/qwen32b.db`, self-contained (own stack — the Llama
 precedent: quoted beside the campaign cells, never pooled).
@@ -28,7 +29,7 @@ both on-pod and aborts on mismatch (if the 32B chat template differs
 and moves $c$, the abort is the right outcome and the arm is
 re-registered with the measured integers).
 
-## Registered readings (fixed at lock)
+## Registered readings (fixed now, before any row)
 
 1. **Phenomenon:** the default-window hole reproduces (Δ at w=64 vs
    own baseline, CI; prediction: certified loss on both languages, as

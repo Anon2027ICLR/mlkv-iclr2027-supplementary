@@ -117,6 +117,26 @@ TAIL_FILLERS = {
 }
 TAIL_PREFIX = {"prose": "mragPAD", "json": "mragJSON", "tools": "mragTOOL"}
 
+# The "refine" layout (docs/iclr-refine-preregister.md, reviewer-5 W2):
+# LlamaIndex's shipped DEFAULT_REFINE_PROMPT_TMPL, verbatim from the frozen
+# survey record (docs/template-survey-report.md, T06, commit-pinned source).
+# The query stands FIRST and the passages fill the {context_msg} slot, so at
+# any small observation window the scorer sees none of the question (V=0 for
+# every language by construction). The existing-answer slot takes a fixed
+# neutral stub, identical across items and languages, carrying no
+# information about the gold answer; it is pinned by the unit test.
+REFINE_PREFIX = "The original query is as follows: "
+REFINE_MID_1 = "\nWe have provided an existing answer: "
+REFINE_MID_2 = ("\nWe have the opportunity to refine the existing answer "
+                "(only if needed) with some more context below.\n"
+                "------------\n")
+REFINE_SUFFIX = ("\n------------\n"
+                 "Given the new context, refine the original answer to "
+                 "better answer the query. If the context isn't useful, "
+                 "return the original answer.\nRefined Answer: ")
+REFINE_EXISTING_ANSWER = ("I do not yet have enough information to answer "
+                          "this question.")
+
 
 def _pad_instruction(instruction: str, lang: str, tokenizer,
                      target_tokens: int, tail: str = "prose") -> str:
@@ -150,7 +170,14 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
         raise ValueError("instr_lang cannot be combined with instr_pad_tokens")
     if instr_lang and layout != "instr-last":
         raise ValueError("instr_lang is only defined for the instr-last layout")
+    if layout == "refine" and (instr_lang or instr_pad_tokens):
+        raise ValueError("the refine layout takes no instruction options")
     instruction = LANGUAGES[instr_lang or lang].qa_instruction
+    if layout == "refine":
+        # The T06 template replaces the frozen instruction entirely; the
+        # fixed overhead is the template text plus the existing-answer stub.
+        instruction = (REFINE_PREFIX + REFINE_MID_1 + REFINE_EXISTING_ANSWER
+                       + REFINE_MID_2 + REFINE_SUFFIX)
     if instr_pad_tokens:
         instruction = _pad_instruction(
             instruction, lang, tokenizer, instr_pad_tokens, tail=tail,
@@ -181,16 +208,25 @@ def assemble(question_item: dict, distractors: list[str], tokenizer,
 
     gold_index = {"front": 0, "middle": len(chosen) // 2, "back": len(chosen)}[position]
     passages = chosen[:gold_index] + [gold_passage] + chosen[gold_index:]
-    if layout == "instr-first":
+    if layout == "refine":
+        prompt = (REFINE_PREFIX + question_item["question"]
+                  + REFINE_MID_1 + REFINE_EXISTING_ANSWER + REFINE_MID_2
+                  + joiner.join(passages) + REFINE_SUFFIX)
+    elif layout == "instr-first":
         parts = [instruction, joiner.join(passages), question_item["question"]]
+        prompt = joiner.join(parts)
     else:
         parts = [joiner.join(passages), question_item["question"], instruction]
-    prompt = joiner.join(parts)
+        prompt = joiner.join(parts)
     meta = {
         "position": position,
         "n_passages": len(passages),
         "approx_prompt_tokens": used,
         "qid": question_item["qid"],
+        # |Q_i| on the run tokenizer: the per-item input the ":wq" oracle
+        # window consumes (docs/iclr-oracle-preregister.md). Recorded for
+        # every layout; costs one encode.
+        "q_tokens": _n_tokens(tokenizer, question_item["question"]),
     }
     return prompt, meta
 
@@ -242,7 +278,8 @@ def build(lang: str, tokenizer, ctx_tokens_list: list[int],
                 meta["instr_lang"] = instr_lang
             # Distinct id prefix per layout/padding/instruction-language:
             # run_keys must never collide with the frozen rows.
-            prefix = "mragIF" if layout == "instr-first" else "mrag"
+            prefix = {"instr-first": "mragIF", "refine": "mragRF"}.get(
+                layout, "mrag")
             if instr_pad_tokens:
                 prefix = f"{TAIL_PREFIX[tail]}{instr_pad_tokens}"
             if instr_lang:

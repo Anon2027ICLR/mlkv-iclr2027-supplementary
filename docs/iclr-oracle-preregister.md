@@ -1,7 +1,8 @@
-# Oracle per-item window at depth (B2) — preregister DRAFT
+# Oracle per-item window at depth (B2) — preregister
 
-**Author: Fable (Claude).** Drafted 2026-08-25, *before* any generation
-of this arm exists; DRAFT until the lock commit. Driver:
+**Author: Fable (Claude).** Written 2026-08-25, *before* any generation
+of this arm exists; locked at the F19 commit, which also carries the
+harness changes and their tests. Driver:
 `scripts/e_iclr10.sh b2`. Store: `results/oracle_depth.db`,
 self-contained.
 
@@ -33,14 +34,15 @@ verbatim). No free parameter.
 Qwen3-4B, mRAG instr-last, ctx 8k, cap 384:
 
 - te × 669: `baseline`, `snapkv@r0.75:w247` ($\hat w$),
-  `snapkv@r0.75:wq` (oracle).
+  `snapkv@r0.75:wq167` (oracle; the `167` is $c$, baked into the config
+  string by the driver after re-derivation).
 
 = 2,007 generations. $\hat w$ is re-run so the decisive head-to-head
 (oracle vs $\hat w$) pairs within one store; baseline and w247 double
 as a determinism measurement against `depth.db`/`slack_depth.db`
 (expected byte-identical; informational).
 
-## Registered readings (fixed at lock)
+## Registered readings (fixed now, before any row)
 
 1. **Primary:** paired Δpp of oracle vs own baseline, exact
    conditional 95% CI, offline scoring; oracle-vs-$\hat w$ head-to-head

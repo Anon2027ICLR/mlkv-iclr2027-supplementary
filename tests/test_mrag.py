@@ -299,3 +299,77 @@ class TestInstructionPadding:
         assert tools[0]["item_id"].startswith("mragTOOL60-")
         assert prose[0]["item_id"] != tools[0]["item_id"]
         assert "Available tools" in tools[0]["prompt"]
+
+
+class TestRefineLayout:
+    """The T06 shipped-template layout (docs/iclr-refine-preregister.md)."""
+
+    def _build(self, lang="en", n=2):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=n)
+        return mrag.build(lang, tok, [512], pool=pool, layout="refine"), pool
+
+    def test_question_first_template_verbatim(self):
+        items, pool = self._build()
+        questions, _ = pool
+        for it, q in zip(items, questions):
+            p = it["prompt"]
+            # The query opens the prompt; the scorer's window at any small w
+            # therefore holds none of it (V=0 by construction).
+            assert p.startswith(mrag.REFINE_PREFIX + q["question"])
+            # The T06 text is verbatim (348-char trailing block of the
+            # frozen survey record, split around the two placeholders).
+            assert mrag.REFINE_MID_1 + mrag.REFINE_EXISTING_ANSWER in p
+            assert p.endswith(mrag.REFINE_SUFFIX)
+            assert it["item_id"].startswith("mragRF-en-")
+            assert it["meta"]["layout"] == "refine"
+
+    def test_existing_answer_stub_pinned_and_gold_free(self):
+        # The stub is the exact registered sentence and cannot leak gold.
+        assert mrag.REFINE_EXISTING_ANSWER == (
+            "I do not yet have enough information to answer this question.")
+        items, pool = self._build()
+        for it in items:
+            for gold in it["gold"]:
+                assert gold not in mrag.REFINE_EXISTING_ANSWER
+
+    def test_passages_between_separators(self):
+        items, _ = self._build()
+        for it in items:
+            body = it["prompt"].split("------------\n")[1]
+            assert it["meta"]["n_passages"] >= 1
+            assert body.count("\n\n") == it["meta"]["n_passages"] - 1
+
+    def test_same_items_larger_overhead_never_more_passages(self):
+        # Same seed and pool as instr-last; the T06 template is longer than
+        # the English instruction, so the refine prompt may fit fewer
+        # passages but never more, and the qid pairing is unchanged.
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        a = mrag.build("en", tok, [512], pool=pool)
+        b = mrag.build("en", tok, [512], pool=pool, layout="refine")
+        for x, y in zip(a, b):
+            assert y["meta"]["n_passages"] <= x["meta"]["n_passages"]
+            assert y["meta"]["qid"] == x["meta"]["qid"]
+            assert x["item_id"] != y["item_id"]
+
+    def test_rejects_instruction_options(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=1)
+        with pytest.raises(ValueError):
+            mrag.build("en", tok, [512], pool=pool, layout="refine",
+                       instr_lang="en")
+        with pytest.raises(ValueError):
+            mrag.build("en", tok, [512], pool=pool, layout="refine",
+                       instr_pad_tokens=64)
+
+
+class TestQTokensMeta:
+    def test_every_layout_records_q_tokens(self):
+        tok = FakeTokenizer()
+        pool = make_pool(n_questions=2)
+        questions, _ = pool
+        for layout in ("instr-last", "instr-first", "refine"):
+            items = mrag.build("en", tok, [512], pool=pool, layout=layout)
+            for it, q in zip(items, questions):
+                assert it["meta"]["q_tokens"] == len(q["question"].split())

@@ -1,7 +1,8 @@
-# 16k prefill slice (B4) — preregister DRAFT
+# 16k prefill slice (B4) — preregister
 
-**Author: Fable (Claude).** Drafted 2026-08-25, *before* any generation
-of this arm exists; DRAFT until the lock commit. Driver:
+**Author: Fable (Claude).** Written 2026-08-25, *before* any generation
+of this arm exists; locked at the F19 commit, which also carries the
+harness changes and their tests. Driver:
 `scripts/e_iclr10.sh b4`. Store: `results/ctx16k.db`, self-contained.
 
 Answers reviewer-5 Q2: every headline number sits at one prefill
@@ -23,7 +24,7 @@ only one with a certified 8k residual to compare against. Same items
 where the 16k packing permits (the packer refills distractors; qids
 are recorded and the overlap with the 8k eval set is reported).
 
-## Registered readings (fixed at lock)
+## Registered readings (fixed now, before any row)
 
 1. **Blind mode:** Δ at w=64 vs own 16k baseline, exact CI.
    Prediction: certified loss — $V{=}0$ is decided by $c{=}167 > 64$,

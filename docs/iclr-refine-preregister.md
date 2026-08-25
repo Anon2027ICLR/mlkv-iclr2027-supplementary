@@ -1,7 +1,8 @@
-# Refine layout: a shipped template, measured (B1) — preregister DRAFT
+# Refine layout: a shipped template, measured (B1) — preregister
 
-**Author: Fable (Claude).** Drafted 2026-08-25, *before* any generation
-of this arm exists; DRAFT until the lock commit that precedes the pod.
+**Author: Fable (Claude).** Written 2026-08-25, *before* any generation
+of this arm exists; locked at the F19 commit, which also carries the
+harness changes and their tests.
 Driver: `scripts/e_iclr10.sh b1`. Store: `results/refine.db`,
 self-contained.
 
@@ -47,7 +48,7 @@ question is ~8k tokens from the prompt end); the driver asserts the
 question-first geometry on a probe item and aborts if the template
 render moves it.
 
-## Registered readings (fixed at lock)
+## Registered readings (fixed now, before any row)
 
 1. **Primary:** paired Δpp of w=64 vs this layout's own uncompressed
    baseline, per language, exact conditional 95% CI, offline scoring.

@@ -53,8 +53,15 @@ PRESS_NAMES = {
 # Optional ":w<int>" overrides the press's observation window (E2, see
 # docs/mrag-mechanism-pivot.md): a fixed token window is itself a
 # token-denominated constant, so it is exposed as a treatment variable.
+# ":wq<c>" is the per-item oracle window w_i = c + |Q_i| (reviewer-5 Q1,
+# docs/iclr-oracle-preregister.md): <c> is the measured trailing-block
+# constant baked into the config string by the driver after on-pod
+# re-derivation, and |Q_i| arrives per item as meta["q_tokens"], computed by
+# the task builder on the run tokenizer. Emulated per item, the same shape
+# as the @b budget family.
 _PRESS_RE = re.compile(
-    r"^(?P<name>[a-z0-9]+)@r(?P<ratio>0\.\d+)(?::w(?P<window>[1-9]\d*))?$"
+    r"^(?P<name>[a-z0-9]+)@r(?P<ratio>0\.\d+)"
+    r"(?::w(?P<window>[1-9]\d*)|:wq(?P<wq_c>[1-9]\d*))?$"
 )
 _BUDGET_RE = re.compile(r"^(?P<name>[a-z0-9]+)@b(?P<budget>[1-9]\d*)$")
 # Byte-denominated cache budget (E3 fix arm): keep the token-equivalent of
@@ -95,21 +102,34 @@ class CompressionConfig:
             }
         return {}
 
-    def _min_prefill(self) -> int:
+    def resolved_window(self, q_tokens: int | None = None) -> int | None:
+        """The observation window this config uses (None: press default).
+        Per-item ":wq" configs need the item's question length."""
+        if "window" in self.params:
+            return self.params["window"]
+        if "wq_c" in self.params:
+            if q_tokens is None:
+                raise ValueError(f"{self.name!r} needs q_tokens per item")
+            return self.params["wq_c"] + q_tokens
+        return None
+
+    def _min_prefill(self, q_tokens: int | None = None) -> int:
         """Prompts shorter than the observation window cannot be compressed;
         a custom window moves that floor with it."""
-        if "window" in self.params:
-            return self.params["window"] + 1
+        w = self.resolved_window(q_tokens)
+        if w is not None:
+            return w + 1
         return PRESS_MIN_PREFILL.get(self.params["press"], 0)
 
     def effective_ratio(self, prefill_len: int,
-                        prompt_bytes: int | None = None) -> float | None:
+                        prompt_bytes: int | None = None,
+                        q_tokens: int | None = None) -> float | None:
         """Actual eviction ratio applied for this prompt (None if the config
         does not evict). Recorded per generation for the RQ2 regression.
-        Byte-budget configs need prompt_bytes; token configs ignore it."""
+        Byte-budget configs need prompt_bytes; ":wq" configs need q_tokens."""
         if self.kind != "press":
             return None
-        if prefill_len < self._min_prefill():
+        if prefill_len < self._min_prefill(q_tokens):
             return 0.0
         if "bytes" in self.params:
             if prompt_bytes is None:
@@ -122,26 +142,30 @@ class CompressionConfig:
         return self.params["ratio"]
 
     def press(self, prefill_len: int | None = None,
-              prompt_bytes: int | None = None):
+              prompt_bytes: int | None = None,
+              q_tokens: int | None = None):
         """Instantiate the kvpress press object, or None.
 
         Needs prefill_len: prompts under the press's observation window, or
         already within a budget, run uncompressed (None) — decided before the
         kvpress import so no-op paths also work without the CUDA extras.
-        Byte-budget configs additionally need prompt_bytes.
+        Byte-budget configs additionally need prompt_bytes; per-item ":wq"
+        configs additionally need q_tokens.
         """
         if self.kind != "press":
             return None
         if prefill_len is None:
             raise ValueError(f"press config {self.name!r} needs prefill_len")
-        ratio = self.effective_ratio(prefill_len, prompt_bytes=prompt_bytes)
+        ratio = self.effective_ratio(prefill_len, prompt_bytes=prompt_bytes,
+                                     q_tokens=q_tokens)
         if ratio == 0.0:
             return None
         import kvpress  # CUDA box extra
 
         cls = getattr(kvpress, PRESS_NAMES[self.params["press"]])
-        if "window" in self.params:
-            return cls(compression_ratio=ratio, window_size=self.params["window"])
+        w = self.resolved_window(q_tokens)
+        if w is not None:
+            return cls(compression_ratio=ratio, window_size=w)
         return cls(compression_ratio=ratio)
 
 
@@ -160,6 +184,8 @@ def parse(config: str) -> CompressionConfig:
         params = {"press": m.group("name"), "ratio": float(m.group("ratio"))}
         if m.group("window"):
             params["window"] = int(m.group("window"))
+        if m.group("wq_c"):
+            params["wq_c"] = int(m.group("wq_c"))
         return CompressionConfig(config, "press", params)
     m = _BYTEBUDGET_RE.match(config)
     if m and m.group("name") in PRESS_NAMES:

@@ -250,7 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
                        help="filler family for --mrag-instr-pad "
                             "(prose=G2; json/tools=fate-changer schema tail)")
     p_run.add_argument("--mrag-layout", default="instr-last",
-                       choices=["instr-last", "instr-first"],
+                       choices=["instr-last", "instr-first", "refine"],
                        help="mrag prompt order; instr-first is the E1 "
                             "window-visibility intervention")
     p_run.add_argument("--mrag-instr-lang", default=None,
