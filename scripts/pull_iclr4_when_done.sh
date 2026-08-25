@@ -1,11 +1,9 @@
 #!/bin/bash
-# Local puller for the 2026-08-17 review-response arms (e_iclr3).
-# Waits for ALL_ICLR3_CHAIN_DONE (or the last optional marker if present),
-# then scp + verify + touch /workspace/SYNCED.
+# Local puller for e_iclr4 (bn_ladder / agnostic / ratio).
 set -u
-POD="${POD:-5va03mfii37sxv}"
+POD="${POD:-}"
 DEST="${DEST:-$HOME/working_space/research/mlkv/results}"
-LOG="${LOG:-$HOME/working_space/research/mlkv/results/pull_iclr3.log}"
+LOG="${LOG:-$HOME/working_space/research/mlkv/results/pull_iclr4.log}"
 AUTH="Authorization: Bearer $(cat "$HOME/.config/runpod/api_key")"
 mkdir -p "$DEST"
 say() { echo "$(date -u +%FT%TZ) $*" | tee -a "$LOG"; }
@@ -22,6 +20,7 @@ print(p.get('desiredStatus',''), ip, pm.get('22') or '')
 "
 }
 
+[ -n "$POD" ] || { echo "set POD"; exit 2; }
 say "ARMED dest=$DEST pod=$POD"
 while true; do
   read -r ST IP PORT < <(conn)
@@ -32,10 +31,9 @@ while true; do
   fi
   if [ -n "$IP" ] && [ -n "$PORT" ]; then
     info=$(ssh $ssh_opts -p "$PORT" root@"$IP" '
-      # Prefer the wrapper-all marker; fall back to chain if extras never ran.
-      if grep -q ALL_ICLR3_ALL_DONE /workspace/iclr3_all.log 2>/dev/null; then echo DONE; exit 0; fi
-      if grep -q ALL_ICLR3_CHAIN_DONE /workspace/iclr3_chain.log 2>/dev/null \
-         && ! pgrep -f "e_iclr3.sh|run_iclr3_all" >/dev/null; then
+      if grep -q ALL_ICLR4_ALL_DONE /workspace/iclr4_all.log 2>/dev/null; then echo DONE; exit 0; fi
+      if grep -q ALL_ICLR4_CHAIN_DONE /workspace/iclr4_chain.log 2>/dev/null \
+         && ! pgrep -f "e_iclr4.sh|run_iclr4_all" >/dev/null; then
         echo DONE
         exit 0
       fi
@@ -43,7 +41,10 @@ while true; do
 import sqlite3, os
 def n(p):
     return sqlite3.connect(p).execute(\"select count(*) from generations\").fetchone()[0] if os.path.exists(p) else 0
-print(f\"rows llama={n(\"/workspace/mlkv/results/llama.db\")} instr_first={n(\"/workspace/mlkv/results/instr_first.db\")}\")
+print(\"rows v_trace_bn=%d agnostic=%d ratio=%d\" % (
+    n(\"/workspace/mlkv/results/v_trace_bn.db\"),
+    n(\"/workspace/mlkv/results/agnostic.db\"),
+    n(\"/workspace/mlkv/results/ratio.db\")))
 "
     ' 2>/dev/null || echo FAIL)
     say "remote: $info"
@@ -55,9 +56,9 @@ print(f\"rows llama={n(\"/workspace/mlkv/results/llama.db\")} instr_first={n(\"/
 done
 
 say "pulling"
-for f in llama.db llama-snapshot.db llama-final.db \
-         instr_first.db instr_first-snapshot.db instr_first-final.db \
-         q_percentiles_llama.json; do
+for f in v_trace_bn.db v_trace_bn-snapshot.db v_trace_bn-final.db \
+         agnostic.db agnostic-snapshot.db agnostic-final.db \
+         ratio.db ratio-snapshot.db ratio-final.db; do
   scp -q -P "$PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
     root@"$IP":/workspace/mlkv/results/$f "$DEST/${f}.part" 2>>"$LOG" || true
   if [ -f "$DEST/${f}.part" ]; then
@@ -69,25 +70,17 @@ if ! python3 - "$DEST" <<'PY' >>"$LOG" 2>&1
 import sqlite3, sys, os
 dest = sys.argv[1]
 ok = True
-# llama: 600 (en+bn) or 900 (+te)
-p = os.path.join(dest, "llama.db")
-c = sqlite3.connect(p)
-assert c.execute("PRAGMA quick_check").fetchone()[0] == "ok"
-n = c.execute("select count(*) from generations").fetchone()[0]
-print("llama.db n=", n)
-print(c.execute("select lang, config, count(*) from generations group by 1,2").fetchall())
-if n < 600:
-    print("TOO FEW llama", n)
-    ok = False
-p = os.path.join(dest, "instr_first.db")
-c = sqlite3.connect(p)
-assert c.execute("PRAGMA quick_check").fetchone()[0] == "ok"
-n = c.execute("select count(*) from generations").fetchone()[0]
-print("instr_first.db n=", n)
-print(c.execute("select lang, config, count(*) from generations group by 1,2").fetchall())
-if n < 600:
-    print("TOO FEW instr_first", n)
-    ok = False
+need = {"v_trace_bn.db": 600, "agnostic.db": 600, "ratio.db": 800}
+for name, lo in need.items():
+    p = os.path.join(dest, name)
+    c = sqlite3.connect(p)
+    assert c.execute("PRAGMA quick_check").fetchone()[0] == "ok", name
+    n = c.execute("select count(*) from generations").fetchone()[0]
+    print(name, "n=", n)
+    print(c.execute("select lang, config, count(*) from generations group by 1,2").fetchall())
+    if n < lo:
+        print("TOO FEW", name, n)
+        ok = False
 if not ok:
     raise SystemExit("verify failed")
 print("VERIFY_OK")

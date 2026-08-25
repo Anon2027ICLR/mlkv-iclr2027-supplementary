@@ -15,6 +15,10 @@ ssh_opts="-n -o StrictHostKeyChecking=accept-new -o ConnectTimeout=12 -o BatchMo
 # refine: 100 x 2 x 2 = 400; oracle_depth: 669 x 3 = 2007;
 # ctx16k: 100 x 3 = 300. (qwen32b:600 pulls from its own pod: set STORES=qwen32b:600.)
 STORES="${STORES:-refine:400 oracle_depth:2007 ctx16k:300}"
+# Pod 1 (chain) finishes on ALL_ICLR10_CHAIN_DONE in iclr10_chain.log; pod 2
+# runs `e_iclr10.sh b3`, so it finishes on B3_DONE in iclr10_b3.log.
+MARKER="${MARKER:-ALL_ICLR10_CHAIN_DONE}"
+REMOTE_LOG="${REMOTE_LOG:-/workspace/iclr10_chain.log}"
 
 conn() {
   curl -s --max-time 15 -H "$AUTH" "https://rest.runpod.io/v1/pods/$POD" \
@@ -37,19 +41,13 @@ while true; do
     exit 2
   fi
   if [ -n "$IP" ] && [ -n "$PORT" ]; then
-    info=$(ssh $ssh_opts -p "$PORT" root@"$IP" '
-      if grep -q ALL_ICLR10_CHAIN_DONE /workspace/iclr10_chain.log 2>/dev/null; then
-        echo DONE; exit 0
-      fi
-      python3 - <<PY
-import sqlite3, os
-for s in ["slack_depth", "xinstr", "if_depth", "thsw"]:
-    p = f"/workspace/mlkv/results/{s}.db"
-    n = (sqlite3.connect(p).execute("select count(*) from generations")
-         .fetchone()[0] if os.path.exists(p) else 0)
-    print(f"rows {s}={n}")
-PY
-    ' 2>/dev/null || echo FAIL)
+    names=$(for e in $STORES; do printf '%s ' "${e%%:*}"; done)
+    info=$(ssh $ssh_opts -p "$PORT" root@"$IP" \
+      "if grep -q $MARKER $REMOTE_LOG 2>/dev/null; then echo DONE; exit 0; fi; \
+       for s in $names; do \
+         python3 -c \"import sqlite3,os,sys; p=f'/workspace/mlkv/results/{sys.argv[1]}.db'; \
+print('rows', sys.argv[1], '=', sqlite3.connect(p).execute('select count(*) from generations').fetchone()[0] if os.path.exists(p) else 0)\" \$s; \
+       done" 2>/dev/null || echo FAIL)
     say "remote: $info"
     if echo "$info" | grep -q DONE; then
       break
@@ -78,15 +76,15 @@ if [ -f "$DEST/q_percentiles_iclr10.json.part" ]; then
   mv "$DEST/q_percentiles_iclr10.json.part" "$DEST/q_percentiles_iclr10.json"
 fi
 scp -q -P "$PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
-  root@"$IP":/workspace/iclr10_chain.log "$DEST/iclr10_chain.log.part" 2>>"$LOG" || true
-if [ -f "$DEST/iclr10_chain.log.part" ]; then
-  mv "$DEST/iclr10_chain.log.part" "$DEST/iclr10_chain.log"
+  root@"$IP":"$REMOTE_LOG" "$DEST/$(basename "$REMOTE_LOG").part" 2>>"$LOG" || true
+if [ -f "$DEST/$(basename "$REMOTE_LOG").part" ]; then
+  mv "$DEST/$(basename "$REMOTE_LOG").part" "$DEST/$(basename "$REMOTE_LOG")"
 fi
 
-if ! python3 - "$DEST" <<'PY' >>"$LOG" 2>&1
+if ! python3 - "$DEST" $STORES <<'PY' >>"$LOG" 2>&1
 import sqlite3, sys, os
 dest = sys.argv[1]
-EXPECT = {"slack_depth": 2676, "xinstr": 600, "if_depth": 1338, "thsw": 600}
+EXPECT = {e.split(":")[0]: int(e.split(":")[1]) for e in sys.argv[2:]}
 for s, want in EXPECT.items():
     p = os.path.join(dest, f"{s}.db")
     c = sqlite3.connect(p)

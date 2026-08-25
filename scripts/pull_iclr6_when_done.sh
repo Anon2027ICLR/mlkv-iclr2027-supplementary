@@ -1,11 +1,10 @@
 #!/bin/bash
-# Local puller for the 2026-08-17 review-response arms (e_iclr3).
-# Waits for ALL_ICLR3_CHAIN_DONE (or the last optional marker if present),
-# then scp + verify + touch /workspace/SYNCED.
+# Local puller for e_iclr6 (constant w=256 at r=0.75 + random ranking control).
+# After a verified pull: touch SYNCED, then POST /pods/$POD/stop (guide §12).
 set -u
-POD="${POD:-5va03mfii37sxv}"
+POD="${POD:-}"
 DEST="${DEST:-$HOME/working_space/research/mlkv/results}"
-LOG="${LOG:-$HOME/working_space/research/mlkv/results/pull_iclr3.log}"
+LOG="${LOG:-$HOME/working_space/research/mlkv/results/pull_iclr6.log}"
 AUTH="Authorization: Bearer $(cat "$HOME/.config/runpod/api_key")"
 mkdir -p "$DEST"
 say() { echo "$(date -u +%FT%TZ) $*" | tee -a "$LOG"; }
@@ -22,6 +21,7 @@ print(p.get('desiredStatus',''), ip, pm.get('22') or '')
 "
 }
 
+[ -n "$POD" ] || { echo "set POD"; exit 2; }
 say "ARMED dest=$DEST pod=$POD"
 while true; do
   read -r ST IP PORT < <(conn)
@@ -32,18 +32,12 @@ while true; do
   fi
   if [ -n "$IP" ] && [ -n "$PORT" ]; then
     info=$(ssh $ssh_opts -p "$PORT" root@"$IP" '
-      # Prefer the wrapper-all marker; fall back to chain if extras never ran.
-      if grep -q ALL_ICLR3_ALL_DONE /workspace/iclr3_all.log 2>/dev/null; then echo DONE; exit 0; fi
-      if grep -q ALL_ICLR3_CHAIN_DONE /workspace/iclr3_chain.log 2>/dev/null \
-         && ! pgrep -f "e_iclr3.sh|run_iclr3_all" >/dev/null; then
-        echo DONE
-        exit 0
-      fi
+      if grep -q ALL_ICLR6_CHAIN_DONE /workspace/iclr6_chain.log 2>/dev/null; then echo DONE; exit 0; fi
       python3 -c "
 import sqlite3, os
-def n(p):
-    return sqlite3.connect(p).execute(\"select count(*) from generations\").fetchone()[0] if os.path.exists(p) else 0
-print(f\"rows llama={n(\"/workspace/mlkv/results/llama.db\")} instr_first={n(\"/workspace/mlkv/results/instr_first.db\")}\")
+p=\"/workspace/mlkv/results/constant.db\"
+n=sqlite3.connect(p).execute(\"select count(*) from generations\").fetchone()[0] if os.path.exists(p) else 0
+print(f\"rows constant={n}\")
 "
     ' 2>/dev/null || echo FAIL)
     say "remote: $info"
@@ -55,9 +49,7 @@ print(f\"rows llama={n(\"/workspace/mlkv/results/llama.db\")} instr_first={n(\"/
 done
 
 say "pulling"
-for f in llama.db llama-snapshot.db llama-final.db \
-         instr_first.db instr_first-snapshot.db instr_first-final.db \
-         q_percentiles_llama.json; do
+for f in constant.db constant-snapshot.db constant-final.db; do
   scp -q -P "$PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
     root@"$IP":/workspace/mlkv/results/$f "$DEST/${f}.part" 2>>"$LOG" || true
   if [ -f "$DEST/${f}.part" ]; then
@@ -68,28 +60,14 @@ done
 if ! python3 - "$DEST" <<'PY' >>"$LOG" 2>&1
 import sqlite3, sys, os
 dest = sys.argv[1]
-ok = True
-# llama: 600 (en+bn) or 900 (+te)
-p = os.path.join(dest, "llama.db")
+p = os.path.join(dest, "constant.db")
 c = sqlite3.connect(p)
 assert c.execute("PRAGMA quick_check").fetchone()[0] == "ok"
 n = c.execute("select count(*) from generations").fetchone()[0]
-print("llama.db n=", n)
+print("constant.db n=", n)
 print(c.execute("select lang, config, count(*) from generations group by 1,2").fetchall())
-if n < 600:
-    print("TOO FEW llama", n)
-    ok = False
-p = os.path.join(dest, "instr_first.db")
-c = sqlite3.connect(p)
-assert c.execute("PRAGMA quick_check").fetchone()[0] == "ok"
-n = c.execute("select count(*) from generations").fetchone()[0]
-print("instr_first.db n=", n)
-print(c.execute("select lang, config, count(*) from generations group by 1,2").fetchall())
-if n < 600:
-    print("TOO FEW instr_first", n)
-    ok = False
-if not ok:
-    raise SystemExit("verify failed")
+if n < 900:
+    raise SystemExit(f"too few rows: {n} (need 900 for chain)")
 print("VERIFY_OK")
 PY
 then
@@ -98,4 +76,8 @@ then
 fi
 ssh $ssh_opts -p "$PORT" root@"$IP" 'touch /workspace/SYNCED && echo SYNCED'
 say "PULL_OK SYNCED"
+# Guide §12: SYNCED race — API stop is what actually ends the GPU bill.
+code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST -H "$AUTH" \
+  "https://rest.runpod.io/v1/pods/$POD/stop")
+say "stop request -> HTTP $code"
 exit 0
