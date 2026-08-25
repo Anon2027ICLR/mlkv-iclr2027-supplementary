@@ -200,6 +200,36 @@ for lang, what in [("bn", 101), ("te", 105)]:
     ci_row(f"xinstr {lang} w-hat (w{what})", XI[lang]["baseline"],
            XI[lang][f"snapkv@r0.75:w{what}"])
 
+# ICLR10 (fifth review). oracle_depth: the per-item oracle window beside
+# w-hat on the full pool, plus their head-to-head. ctx16k: the same shipped
+# integer at twice the prefill. qwen32b: the scale slice on its own stack.
+# refine: the shipped T06 layout at the default window (a mechanism cell
+# like the IF rows). All self-contained; pairs stay inside each store.
+OD = load("oracle_depth.db")
+ci_row("full pool te w-hat (oracle arm)", OD["te"]["baseline"],
+       OD["te"]["snapkv@r0.75:w247"])
+ci_row("full pool te oracle w_i", OD["te"]["baseline"],
+       OD["te"]["snapkv@r0.75:wq167"])
+ci_row("h2h te oracle-vs-what", OD["te"]["snapkv@r0.75:w247"],
+       OD["te"]["snapkv@r0.75:wq167"], closure=False)
+
+CK = load("ctx16k.db")
+ci_row("te @16k w64", CK["te"]["baseline"], CK["te"]["snapkv@r0.75"])
+ci_row("te @16k w-hat", CK["te"]["baseline"], CK["te"]["snapkv@r0.75:w247"])
+ci_row("te @16k recovery what-vs-w64", CK["te"]["snapkv@r0.75"],
+       CK["te"]["snapkv@r0.75:w247"], closure=False)
+
+QB = load("qwen32b.db")
+for lang, what in [("bn", 183), ("te", 247)]:
+    ci_row(f"32B {lang} @w64", QB[lang]["baseline"], QB[lang]["snapkv@r0.75"])
+    ci_row(f"32B {lang} w-hat", QB[lang]["baseline"],
+           QB[lang][f"snapkv@r0.75:w{what}"])
+
+RF = load("refine.db")
+for lang in ("en", "bn"):
+    ci_row(f"refine {lang} @w64", RF[lang]["baseline"],
+           RF[lang]["snapkv@r0.75"])
+
 # The instruction-first cells are mechanism-gate cells, not w-hat closures:
 # the treatment is the default window with the question last (V=1 by
 # construction), judged by the same |delta| <= 3pp gate and CI vocabulary.

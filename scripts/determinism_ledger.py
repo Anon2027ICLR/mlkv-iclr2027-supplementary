@@ -36,6 +36,7 @@ STORES = [
     "llama.db", "instr_first.db", "agnostic.db", "ratio.db",
     "pyramidkv.db", "constant.db", "depth.db", "constant_depth.db",
     "slack_depth.db", "xinstr.db", "if_depth.db", "thsw.db",
+    "refine.db", "oracle_depth.db", "ctx16k.db", "qwen32b.db",
 ]
 
 DEFAULT_W = 64
