@@ -55,19 +55,20 @@ The same integers transfer unchanged to a
 second evictor with the same window ($+26$/$+31$\,pp on its own
 baselines), and the residual is not a visibility failure:
 with the question moved last, fully visible by construction, eviction
-still costs $-3.4$\,pp ($[-5.3,-1.2]$, $n{=}669$).
+still costs $-3.4$\,pp ($[-5.3,-1.2]$, $n{=}669$), and a per-item
+oracle window ($V_i{=}1$ exactly) recovers $0.6$\,pp of it
+($[-1.2,+2.3]$).
 \end{abstract}
 
 % =====================================================================
 \section{Introduction}
 
-Serving a language model involves a surprising number of integers that
-count tokens: context limits, cache budgets, decode caps. Because
+Serving a language model involves a surprising number of integers
+that count tokens: context limits, cache budgets, decode caps. Because
 tokenizers are not language-neutral \citep{petrov2023language}, each
-means something different in different languages, and the consequences
-have been documented for the budgets a user can see --- cost, latency,
-usable context \citep{marchisio2024multilingual,
-marie2025lowbit}. This paper is about a token-denominated integer that
+means something different in different languages; the consequences are
+documented for the budgets a user can see --- cost, latency, usable
+context \citep{marchisio2024multilingual, marie2025lowbit}. This paper is about a token-denominated integer that
 users cannot see. It sits inside the scoring rule of a widely used family
 of KV-cache eviction methods, and its default value decides whether the
 model is allowed to look at the question.
@@ -76,19 +77,17 @@ SnapKV \citep{li2024snapkv} and its descendants do not read the whole
 prompt when they decide what to evict: they score the cached keys against
 the last $w$ tokens --- the \emph{observation window} ---
 and keep the highest-scoring entries. kvpress ships
-$w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships $w{=}32$. In
-the retrieval-QA layout \texttt{passages + question + instruction +
-chat suffix}, that window is consumed from the right. Write $c$ for the
-number of tokens standing after the question: if $c > w$, the window
-contains no token of the question at all, and the scorer decides what
-to keep without seeing what was asked (Figure~\ref{fig:schematic}).
+$w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships $w{=}32$. In the retrieval-QA layout \texttt{passages + question +
+instruction + chat suffix}, that window is consumed from the right.
+Write $c$ for the tokens standing after the question: if $c > w$, the
+window holds no token of the question, and the scorer decides what to
+keep without seeing what was asked (Figure~\ref{fig:schematic}).
 
-On Qwen3-4B, the tokens standing after the question --- a one-line QA
-instruction plus the chat suffix --- number 25 in English, 107 in Bengali
-and 167 in Telugu. At the shipped default,
-English prompts are safe while Bengali and Telugu prompts are blind, and
-they lose 15 and 20 points on the full validation pools
-(Section~\ref{sec:autowindow}). The mechanism, however, is not
+On Qwen3-4B those trailing tokens --- a one-line QA instruction plus
+the chat suffix --- number 25 in English, 107 in Bengali and 167 in
+Telugu: at the shipped default, English prompts are safe while Bengali
+and Telugu are blind, losing 15 and 20 points on the full validation
+pools (Section~\ref{sec:autowindow}). The mechanism, however, is not
 about those languages: padding the English instruction until $c$ passes
 $w$ reproduces the cliff without leaving English; a JSON response schema
 does the same and puts its trailing block one token from Telugu's; and a
@@ -134,7 +133,8 @@ default, joining the Bengali misses at Gemma-3-4b-it ($-6$), Qwen3-8B
 and Llama-3.1-8B ($-8$) --- and we show the residual is not, in the
 main, a visibility failure: moving the question to the end of the
 prompt --- full visibility by construction --- still costs $-3.4$\,pp
-($[-5.3,-1.2]$) at the full pool, and the items the rule leaves broken
+($[-5.3,-1.2]$) at the full pool, a per-item oracle window closes none
+of it, and the items the rule leaves broken
 are no poorer in fully visible questions than their pool (Fisher
 $p{=}.62$).
 
@@ -153,8 +153,9 @@ intervals, and the misses.
 (iv)~We diagnose the residual where the gate is missed and confirm the
 diagnosis at power: with the question last --- fully visible by
 construction --- the full Telugu pool still pays $-3.4$\,pp
-($[-5.3,-1.2]$), within the registered $\pm3$\,pp of the $\hat w$
-residual. What remains is eviction cost, not blindness.
+($[-5.3,-1.2]$), and a per-item oracle window ($V_i{=}1$ exactly)
+leaves $-5.1$ of $\hat w$'s $-5.7$. What remains is eviction cost,
+not blindness.
 (v)~We show the integer belongs to the prompt, not the method: it
 transfers unchanged to a second evictor inheriting the same window,
 while at matched ratios a query-agnostic scorer loses in every
@@ -162,9 +163,9 @@ language, English included, and one larger constant misses the Bengali
 gate the rule meets; neither outperforms the measured window anywhere
 we ran both.
 Appendix~\ref{app:claims} maps every claim to its evidence and its
-interval status in one table; the broader offer is the discipline
-itself --- any constant that counts tokens is a measurement in
-disguise, and this paper shows what auditing one costs and buys.
+interval status in one table. The broader offer is the discipline: a
+constant that counts tokens is a measurement in disguise, and the
+paper shows what auditing one costs and buys.
 
 \paragraph{Scope.}
 We study a method family rather than a shipped production default: vLLM
@@ -178,8 +179,8 @@ non-English --- two of our eight languages at $w{=}64$, six at 32,
 English never. That last clause is why the number goes unaudited:
 no tested window costs English anything at this ratio ($w{=}32$ vs
 $w{=}64$: $2$\,pp, ns), so an English-validated
-benchmark cannot tell the two shipped constants apart, and nothing in
-standard practice objects to whichever ships. Of the surveyed
+benchmark cannot tell the two shipped constants apart; nothing in standard
+practice objects to whichever ships. Of the surveyed
 templates, most of what ships is safe --- single-shot retrieval
 defaults leave 0--5 tokens after the question --- and the long blocks
 concentrate where prompts are iterated (Appendix~\ref{app:wild}).
@@ -280,10 +281,9 @@ variant leaves every conclusion it re-scores unchanged
 (Appendix~\ref{app:r2}), with one qualification stated where it arises:
 the slack-ablation head-to-head keeps its ordering but not its
 individual significance under that scorer (Appendix~\ref{app:ci}).
-Paired comparisons are two-sided McNemar
-tests, reported with their discordant counts (fixed/broken) so the
-reader sees what the $p$-value is made of. Cells pair 100 items unless
-marked otherwise (the full-pool re-runs, and the $n{=}200$ supporting
+Paired comparisons are two-sided McNemar tests, reported with their
+discordant counts (fixed/broken). Cells pair 100 items unless marked
+otherwise (the full-pool re-runs, and the $n{=}200$ supporting
 comparisons pairing the same 100 questions at two context budgets).
 
 \paragraph{The quantities.}
@@ -338,11 +338,9 @@ question. Widths are item medians; passages continue leftwards.}
 \label{fig:schematic}
 \end{figure}
 
-This section establishes three facts about the tail the scorer ranks
-against: damage tracks the window
-against the tail rather than against the language; it appears in English
-as soon as we lengthen the tail; and it appears at a constant that is
-already shipped.
+This section establishes three facts: damage tracks the window
+against the tail, not the language; it appears in English as soon as
+we lengthen the tail; and it appears at a constant already shipped.
 
 \paragraph{A window sweep across five languages.}
 Table~\ref{tab:cliff} and Figure~\ref{fig:triptych}a report paired damage
@@ -378,11 +376,11 @@ te & 167 & 56 & \blind{${-}19^{*}$} & \blind{${-}21^{*}$} & \blind{${-}19^{*}$} 
 \end{tabular}
 \end{table}
 
-English never moves --- not because every tested window holds its whole
-question (at $w{=}32$ the slack past its block is seven tokens, against
-questions of 6--24) but empirically: partial visibility without damage
-recurs on Gemma (Appendix~\ref{app:gemma}). Bengali is damaged in every blind cell ($-13$ to $-21$\,pp, all
-$p<.01$) and comes back to $-3$\,pp only at $w{=}176$, which is $c{+}69$.
+English never moves --- not because every tested window holds its
+whole question ($w{=}32$ leaves seven tokens of slack against
+questions of 6--24) but empirically: partial visibility without
+damage recurs on Gemma (Appendix~\ref{app:gemma}). Bengali is damaged in every blind cell ($-13$ to $-21$\,pp, all
+$p<.01$) and comes back to $-3$\,pp only at $w{=}176$ ($c{+}69$).
 Telugu is damaged in all five cells, including $w{=}176$ --- for Telugu
 that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$,
 uncorrected; Appendix~\ref{app:r2}); its $-14$-then-$-13$ wiggle over
@@ -400,13 +398,12 @@ is evidently not sufficient --- Telugu at $c{+}9$ is still down 13
 points --- which is what Section~\ref{sec:dose} takes up.
 
 \paragraph{The same cliff, constructed in English.}
-If the mechanism is trailing length rather than language, then padding an
-English instruction should reproduce the cliff, and widening $w$ past the
-new $c$ should remove it. We pad the English QA instruction with
+If the mechanism is trailing length, padding an English instruction
+should reproduce the cliff and widening $w$ past the new $c$ should
+remove it. We pad the English QA instruction with
 content-free filler to four lengths, which put $c$ at $57$, $73$, $105$
 and $137$ tokens, and sweep five windows on the same English items
-(Figure~\ref{fig:triptych}b). Accuracy at $w{=}32$ is $81/86/82/78\%$
-against per-condition maxima of $92/94/93/91\%$.
+(Figure~\ref{fig:triptych}b; Table~\ref{tab:padgrid}).
 
 The threshold moves with the pad: in each condition accuracy peaks at the
 first tested window exceeding that condition's $c$ and at no earlier one
@@ -415,18 +412,16 @@ $w{=}104$ --- one token short of its $c{=}105$ --- scores
 $90\%$ where $w{=}144$ scores $93\%$. Plotted against the slack $w-c$ the
 four conditions collapse onto one curve (Figure~\ref{fig:triptych}b):
 every window short of its condition's trailing block scores at most
-$90\%$, every window clearing it at least $91\%$ --- a separation we
-read as a description of the grid, not a test, since neighbouring
-cells sit within the noise of 100 items. Across these curves only the
-number of tokens between the question and the end of the prompt
-changed.
+$90\%$, every window clearing it at least $91\%$ --- a separation
+we read as a description of the grid, not a test, since neighbouring
+cells sit within 100-item noise; across these curves only the number
+of tokens between the question and the end of the prompt changed.
 \paragraph{A constant that is already shipped.}
 kvpress ships $w{=}64$; the opt-in RocketKV path in TensorRT-LLM ships
 $w{=}32$. Moving from the first constant to the second, on matched items,
-costs Thai $4.5$\,pp (2/11, $p{=}.022$) and Swahili $6.5$\,pp (1/14,
-$p{=}.001$; $n{=}200$ per language --- the same 100 questions at two
-context budgets, so we lean on the discordant counts rather than the
-$p$-values --- store \texttt{w32}). Both languages sit above the
+costs Thai $4.5$\,pp (2/11, $p{=}.022$) and Swahili $6.5$\,pp
+(1/14, $p{=}.001$; $n{=}200$ --- the same 100 questions at two context
+budgets, so we lean on the discordant counts; store \texttt{w32}). Both languages sit above the
 threshold at $w{=}64$ and below it at $w{=}32$: the failure is not
 confined to the two scripts with the longest instructions but reaches
 any language whose trailing block outgrows whichever constant is in
@@ -459,10 +454,9 @@ ceiling within about ten tokens of slack, Telugu needs eighty.}
 \section{The slack must be question-sized}
 \label{sec:dose}
 
-Section~\ref{sec:threshold} leaves one quantity unmeasured. If the window
-has to reach past the trailing block before the scorer sees the question,
-how far past? Telugu at $c{+}9$ was still $13$ points down, so ``clear
-$c$'' is not the answer.
+How far past the trailing block must the window reach? Telugu at
+$c{+}9$ was still $13$ points down, so ``clear $c$'' is not the
+answer.
 
 \paragraph{A dose ladder.}
 We sweep five windows at fixed offsets above the measured $c$ on Telugu,
@@ -481,9 +475,9 @@ $-2$\,pp), including a $c{+}4$ rung as useless there as here
 (Appendix~\ref{app:dose}).
 
 \paragraph{Visibility as the dose.}
-Question length varies across items (34--122 tokens here), so a
-single window already spreads visibility across items, and each item
-passes through several values of $V$ as the window widens. Pooling the five
+Question length varies across items (34--122 tokens), so one window
+already spreads visibility across items, and each item passes through
+several values of $V$ as the window widens. Pooling the five
 treated cells and binning by per-item $V$: items with $V<0.25$ lose
 $16.1$\,pp ($n{=}118$, $p{<}10^{-3}$), while items with $V{=}1$ show no
 detectable effect ($+0.7$\,pp, $n{=}135$; 9/8 discordant). Across the
@@ -502,28 +496,27 @@ that recover once $V$ reaches $1$ (Appendix~\ref{app:dose}). We claim the
 window-level dose curve and the within-item trend, not a monotone
 per-item bin profile.
 
-Slack therefore has to be counted in units of the question rather than in
-constant tokens: a slack the size of an English question leaves the
-median Telugu item at $V{=}0.31$.
+Slack therefore counts in units of the question, not constant
+tokens: an English-question-sized slack leaves the median Telugu item
+at $V{=}0.31$.
 
 % =====================================================================
 \section{AutoWindow: one integer, and where it stops}
 \label{sec:autowindow}
 
 \paragraph{The rule.}
-Both quantities that Sections~\ref{sec:threshold} and~\ref{sec:dose}
-identify are available before any forward pass: $c$ from the tokenizer
-and the chat template, a question-sized slack from a held-out sample
-of questions. We therefore set $\hat w = c + Q_{90}$: one integer per
-(model, language, template), computed offline, no delimiter. A per-item window $w_i{=}c+|Q_i|$ would give $V_i{=}1$ by
-construction, and where a serving path can locate the question in every
-request it is the natural refinement. We commit to the percentile
-because it is computed once, offline, per (model, language, template):
-per-item sizing puts a question-locating parser on the serving path
---- our own measurement script needs a fallback when tokenization
-merges the boundary (Appendix~\ref{app:measure}) --- which is the
-assumption FINCH's delimiter buys its way out of and we decline
-\citep{corallo2024finch}. The language-level percentile is a deliberately weaker commitment:
+Both quantities Sections~\ref{sec:threshold} and~\ref{sec:dose}
+identify are available before any forward pass: $c$ from the
+tokenizer and chat template, a question-sized slack from held-out
+questions. We set $\hat w = c + Q_{90}$: one integer per (model,
+language, template), computed offline, no delimiter. A per-item window $w_i{=}c+|Q_i|$ would give $V_i{=}1$ by
+construction, and where a serving path can locate the question in
+every request it is the natural refinement --- but a preregistered
+full-pool run of that oracle buys almost nothing (the residual
+paragraph below), and per-item sizing puts a question-locating parser
+on the serving path, the assumption FINCH's delimiter buys its way
+out of and we decline \citep{corallo2024finch}
+(Appendix~\ref{app:measure}). The language-level percentile is a deliberately weaker commitment:
 $\hat w$ covers the entire question for $98/113$ Bengali and $611/669$
 Telugu items; the remaining decile is registered leftover, not a
 claim.
@@ -572,16 +565,15 @@ settled at the full pool below). Across the eight-language grid, the
 languages the default window does not blind stay within $3$\,pp of
 baseline bar one marginal exception (Appendix~\ref{app:grids}): the
 gate is a statement about the languages it does.
-Re-run on the entire validation pools under the preregistered
-everything-there-is stopping rule (Appendix~\ref{app:ci}), Bengali
+Re-run on the entire validation pools (the preregistered
+everything-there-is rule, Appendix~\ref{app:ci}), Bengali
 holds the gate ($-1.8$, $n{=}113$; its capped pool adds no discordant
 item beyond the original hundred) with a $+13.3$\,pp recovery (18/3,
 $p{=}.0015$); Telugu does not: $-5.7$\,pp (19/57, CI $[-7.8,-3.1]$),
 against a $-20.2$\,pp default hole ($[-22.4,-17.3]$) and a
-$+14.5$\,pp recovery ($p{=}7{\times}10^{-18}$). The original hundred items reproduce
-byte-identically and still sit at zero; the 569 new items sit at $-6.7$.
-The $n{=}100$ gate was sampling luck, and we report the full-pool number
-as the headline.
+$+14.5$\,pp recovery ($p{=}7{\times}10^{-18}$). The original hundred reproduce byte-identically and still sit at
+zero; the 569 new items sit at $-6.7$ --- the $n{=}100$ gate was
+sampling luck, and the full-pool number is the headline.
 
 \paragraph{The percentile, separated from a constant slack.}
 Is $Q_{90}$ doing work a fixed slack would not? A preregistered
@@ -599,11 +591,10 @@ ordering holds but the $c{+}16$ head-to-head alone is ns
 $n{=}100$ pooling.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
-The same logic applies when the tail is a response format
-rather than a translated instruction. An earlier run sized the window
-from the \emph{unpadded} English instruction ($w{=}41$, below the very
-default it meant to improve on) and cost $23$\,pp at the 120-token
-schema. Measuring $c$ with the
+The same logic applies when the tail is a response format. An
+earlier run sized the window from the \emph{unpadded} English
+instruction ($w{=}41$, below the very default it meant to improve on)
+and cost $23$\,pp at the 120-token schema. Measuring $c$ with the
 schema in place gives $72$, $166$ and $213$ tokens, hence
 $\hat w = 90$, $184$ and $231$. Panel~(B) shows the same formula closing
 all three tails while breaking none of the items the default window
@@ -616,28 +607,32 @@ removed by the same integer (both runs: Appendix~\ref{app:schema}).
 \paragraph{A second tokenizer.}
 Gemma-3-4b-it tokenizes the same Bengali instruction to $26$ tokens
 against Qwen's $102$ and its questions to a median of $11$, so both
-inputs to the rule move: $c$ is $27/32/44$ and $Q_{90}$ is
-$18/18/20$ for English, Bengali and Telugu, giving $\hat w = 45/50/64$.
+inputs move: $c{=}27/32/44$ and $Q_{90}{=}18/18/20$ for en/bn/te,
+giving $\hat w = 45/50/64$.
 For Telugu the rule returns exactly the constant kvpress already
 ships, and Telugu meets the gate there ($-3$\,pp; CI $[-8.6, +4.2]$):
 a window rule worth running should also be able to say when the
 shipped constant already passes. For Bengali, $\hat w{=}50$ leaves
 $-6$\,pp, which misses the same $\pm 3$\,pp criterion the 4B cells met
 --- and the default leaves $-5$: one plateau, on which the rule
-neither digs nor fills a hole; its value on this tokenizer is saying
-correctly that the default carries no blind mode to remove
-(Appendix~\ref{app:gemma}).
+neither digs nor fills a hole; its value here is saying correctly
+that there is no blind mode to remove (Appendix~\ref{app:gemma}).
 
-\paragraph{Scale, and a third family.}
+\paragraph{Scale, prefill, and a third family.}
 A Qwen3-8B slice reproduces the phenomenon and not the gate: the
-default costs Bengali $17$\,pp, $\hat w$ recovers $+9$ and remains $8$
-below baseline ($p{=}.008$); English is at ceiling
-(Appendix~\ref{app:8b}). Llama-3.1-8B-Instruct re-measures both
-inputs on a third tokenizer family ($c{=}125$, $Q_{90}{=}87$ for
-Bengali, $\hat w{=}212$): the hole reproduces at $-18$\,pp
-($[-21.5, -9.2]$), the formula recovers $+10$ and leaves $-8$
-($p{=}.057$), the same residual as 8B; we do not claim it closes on
-either model (Appendix~\ref{app:llama}).
+default costs Bengali $17$\,pp, $\hat w$ recovers $+9$ and remains
+$8$ below baseline; English is at ceiling (Appendix~\ref{app:8b}). Llama-3.1-8B-Instruct re-measures both
+inputs on a third tokenizer family ($\hat w{=}212$ for Bengali): the
+hole reproduces at $-18$\,pp ($[-21.5,-9.2]$), the formula recovers
+$+10$ and leaves $-8$; we do not claim it closes on either model
+(Appendix~\ref{app:llama}). At Qwen3-32B the Bengali hole persists,
+certified ($-12.0$ $[-13.9,-4.5]$), $\hat w$ misses the gate at $-5$,
+and the Telugu cell cannot distinguish a hole from noise at $n{=}100$
+($[-12.4,+5.6]$) --- scale softens the magnitudes
+(Appendix~\ref{app:scale16k}). At twice the prefill nothing moves:
+16k Telugu loses $-15.0$ ($[-19.7,-5.7]$) at the default, and the
+SAME $\hat w{=}247$ --- its inputs are prefill-free --- meets the
+gate with a $+13.0$ recovery ($p{=}.0023$).
 
 \paragraph{What the residuals are not.}
 Four cells miss the closure gate: Bengali at Gemma ($-6$), 8B and
@@ -649,46 +644,48 @@ preregistered instruction-first re-run of the entire Telugu pool
 certifies that eviction still costs $-3.4$\,pp there ($p{=}.0027$, CI
 $[-5.3,-1.2]$) --- within the registered $\pm3$\,pp of the $\hat w$
 residual --- with no concentration by gold position or question length
-(Fisher $p \ge .17$). The missed cells agree in proportion-test form:
-each residual is as rich in fully visible questions as its pool
-($89\%$ vs $91\%$ at the full Telugu pool, 8/8 vs $88\%$ at 8B, 10/11
-vs $88\%$ at Llama, all $p \ge .59$), and at Gemma the gap is a
-plateau from 48 to 64
+(Fisher $p \ge .17$). A preregistered per-item oracle window ---
+$V_i{=}1$ exactly, no percentile leftover --- leaves $-5.1$
+($[-7.3,-2.4]$), indistinguishable from $\hat w$ ($+0.6$,
+$[-1.2,+2.3]$); its residual is depleted at the front gold position
+($10.7\%$ vs $33.3\%$, $p{=}.0001$) and concentrated mid-document
+--- the fingerprint of retrieval-difficulty eviction cost, which
+visibility, constant across positions, cannot produce. The missed cells agree in
+proportion-test form: each residual is as rich in fully visible
+questions as its pool ($89\%$ vs $91\%$ at the full Telugu pool, 8/8
+vs $88\%$ at 8B, 10/11 vs $88\%$ at Llama, all $p \ge .59$), and at
+Gemma the gap is a plateau from 48 to 64
 (Appendices~\ref{app:gemma}--\ref{app:llama}, \ref{app:ci}).
 Widening the window turns off the blind mode; it does not remove the
 ordinary cost of discarding three quarters of the cache.
 
 Nor is the integer a property of one method: dropped unchanged into
 PyramidKV \citep{cai2024pyramidkv}, which inherits the same window,
-it takes Bengali from $-28$ to $-2$ and Telugu from $-32$ to $-1$ on
-that method's own baselines (Appendix~\ref{app:rivals}).
+it takes Bengali from $-28$ to $-2$ and Telugu from $-32$ to $-1$
+(own baselines; Appendix~\ref{app:rivals}).
 
 % =====================================================================
 \section{Analysis}
 \label{sec:analysis}
 
-Pooling the window sweep (3{,}000 generations over 500 items) and
-regressing correctness on a compression indicator and a blindness
-indicator $\mathbf{1}[w<c]$, with standard errors clustered by item, gives
+Pooling the window sweep (3{,}000 generations, 500 items) and
+regressing correctness on compression and blindness
+($\mathbf{1}[w<c]$) indicators, errors clustered by item, gives
 $+0.09$ log-odds for compression when the question is visible
-(95\% CI $[-0.05, 0.23]$) and $-1.06$ for blindness ($z{=}{-}9.4$,
-$p{<}.001$; uncompressed rows are never blind, so the interaction
-equals blindness). We cannot distinguish the compression cost from
+($[-0.05, 0.23]$) and $-1.06$ for blindness ($z{=}{-}9.4$;
+uncompressed rows are never blind, so the interaction equals
+blindness). We cannot distinguish the compression cost from
 zero when the scorer sees the question --- not a demonstration that it
 is zero: the interval admits a small effect either way, and excludes
-anything resembling the blindness term. (On the sweep alone AIC
-prefers language fixed effects --- five languages cannot separate a
-threshold from a per-language constant; the language-fixed experiments
-and the dose ladder do, Appendix~\ref{app:dose}.)
+anything resembling the blindness term. (AIC model comparison: Appendix~\ref{app:dose}.)
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
 (Bengali $-3$\,pp, ns): the failure needs a question matched against
-passages, not merely a long prompt. Two scorers
-designed never to look at the question \citep{devoto2025expected,
-oren2024transformers} fail differently and worse, costing even
-English $14$ and $8$\,pp at a ratio where no window costs it anything
-(Appendix~\ref{app:rivals}). Early-stack pilots of 4-bit KV
+passages, not merely a long prompt. Two scorers that never look at the question
+\citep{devoto2025expected, oren2024transformers} fail differently and
+worse, costing even English $14$ and $8$\,pp where no window costs it
+anything (Appendix~\ref{app:rivals}). Early-stack pilots of 4-bit KV
 quantization damaged languages in a non-fertility order (not re-run on
 the campaign stack); a capacity mechanism exists in a different regime
 --- at aggressive eviction even long-passage English items fail ---
@@ -699,22 +696,21 @@ use high-dose fertility slopes as evidence about the window.
 % =====================================================================
 \section{Limitations}
 
-The failure needs a layout in which something long stands between the
-question and the end of the prompt; a chat deployment that puts the
-question last has $V{=}1$ by construction and nothing here applies to
-it. The tail must also be long in the deployment's own terms: serving
-one \emph{English} instruction to Bengali and Telugu questions
-($c{=}25$), a preregistered arm found no significant damage at the
-default window ($-3$/$-4$\,pp, ns at $n{=}100$;
-Appendix~\ref{app:xinstr}) --- the blind mode as measured requires a
-tail long enough to hide the whole question.
+The failure needs something long standing between the question and
+the end of the prompt; a deployment that puts the question last has
+$V{=}1$ and nothing here applies. The tail must also be long in the deployment's own terms --- one
+\emph{English} instruction serving Bengali and Telugu questions
+($c{=}25$) produced no significant damage at the default window
+($-3$/$-4$\,pp, ns; Appendix~\ref{app:xinstr}) --- and even a fully
+hiding tail is not sufficient: the shipped refine layout, blind for
+every item, shows no certified damage at $n{=}100$
+(Appendix~\ref{app:wild}).
 
-Two properties of the remedy are by design, not oversight. A
-language-level percentile leaves the longest decile of questions below
-$V{=}1$; and because SnapKV protects the window it scores from, a very
-large $w$ at a very aggressive ratio would tax the content budget ---
-small at this paper's ratio, measured rather than predicted at
-$r{=}0.9375$ (Appendix~\ref{app:rivals}).
+Two properties of the remedy are by design, not oversight: the
+percentile leaves the longest question decile below $V{=}1$, and
+because SnapKV protects the window it scores from, a very large $w$
+at an aggressive ratio taxes the content budget --- small here,
+measured at $r{=}0.9375$ (Appendix~\ref{app:rivals}).
 Deploying the rule assumes the prompt family is known: one integer
 per trailing-block variant, so mixed traffic needs per-family
 measurement or the maximum over families --- the mis-sized schema run
@@ -722,28 +718,28 @@ is what skipping it looks like. On the surveyed templates that
 maximum is the agent scaffold's $c{=}221$, $\hat w{=}239$ in English;
 Appendix~\ref{app:rivals}'s $w{=}256$ row prices a window that size
 --- at $r{=}0.9375$ it protects half the retained cache and costs
-English nine points. For a deployer the guidance splits: sizing
-the window removes the blind mode in every model family where the default
-digs one ($+9$ to $+19$\,pp at $n{=}100$, $+13$/$+14$ at the full
-pools), while the residual is a property of eviction at that ratio,
-which no window we tested removes --- the lever left is retaining more
-cache, not resizing the window (Appendix~\ref{app:rivals}).
+English nine points. For a deployer the guidance splits: sizing the window removes the
+blind mode wherever the default digs one ($+9$ to $+19$\,pp at
+$n{=}100$, $+13$/$+14$ at the full pools); the residual is a property
+of eviction at that ratio, which no window --- oracle included ---
+removes: the lever left is retaining more cache
+(Appendix~\ref{app:rivals}).
 
 Our items are constructed rather than drawn from a standard suite
 --- a deliberate trade: published suites vary question length,
 instruction length and language together, exactly the confound we
 must hold fixed, at the price of leaderboard comparability. The
 headline cells now rest on the full validation pools (669 Telugu, 113
-Bengali) --- enough to certify the
-Telugu hole ($[-22.4,-17.3]$) and its residual ($[-7.8,-3.1]$), the
-slack separation ($[+1.9,+7.0]$) and the
-instruction-first residual ($[-5.3,-1.2]$), while
-Bengali's capped pool leaves its interval wide ($[-8.0,+5.2]$).
-Other cells rest on 100 items, with closure intervals of roughly
-$\pm 7$--$9$\,pp (Appendix~\ref{app:ci}). Finally, one primary 4B
-model carries the headline result; the 8B slice shares its tokenizer
---- replication in scale, not an independent sample --- and one
-contrast tokenizer cannot map the space of tokenizers.
+Bengali) --- enough to certify the Telugu hole, its residual, the
+slack separation and the instruction-first residual
+(Appendix~\ref{app:ci}), while Bengali's capped pool leaves its
+interval wide ($[-8.0,+5.2]$); other cells rest on 100 items, with
+closure intervals of roughly $\pm 7$--$9$\,pp
+(Appendix~\ref{app:ci}). Finally, one primary 4B
+model carries the headline result; the 8B and 32B slices share its
+tokenizer --- replications in scale, not independent samples, and at
+32B the effects soften to where $n{=}100$ leaves Telugu inconclusive
+--- and one contrast tokenizer cannot map the space of tokenizers.
 
 % =====================================================================
 \section{Conclusion}
@@ -753,12 +749,12 @@ trailing instructions are not. Two quantities, both computable before any infere
 outcome: the trailing block $c$ and the slack beyond it --- too little
 is blindness; too much, at heavy eviction, a tax. Setting
 $w = c + Q_{90}$ removes the blind mode, certifiably outperforms an
-English-sized slack at scale, leaves a certified residual that is not
-a visibility failure, and transfers unchanged to a second evictor: the
-integer belongs to the prompt, not the method. And the lesson
-generalises --- our own decode cap chose which scoring branch judged
-each language (Appendix~\ref{app:cap}): derive the constants that
-count tokens; do not ship them.
+English-sized slack at scale, leaves a certified residual that no
+oracle visibility removes, and transfers unchanged to a second
+evictor: the integer belongs to the prompt, not the method. The
+lesson generalises --- our own decode cap chose which scoring branch
+judged each language (Appendix~\ref{app:cap}): derive the constants
+that count tokens; do not ship them.
 
 % =====================================================================
 \section*{Ethics statement}
@@ -779,9 +775,10 @@ between documents: \texttt{measure\_c.py} (and
 run tokenizer and chat template, and \texttt{measure\_q.py} computes
 $Q_{90}$ from a held-out question split. The dose-response readout is
 produced by \texttt{v\_trace\_bins.py}, committed before the
-corresponding data existed, and the four last arms' readouts by
-\texttt{iclr9\_readout.py} against preregistered readings.
-Twenty-five generation stores back the main arms
+corresponding data existed, and the eight last arms' readouts by
+\texttt{iclr9\_readout.py} and \texttt{iclr10\_readout.py} against
+preregistered readings.
+Twenty-nine generation stores back the main arms
 and their controls --- \texttt{cliff\_multi}, \texttt{cliff\_en},
 \texttt{autowin}, \texttt{autowin\_q90}, \texttt{autowin\_8b},
 \texttt{cliff\_gemma}, \texttt{gemma\_q90}, \texttt{schema},
@@ -789,25 +786,28 @@ and their controls --- \texttt{cliff\_multi}, \texttt{cliff\_en},
 \texttt{llama}, \texttt{instr\_first}, \texttt{agnostic},
 \texttt{ratio}, \texttt{pyramidkv}, \texttt{constant},
 \texttt{depth}, \texttt{constant\_depth}, \texttt{slack\_depth},
-\texttt{if\_depth}, \texttt{thsw}, \texttt{xinstr}, \texttt{w32} and
+\texttt{if\_depth}, \texttt{thsw}, \texttt{xinstr},
+\texttt{refine}, \texttt{oracle\_depth}, \texttt{ctx16k},
+\texttt{qwen32b}, \texttt{w32} and
 \texttt{stuffed} --- and
 Appendix~\ref{app:cap} draws on two further cap-128-era stores,
 \texttt{e3} and \texttt{e3\_384}. Every table cell in this paper is
-recomputed from the raw generations in those twenty-seven stores
+recomputed from the raw generations in those thirty-one stores
 by \texttt{audit\_paper\_numbers.py}, which fails on any drift, and
 comparisons never cross a stack boundary
 (Appendix~\ref{app:provenance}). The predictions and kill
 conditions for every arm are files that ship with the code, each written
-before its run; for fourteen of the seventeen arms the version-history timestamp
+before its run; for eighteen of the twenty-one arms the version-history timestamp
 also precedes the first generation in the corresponding store, while the
 other three --- the $Q_{90}$ re-measurement, the 8B slice and the schema
 re-run --- entered version control in a later batch. For the
 constant-at-scale arm, the public anonymised release carrying its
 registration was pushed 48 minutes before its first generation, so a
 publicly visible external timestamp precedes every row it governs. For
-the four fourth-review arms the registrations were pushed to the
-hosting server more than nine hours before the first generation ---
-a third-party server timestamp that precedes every row --- but to the
+the eight fourth- and fifth-review arms the registrations were pushed
+to the hosting server before the first generation --- over nine hours
+for the former, over an hour for the latter; third-party server
+timestamps that precede every row --- but to the
 private working repository: the public anonymised release that carries
 them was rebuilt only after their results existed, and we state that
 distinction rather than blur it. The
@@ -870,11 +870,15 @@ $\hat w$ recovers the holes vs the default & full pools, App.~\ref{app:ci} & cer
 closure gate at $\hat w$, five languages, $n{=}100$ & Tab.~\ref{tab:ci} & met on all five; non-inferior en+th; others wide \\
 $Q_{90}$ slack beats $c{+}16$ at scale & slack ablation, \S\ref{sec:autowindow} & certified ($+4.6$ $[+1.9,+7.0]$); vs $c{+}32$ ns \\
 Telugu residual at $\hat w$, full pool & App.~\ref{app:ci} & certified miss ($-5.7$ $[-7.8,-3.1]$) \\
-the residual is not a visibility failure & IF full pool + proportion tests & confirmed ($-3.4$ $[-5.3,-1.2]$; Fisher $p\ge.17$) \\
+the residual is not a visibility failure & IF + oracle full pools & confirmed ($-3.4$; oracle $-5.1$, h2h $+0.6$ ns) \\
 the integer transfers to PyramidKV & App.~\ref{app:rivals} & significant ($+26$/$+31$, $n{=}100$) \\
 shipped-constant flip costs th/sw & \S\ref{sec:threshold}, $n{=}200$ & significant ($p{=}.022$/$.001$) \\
 an English instruction removes the damage & App.~\ref{app:xinstr} & ns at $n{=}100$ (registered branch) \\
 query-agnostic scorers lose everywhere & App.~\ref{app:rivals} & significant, English included \\
+the per-item oracle window beats $\hat w$ & oracle arm, App.~\ref{app:ci} & refuted at $n{=}669$ ($+0.6$, $[-1.2,+2.3]$) \\
+the same integer works at twice the prefill & 16k slice, App.~\ref{app:scale16k} & certified hole; gate met, recovery $p{=}.0023$ \\
+the hole persists at 32B & App.~\ref{app:scale16k} & bn certified ($-12$); te inconclusive at $n{=}100$ \\
+the shipped refine layout is damaged & App.~\ref{app:wild} & ns (en $-3$; bn $-8$, $p{=}.057$) --- geometry only \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1087,6 +1091,13 @@ full pool: bn & 113 & ${-}1.8$ & 6/8 & $[-8.0, +5.2]$ & gate met; interval wide 
 full pool: te $c{+}16$ & 669 & ${-}10.3$ & 24/93 & $[-12.7, -7.4]$ & certified residual \\
 full pool: te $c{+}32$ & 669 & ${-}7.8$ & 18/70 & $[-9.8, -5.2]$ & certified residual \\
 full pool: te IF at $w{=}64$ & 669 & ${-}3.4$ & 16/39 & $[-5.3, -1.2]$ & confirmed residual \\
+full pool: te oracle $w_i$ & 669 & ${-}5.1$ & 22/56 & $[-7.3, -2.4]$ & confirmed residual \\
+te @16k, $w{=}64$ & 100 & ${-}15$ & 3/18 & $[-19.7, -5.7]$ & certified residual \\
+te @16k, $\hat w$ & 100 & ${-}2$ & 3/5 & $[-6.6, +4.1]$ & gate met; interval wide \\
+32B bn & 100 & ${-}5$ & 2/7 & $[-8.5, +1.8]$ & gate missed; interval wide \\
+32B te & 100 & ${-}1$ & 2/3 & $[-4.5, +3.5]$ & gate met; interval wide \\
+refine en at $w{=}64$ & 100 & ${-}3$ & 1/4 & $[-4.9, +2.2]$ & interval too wide \\
+refine bn at $w{=}64$ & 100 & ${-}8$ & 3/11 & $[-12.7, +0.2]$ & interval too wide \\
 \addlinespace
 JSON-60 & 100 & ${+}2$ & 3/1 & $[-2.4, +3.9]$ & non-inferior at $-3$\,pp \\
 JSON-120 & 100 & ${+}1$ & 1/0 & $[-0.9, +1.0]$ & non-inferior at $-3$\,pp \\
@@ -1451,6 +1462,41 @@ te & 190 & 284 & 51 & 46 (${-}5$) & \textbf{50} (${-}1$; $[-5.6, +4.4]$) \\
 \end{tabular}
 \end{table}
 
+\section{Two more slices: Qwen3-32B, and a 16k prefill}
+\label{app:scale16k}
+
+Both arms were preregistered against the fifth review and run on
+fresh pods; each store is self-contained with its own baselines.
+
+\paragraph{Qwen3-32B ($n{=}100$ per language, own stack).} The
+shipped integers reproduce on the 32B checkpoint (shared tokenizer
+and template; the driver re-derived $c{=}25/107/167$ and
+$Q_{90}{=}76/80$ on pod). Bengali: baseline 80, the default window
+certifies a $-12.0$\,pp hole (1/13, $[-13.9,-4.5]$), $\hat w{=}183$
+misses the point gate at $-5.0$ ($[-8.5,+1.8]$) with a $+7.0$
+recovery that does not reach significance ($p{=}.065$) --- the
+Bengali residual at every scale above 4B, now a third time. Telugu:
+baseline 56, and $n{=}100$ cannot distinguish a hole from noise
+($-4.0$, 8/12, $[-12.4,+5.6]$); $\hat w$ meets the point gate
+($-1.0$, wide). We registered "caution, not victory" and got it:
+scale softens every magnitude, and the honest sentence is that the
+32B Telugu cell is inconclusive at this power. One scoring caveat,
+the Llama-Telugu precedent again: 32B answers in prose and then
+copies the instruction's placeholder verbatim after the marker, so
+marker compliance is 0--1\% and the marker-only robustness check
+does not exist for this arm; every 32B number rides the registered
+lenient scorer's prose branch.
+
+\paragraph{16k prefill (Telugu, $n{=}100$, the same first-100
+qids).} The blind mode is prefill-independent, as the threshold
+account requires: at 16k the default window loses $-15.0$ (3/18,
+$[-19.7,-5.7]$, $p{=}.0015$) from a baseline of 54. The SAME
+$\hat w{=}247$ --- no re-measurement, both inputs are prefill-free
+--- meets the gate ($-2.0$, $[-6.6,+4.1]$) and recovers $+13.0$
+(15/2, $[+4.6,+16.5]$, $p{=}.0023$). The 8k-vs-16k magnitudes ($-19$
+to $-20$ vs $-15$) are stated descriptively; the item sets differ in
+distractor packing, so no cross-length test is run.
+
 \section{One English instruction for every language}
 \label{app:xinstr}
 
@@ -1782,12 +1828,14 @@ describing the same system. Three hundred of those pairs also cross a
 naming difference --- one store requests the default window implicitly
 and the other names $w{=}64$ explicitly --- and agree token for token, as
 they should. The drifted pods bought a measurement we had not
-planned: $800$ uncompressed baselines are shared across stack boundaries
---- the PyramidKV and constant-control pods each share baselines with the
-campaign stack, the latter now at two sample sizes --- and every one is
+planned: $2{,}138$ generations are shared across stack boundaries ---
+the PyramidKV and constant-control baselines, and now the entire
+baseline and $\hat w$ cells of the oracle arm, which reproduce the
+depth arm's 1{,}338 corresponding rows byte-for-byte from a different
+pod --- and every one is
 byte-identical across the boundary it crosses. The
 ledger counts same-descriptor repeats ($6{,}763$, the figure above) and
-cross-descriptor ones ($800$) separately, and the argument that the
+cross-descriptor ones ($2{,}138$) separately, and the argument that the
 earlier and later tables describe one system rests only on the former.
 For completeness: two earlier pod attempts of the final arms died
 partway (one to a guard abort with zero generations, whose log ships
@@ -1849,12 +1897,21 @@ with every unfilled placeholder deleted, on the Qwen3-4B tokenizer.
 Deleting placeholders makes every number a lower bound, because runtime
 content only adds (Table~\ref{tab:wild}).
 
-This is a measurement of geometry, not of damage. Whether windowed
-eviction harms an agent loop the way it harms instruction-last QA is not
-tested here, and the question an agent is answering at step $k$ is not
-only the task it was given at step $0$. What the survey supports is
-narrower: the layout in which a token-denominated window can blind the
-scorer is not an artefact of our construction.
+The survey measures geometry; for its strongest single-shot example
+the damage is now measured too. A preregistered arm rendered the
+shipped refine template (T06) verbatim over our items --- query
+first, a fixed existing-answer stub, passages as the new context, so
+$V{=}0$ for every item at any small window. Total blindness in that
+layout costs English a non-significant $-3.0$ ($[-4.9,+2.2]$,
+$n{=}100$) and Bengali $-8.0$ ($[-12.7,+0.2]$, $p{=}.057$) ---
+blindness is necessary for the failure, not sufficient (the Gemma
+blind-English cells again), with the Bengali interval leaving room
+for a real effect. AutoWindow's output for this layout is a refusal
+--- $c$ is the entire post-question suffix, so no practical window
+clears it; the remedy is to protect or reorder, not to resize.
+Whether eviction harms an agent LOOP mid-trajectory remains untested
+--- the question at step $k$ is not the task at step $0$ --- and the
+T22-style templates stay static measurements.
 
 Most of what ships is safe, and that is the first half of the result.
 Single-shot retrieval-QA defaults leave 4--5 tokens after the question,

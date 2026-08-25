@@ -1230,6 +1230,115 @@ except Exception as exc:  # tokenizer or dataset unavailable
     print(f"  SKIPPED (no tokenizer or dataset: {type(exc).__name__})")
 
 # --------------------------------------------------------------------------
+print("## ICLR10: refine layout — refine.db")
+RFD = load("refine.db")
+for lang, b_tex, d_tex, fb_tex in [("en", 87, -3, (1, 4)),
+                                   ("bn", 80, -8, (3, 11))]:
+    base = RFD[lang]["baseline"]
+    check(f"refine {lang} baseline",
+          round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, RFD[lang]["snapkv@r0.75"])
+    check(f"refine {lang} w64 delta", r["d"], d_tex)
+    check(f"refine {lang} w64 fixed/broken", r["fb"], fb_tex)
+    check(f"refine {lang} w64 not significant", r["star"], False)
+check("refine bn p as printed",
+      round(mcnemar_p(3, 11), 3), 0.057)
+
+# --------------------------------------------------------------------------
+print("## ICLR10: the per-item oracle window at depth — oracle_depth.db")
+ORD = load("oracle_depth.db")
+check("oracle pool size", len(ORD["te"]["baseline"]), 669)
+check("oracle baseline accuracy",
+      round(100 * sum(ORD["te"]["baseline"].values()) / 669, 1), 62.6)
+r = _dpair(ORD["te"]["baseline"], ORD["te"]["snapkv@r0.75:w247"])
+check("oracle-arm w247 delta", r["d"], -5.7)
+check("oracle-arm w247 fixed/broken", r["fb"], (19, 57))
+r = _dpair(ORD["te"]["baseline"], ORD["te"]["snapkv@r0.75:wq167"])
+check("oracle w_i delta", r["d"], -5.1)
+check("oracle w_i fixed/broken", r["fb"], (22, 56))
+r = _dpair(ORD["te"]["snapkv@r0.75:w247"], ORD["te"]["snapkv@r0.75:wq167"])
+check("oracle h2h delta", r["d"], 0.6)
+check("oracle h2h fixed/broken", r["fb"], (19, 15))
+# the position fingerprint quoted in section 5 and the readout
+_c = sqlite3.connect(f"file:{RES / 'oracle_depth.db'}?mode=ro", uri=True)
+_pos, _qt = {}, {}
+import json as _json2
+for iid, meta in _c.execute(
+        "SELECT item_id, meta FROM generations WHERE config='baseline'"):
+    m = _json2.loads(meta)
+    _pos[iid], _qt[iid] = m["position"], m["q_tokens"]
+_c.close()
+base, comp = ORD["te"]["baseline"], ORD["te"]["snapkv@r0.75:wq167"]
+_brk = [i for i in base if base[i] and not comp[i]]
+check("oracle residual by position (front/middle/back)",
+      tuple(sum(1 for i in _brk if _pos[i] == p)
+            for p in ("front", "middle", "back")), (6, 26, 24))
+check("oracle pool front count",
+      sum(1 for i in base if _pos[i] == "front"), 223)
+check("oracle long decile size (|Q|>80)",
+      sum(1 for i in base if _qt[i] > 80), 58)
+# cross-stack byte-identity with the depth arm (app:provenance)
+_c1 = sqlite3.connect(f"file:{RES / 'depth.db'}?mode=ro", uri=True)
+_c2 = sqlite3.connect(f"file:{RES / 'oracle_depth.db'}?mode=ro", uri=True)
+_same = 0
+for cfg in ("baseline", "snapkv@r0.75:w247"):
+    a = dict(_c1.execute("SELECT item_id, output FROM generations "
+                         "WHERE lang='te' AND config=?", (cfg,)))
+    b = dict(_c2.execute("SELECT item_id, output FROM generations "
+                         "WHERE lang='te' AND config=?", (cfg,)))
+    _same += sum(1 for i in set(a) & set(b) if a[i] == b[i])
+_st = {r[0] for r in _c1.execute("SELECT DISTINCT stack_id FROM generations")} \
+    & {r[0] for r in _c2.execute("SELECT DISTINCT stack_id FROM generations")}
+_c1.close(); _c2.close()
+check("oracle/depth shared generations byte-identical", _same, 1338)
+check("oracle and depth stacks are distinct", len(_st), 0)
+
+# --------------------------------------------------------------------------
+print("## ICLR10: the 16k prefill slice — ctx16k.db")
+CKD = load("ctx16k.db")
+base = CKD["te"]["baseline"]
+check("ctx16k baseline", round(100 * sum(base.values()) / len(base)), 54)
+r = cmp_pair(base, CKD["te"]["snapkv@r0.75"])
+check("ctx16k w64 delta", r["d"], -15)
+check("ctx16k w64 fixed/broken", r["fb"], (3, 18))
+r = cmp_pair(base, CKD["te"]["snapkv@r0.75:w247"])
+check("ctx16k w-hat delta", r["d"], -2)
+check("ctx16k w-hat fixed/broken", r["fb"], (3, 5))
+r = cmp_pair(CKD["te"]["snapkv@r0.75"], CKD["te"]["snapkv@r0.75:w247"])
+check("ctx16k recovery delta", r["d"], 13)
+check("ctx16k recovery fixed/broken", r["fb"], (15, 2))
+check("ctx16k recovery p as printed", round(mcnemar_p(15, 2), 4), 0.0023)
+
+# --------------------------------------------------------------------------
+print("## ICLR10: the Qwen3-32B slice — qwen32b.db")
+QBD = load("qwen32b.db")
+for lang, what, b_tex, hole, gate, rec in [
+    ("bn", 183, 80, (-12, (1, 13)), (-5, (2, 7)), (7, (9, 2))),
+    ("te", 247, 56, (-4, (8, 12)), (-1, (2, 3)), (3, (9, 6))),
+]:
+    base = QBD[lang]["baseline"]
+    check(f"32B {lang} baseline",
+          round(100 * sum(base.values()) / len(base)), b_tex)
+    r = cmp_pair(base, QBD[lang]["snapkv@r0.75"])
+    check(f"32B {lang} hole delta", r["d"], hole[0])
+    check(f"32B {lang} hole fixed/broken", r["fb"], hole[1])
+    r = cmp_pair(base, QBD[lang][f"snapkv@r0.75:w{what}"])
+    check(f"32B {lang} gate delta", r["d"], gate[0])
+    check(f"32B {lang} gate fixed/broken", r["fb"], gate[1])
+    r = cmp_pair(QBD[lang]["snapkv@r0.75"],
+                 QBD[lang][f"snapkv@r0.75:w{what}"])
+    check(f"32B {lang} recovery delta", r["d"], rec[0])
+check("32B bn hole significant",
+      cmp_pair(QBD["bn"]["baseline"], QBD["bn"]["snapkv@r0.75"])["star"], True)
+check("32B te hole not significant",
+      cmp_pair(QBD["te"]["baseline"], QBD["te"]["snapkv@r0.75"])["star"], False)
+# the marker-collapse caveat quoted in app:scale16k (0--1% compliance)
+QBM = load("qwen32b.db", scorer=containment_match_marker_only)
+for lang, want in (("bn", 0), ("te", 1)):
+    check(f"32B {lang} marker-only baseline",
+          round(100 * sum(QBM[lang]["baseline"].values()) / 100), want)
+
+# --------------------------------------------------------------------------
 print(f"\n{CHECKS[0]} checks run, {len(FAILS)} mismatches")
 if FAILS:
     print("\n".join(FAILS))
