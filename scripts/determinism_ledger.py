@@ -37,6 +37,7 @@ STORES = [
     "pyramidkv.db", "constant.db", "depth.db", "constant_depth.db",
     "slack_depth.db", "xinstr.db", "if_depth.db", "thsw.db",
     "refine.db", "oracle_depth.db", "ctx16k.db", "qwen32b.db",
+    "qwen32b_depth.db",
 ]
 
 DEFAULT_W = 64

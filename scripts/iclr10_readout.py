@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Preregistered readout for the four ICLR10 arms (fifth review).
+"""Preregistered readout for the five ICLR10 arms (fifth review).
 
 Preregisters: docs/iclr-refine-preregister.md (B1),
 docs/iclr-oracle-preregister.md (B2), docs/iclr-32b-preregister.md (B3),
-docs/iclr-ctx16k-preregister.md (B4). All scoring offline (R2 lenient
+docs/iclr-ctx16k-preregister.md (B4),
+docs/iclr-32b-depth-preregister.md (B5, the closing arm). All scoring offline (R2 lenient
 primary, marker-only robustness beside it) — never the stored `correct`.
 |Q_i| comes from meta["q_tokens"] (run tokenizer, recorded at build).
 
@@ -138,7 +139,8 @@ def enrichment(label, flag_of, broken, pool):
 
 
 def main() -> None:
-    for db in ("refine.db", "oracle_depth.db", "ctx16k.db", "qwen32b.db"):
+    for db in ("refine.db", "oracle_depth.db", "ctx16k.db", "qwen32b.db",
+               "qwen32b_depth.db"):
         con = sqlite3.connect(f"file:{RES / db}?mode=ro", uri=True)
         stacks = [r[0] for r in con.execute(
             "SELECT DISTINCT stack_id FROM generations")]
@@ -220,6 +222,29 @@ def main() -> None:
             print(f"    gate |d|<=3pp: {'MET' if abs(d) <= 3 else 'MISSED'}")
             ci_row(f"{lang} w{wh} vs w64 (recovery)", Q[lang]["snapkv@r0.75"],
                    Q[lang][f"snapkv@r0.75:w{wh}"], closure=False)
+
+        # ---------------- B5: 32B Telugu at depth ----------------
+        QD, qdm = load("qwen32b_depth.db", scorer)
+        te = QD["te"]
+        base = te["baseline"]
+        print(f"\n== B5 qwen32b_depth.db  te n={len(base)}  "
+              f"baseline acc={acc(base):.1f}")
+        ci_row("te w64 vs baseline (PRIMARY)", base, te["snapkv@r0.75"])
+        d, *_ = ci_row("te w247 (w-hat) vs baseline (GATE)", base,
+                       te["snapkv@r0.75:w247"])
+        print(f"    gate |d|<=3pp: {'MET' if abs(d) <= 3 else 'MISSED'}")
+        ci_row("te w247 vs w64 (recovery)", te["snapkv@r0.75"],
+               te["snapkv@r0.75:w247"], closure=False)
+        broken = [i for i in base if base[i] and not te["snapkv@r0.75"][i]]
+        print(f"  item audit (broken n={len(broken)}):")
+        for pos in ("front", "middle", "back"):
+            enrichment(f"gold position = {pos}",
+                       lambda i, p=pos: qdm[i]["position"] == p,
+                       broken, list(base))
+        qs = sorted(qdm[i]["q_tokens"] for i in base)
+        med = qs[len(qs) // 2]
+        enrichment(f"|Q| > median ({med})",
+                   lambda i: qdm[i]["q_tokens"] > med, broken, list(base))
 
     # qid overlap of the 16k eval set with the 8k one (registered reporting)
     _, cm = load("ctx16k.db", containment_match_lenient)

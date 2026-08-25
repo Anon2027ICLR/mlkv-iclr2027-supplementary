@@ -225,6 +225,14 @@ for lang, what in [("bn", 183), ("te", 247)]:
     ci_row(f"32B {lang} w-hat", QB[lang]["baseline"],
            QB[lang][f"snapkv@r0.75:w{what}"])
 
+QD = load("qwen32b_depth.db")
+ci_row("32B te @w64 full pool", QD["te"]["baseline"],
+       QD["te"]["snapkv@r0.75"])
+ci_row("32B te w-hat full pool", QD["te"]["baseline"],
+       QD["te"]["snapkv@r0.75:w247"])
+ci_row("32B te recovery what-vs-w64", QD["te"]["snapkv@r0.75"],
+       QD["te"]["snapkv@r0.75:w247"], closure=False)
+
 RF = load("refine.db")
 for lang in ("en", "bn"):
     ci_row(f"refine {lang} @w64", RF[lang]["baseline"],
