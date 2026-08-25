@@ -63,10 +63,10 @@ still costs $-3.4$\,pp ($[-5.3,-1.2]$, $n{=}669$).
 
 Serving a language model involves a surprising number of integers that
 count tokens: context limits, cache budgets, decode caps. Because
-tokenizers are not language-neutral \citep{petrov2023language}, each of
-those integers means something different in different languages, and the
-consequences have been documented for the budgets a user can see, such as
-cost, latency and usable context \citep{marchisio2024multilingual,
+tokenizers are not language-neutral \citep{petrov2023language}, each
+means something different in different languages, and the consequences
+have been documented for the budgets a user can see --- cost, latency,
+usable context \citep{marchisio2024multilingual,
 marie2025lowbit}. This paper is about a token-denominated integer that
 users cannot see. It sits inside the scoring rule of a widely used family
 of KV-cache eviction methods, and its default value decides whether the
@@ -97,15 +97,14 @@ tokenizer that encodes the Bengali instruction in 26 tokens rather than
 High-fertility tokenizers are the pathway that makes a fixed instruction
 overflow a fixed window, not a ranking of languages by difficulty.
 
-The exposure turns on whichever constant is in force. Moving between
+The exposure turns on whichever constant is in force: moving between
 the two shipped constants on matched items flips Thai and Swahili
 across the threshold at a measured cost of 4.5 and 6.5 points
 (Section~\ref{sec:threshold}). And the layout is not our invention:
-among 22 popular templates surveyed blind --- the list frozen before
-any body was read --- a shipped refine template leaves exactly the
-library default of 64 tokens after the query, and an agent scaffold
-leaves 221 --- longer than any of our eight instructions
-(Appendix~\ref{app:wild}).
+among 22 popular templates surveyed blind, a shipped refine template
+leaves exactly the library default of 64 tokens after the query, and
+an agent scaffold leaves 221 --- longer than any of our eight
+instructions (Appendix~\ref{app:wild}).
 
 Clearing the trailing block turns out to be necessary but far from
 sufficient: a window four tokens past $c$ recovers nothing at all, and
@@ -162,6 +161,10 @@ while at matched ratios a query-agnostic scorer loses in every
 language, English included, and one larger constant misses the Bengali
 gate the rule meets; neither outperforms the measured window anywhere
 we ran both.
+Appendix~\ref{app:claims} maps every claim to its evidence and its
+interval status in one table; the broader offer is the discipline
+itself --- any constant that counts tokens is a measurement in
+disguise, and this paper shows what auditing one costs and buys.
 
 \paragraph{Scope.}
 We study a method family rather than a shipped production default: vLLM
@@ -193,10 +196,11 @@ compression methods on English long-context benchmarks, and left a
 continuous measure of query sensitivity open, noting that the natural
 candidates require a forward pass. $V$
 fills that slot from the input side: SnapKV's accumulated attention and
-the estimated attention of \citet{devoto2025expected} are computed from
-the model, $V$ from the tokenizer and the template. Expected Attention is
-the informative contrast: it removes the need to see the question by
-estimating future queries, and never reasons about a window at all.
+the estimated attention of \citet{devoto2025expected} are computed
+from the model, $V$ from the tokenizer and the template alone.
+Expected Attention is the informative contrast: it removes the need to
+see the question by estimating future queries, and never reasons about
+a window at all.
 
 \paragraph{How $w$ gets chosen.}
 Recent eviction work treats $w$ as a hyperparameter to set rather than
@@ -343,9 +347,9 @@ already shipped.
 \paragraph{A window sweep across five languages.}
 Table~\ref{tab:cliff} and Figure~\ref{fig:triptych}a report paired damage
 against the uncompressed baseline for five languages at five windows,
-ratio $0.75$. The predictions were registered before the sweep:
-\textsc{blind} when $w<c$, \textsc{safe} when $w>c$, with an allowed
-refinement that the step sits somewhat above $c$.
+ratio $0.75$; the registered predictions were \textsc{blind} when
+$w<c$, \textsc{safe} when $w>c$, the step allowed to sit somewhat
+above $c$.
 
 \begin{table}[t]
 \caption{Sweeping the observation window. Paired $\Delta$pp against the
@@ -381,7 +385,9 @@ recurs on Gemma (Appendix~\ref{app:gemma}). Bengali is damaged in every blind ce
 $p<.01$) and comes back to $-3$\,pp only at $w{=}176$, which is $c{+}69$.
 Telugu is damaged in all five cells, including $w{=}176$ --- for Telugu
 that window is $c{+}9$ --- where it is still $-13$\,pp ($p{=}.019$,
-uncorrected; Appendix~\ref{app:r2}). Thai and Swahili dip at the one
+uncorrected; Appendix~\ref{app:r2}); its $-14$-then-$-13$ wiggle over
+the last two windows is one point at $n{=}100$, noise rather than
+structure. Thai and Swahili dip at the one
 tested window below their $c$ and are within noise elsewhere; we do
 not headline Swahili, whose block fits inside the default window, so
 it carries no default-window hole.
@@ -438,7 +444,7 @@ a lever on the mechanism, not a deployment recommendation.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{figs/f2_triptych.pdf}
+\includegraphics[width=\linewidth]{figs/f2_triptych.pdf}
 \caption{Three sweeps of the same mechanism, each paired against its own
 uncompressed baseline. \textbf{(a)}~Five languages against the window;
 ticks mark each language's $c$.
@@ -517,10 +523,10 @@ per-item sizing puts a question-locating parser on the serving path
 --- our own measurement script needs a fallback when tokenization
 merges the boundary (Appendix~\ref{app:measure}) --- which is the
 assumption FINCH's delimiter buys its way out of and we decline
-\citep{corallo2024finch}. The language-level percentile is a
-deliberately weaker commitment: at $\hat w$ the window covers the entire
-question for $98/113$ Bengali and $611/669$ Telugu items (the full
-pools); the remaining decile is registered leftover, not a claim.
+\citep{corallo2024finch}. The language-level percentile is a deliberately weaker commitment:
+$\hat w$ covers the entire question for $98/113$ Bengali and $611/669$
+Telugu items; the remaining decile is registered leftover, not a
+claim.
 
 \begin{table}[t]
 \caption{AutoWindow at eviction ratio $0.75$. Accuracy, with
@@ -562,12 +568,10 @@ $p{\le}.001$). The
 English-sized ablation $c{+}16$ behaves as Section~\ref{sec:dose}
 predicts: it recovers most of the hole and stops short of the baseline
 ($-7$ and $-6$\,pp; the direct $c{+}16$-vs-$\hat w$ comparison is
-settled at the full pool below). Across the eight-language grid,
-languages whose
-trailing block already fits inside the default window stay within
-$3$\,pp of baseline bar one marginal exception
-(Appendix~\ref{app:grids}); the gate is a statement about the
-languages the default window actually blinds.
+settled at the full pool below). Across the eight-language grid, the
+languages the default window does not blind stay within $3$\,pp of
+baseline bar one marginal exception (Appendix~\ref{app:grids}): the
+gate is a statement about the languages it does.
 Re-run on the entire validation pools under the preregistered
 everything-there-is stopping rule (Appendix~\ref{app:ci}), Bengali
 holds the gate ($-1.8$, $n{=}113$; its capped pool adds no discordant
@@ -672,12 +676,10 @@ $p{<}.001$; uncompressed rows are never blind, so the interaction
 equals blindness). We cannot distinguish the compression cost from
 zero when the scorer sees the question --- not a demonstration that it
 is zero: the interval admits a small effect either way, and excludes
-anything resembling the blindness term.
-
-On the sweep alone, AIC prefers language fixed effects to $(w{-}c)$:
-five languages cannot separate a threshold from a per-language
-constant. The separation comes from the language-fixed experiments and the
-dose ladder (Appendix~\ref{app:dose}).
+anything resembling the blindness term. (On the sweep alone AIC
+prefers language fixed effects --- five languages cannot separate a
+threshold from a per-language constant; the language-fixed experiments
+and the dose ladder do, Appendix~\ref{app:dose}.)
 
 \paragraph{Results that do not support the account.}
 A stuffed arithmetic-reasoning control does not reproduce the effect
@@ -687,13 +689,12 @@ designed never to look at the question \citep{devoto2025expected,
 oren2024transformers} fail differently and worse, costing even
 English $14$ and $8$\,pp at a ratio where no window costs it anything
 (Appendix~\ref{app:rivals}). Early-stack pilots of 4-bit KV
-quantization damaged languages in an order that was not the fertility
-order (not re-run on the campaign stack); a capacity mechanism exists
-in a different regime --- at aggressive eviction even long-passage
-English items fail --- and at this paper's ratio we found no Bengali
-damage gradient across gold-length or retention strata (not a
-certified absence). We do not use high-dose fertility slopes as
-evidence about the window.
+quantization damaged languages in a non-fertility order (not re-run on
+the campaign stack); a capacity mechanism exists in a different regime
+--- at aggressive eviction even long-passage English items fail ---
+and at this ratio we found no Bengali damage gradient across
+gold-length or retention strata (not a certified absence); we do not
+use high-dose fertility slopes as evidence about the window.
 
 % =====================================================================
 \section{Limitations}
@@ -716,8 +717,12 @@ small at this paper's ratio, measured rather than predicted at
 $r{=}0.9375$ (Appendix~\ref{app:rivals}).
 Deploying the rule assumes the prompt family is known: one integer
 per trailing-block variant, so mixed traffic needs per-family
-measurement or the maximum over families (the mis-sized schema run of
-Appendix~\ref{app:schema} is what skipping it looks like). For a deployer the guidance splits: sizing
+measurement or the maximum over families --- the mis-sized schema run
+is what skipping it looks like. On the surveyed templates that
+maximum is the agent scaffold's $c{=}221$, $\hat w{=}239$ in English;
+Appendix~\ref{app:rivals}'s $w{=}256$ row prices a window that size
+--- at $r{=}0.9375$ it protects half the retained cache and costs
+English nine points. For a deployer the guidance splits: sizing
 the window removes the blind mode in every model family where the default
 digs one ($+9$ to $+19$\,pp at $n{=}100$, $+13$/$+14$ at the full
 pools), while the residual is a property of eviction at that ratio,
@@ -744,17 +749,16 @@ contrast tokenizer cannot map the space of tokenizers.
 \section{Conclusion}
 
 A token-denominated observation window is not language-neutral, because
-trailing instructions are not. Two quantities decide the outcome, both computable before any
-inference: the trailing block $c$ and the slack beyond it, in
-question-sized units --- too little is blindness, too much, at heavy
-eviction, a tax. Setting
+trailing instructions are not. Two quantities, both computable before any inference, decide the
+outcome: the trailing block $c$ and the slack beyond it --- too little
+is blindness; too much, at heavy eviction, a tax. Setting
 $w = c + Q_{90}$ removes the blind mode, certifiably outperforms an
 English-sized slack at scale, leaves a certified residual that is not
 a visibility failure, and transfers unchanged to a second evictor: the
-integer belongs to the prompt, not the method. The lesson generalises --- our own decode cap
-chose which scoring branch judged each language
-(Appendix~\ref{app:cap}): any constant that counts tokens inherits
-the tokenizer, and should be derived rather than shipped.
+integer belongs to the prompt, not the method. And the lesson
+generalises --- our own decode cap chose which scoring branch judged
+each language (Appendix~\ref{app:cap}): derive the constants that
+count tokens; do not ship them.
 
 % =====================================================================
 \section*{Ethics statement}
@@ -836,6 +840,45 @@ content and takes full responsibility for every claim in this paper.
 
 % =====================================================================
 \appendix
+\section{Every claim, its evidence, and its status}
+\label{app:claims}
+
+Table~\ref{tab:claims} maps each claim the paper makes to the cell
+that carries it and to its status in the closure vocabulary of
+Appendix~\ref{app:ci}. Reading guide: \emph{certified} means the exact
+95\% interval clears the relevant bound; \emph{confirmed} that it
+excludes zero; \emph{gate met, wide} that the registered $\pm3$\,pp
+point rule passed but $n{=}100$ cannot bound the interval; \emph{ns}
+that no effect was detected at the stated power. Nothing in this
+table is claimed beyond its status column.
+
+\begin{table}[h]
+\caption{Claim-by-claim evidence map. "Full pool" = the entire TyDiQA
+validation pool (669 Telugu / 113 Bengali).}
+\label{tab:claims}
+\centering
+\small
+\begin{tabular}{p{0.40\linewidth}p{0.24\linewidth}p{0.26\linewidth}}
+\toprule
+claim & evidence & status \\
+\midrule
+default $w{=}64$ blinds bn/te; holes at scale & full pools, App.~\ref{app:ci} & certified (te $[-22.4,-17.3]$; bn $-15$, 3/20) \\
+the cliff is reproduced in English by padding & pad grid, Fig.~\ref{fig:triptych}b & design-level grid, $n{=}100$/cell \\
+an English JSON schema blinds identically & Tab.~\ref{tab:aw}B & certified close after resizing (3 tails non-inferior) \\
+the threshold moves with the tokenizer & Gemma sweep, App.~\ref{app:gemma} & consistent sweep, $n{=}100$ \\
+$\hat w$ recovers the holes vs the default & full pools, App.~\ref{app:ci} & certified ($+14.5$, $p{=}7{\times}10^{-18}$; $+13.3$, $p{=}.0015$) \\
+closure gate at $\hat w$, five languages, $n{=}100$ & Tab.~\ref{tab:ci} & met on all five; non-inferior en+th; others wide \\
+$Q_{90}$ slack beats $c{+}16$ at scale & slack ablation, \S\ref{sec:autowindow} & certified ($+4.6$ $[+1.9,+7.0]$); vs $c{+}32$ ns \\
+Telugu residual at $\hat w$, full pool & App.~\ref{app:ci} & certified miss ($-5.7$ $[-7.8,-3.1]$) \\
+the residual is not a visibility failure & IF full pool + proportion tests & confirmed ($-3.4$ $[-5.3,-1.2]$; Fisher $p\ge.17$) \\
+the integer transfers to PyramidKV & App.~\ref{app:rivals} & significant ($+26$/$+31$, $n{=}100$) \\
+shipped-constant flip costs th/sw & \S\ref{sec:threshold}, $n{=}200$ & significant ($p{=}.022$/$.001$) \\
+an English instruction removes the damage & App.~\ref{app:xinstr} & ns at $n{=}100$ (registered branch) \\
+query-agnostic scorers lose everywhere & App.~\ref{app:rivals} & significant, English included \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \section{How last-$w$ scoring works}
 \label{app:snapkv}
 SnapKV forms $q_{\mathrm{obs}} = q[:,:,-w:]$, scores the prefix keys
