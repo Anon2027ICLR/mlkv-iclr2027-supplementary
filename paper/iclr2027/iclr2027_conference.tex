@@ -4,6 +4,7 @@
 \usepackage{hyperref}
 \usepackage{url}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -849,32 +850,35 @@ that no effect was detected at the stated power. Nothing in this
 table is claimed beyond its status column.
 
 \begin{table}[h]
-\caption{Claim-by-claim evidence map. "Full pool" = the entire TyDiQA
-validation pool (669 Telugu / 113 Bengali).}
+\caption{Claim-by-claim evidence map. ``Full pool'' = the entire
+TyDiQA validation pool (669 Telugu / 113 Bengali).}
 \label{tab:claims}
 \centering
 \small
-\begin{tabular}{p{0.40\linewidth}p{0.24\linewidth}p{0.26\linewidth}}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.36\linewidth}%
+                >{\raggedright\arraybackslash}p{0.22\linewidth}%
+                >{\raggedright\arraybackslash}p{0.32\linewidth}}
 \toprule
 claim & evidence & status \\
 \midrule
 default $w{=}64$ blinds bn/te; holes at scale & full pools, App.~\ref{app:ci} & certified (te $[-22.4,-17.3]$; bn $-15$, 3/20) \\
 the cliff is reproduced in English by padding & pad grid, Fig.~\ref{fig:triptych}b & design-level grid, $n{=}100$/cell \\
-an English JSON schema blinds identically & Tab.~\ref{tab:aw}B & certified close after resizing (3 tails non-inferior) \\
+an English JSON schema blinds identically & Tab.~\ref{tab:aw}B & certified close after resizing (3~tails non-inferior) \\
 the threshold moves with the tokenizer & Gemma sweep, App.~\ref{app:gemma} & consistent sweep, $n{=}100$ \\
-$\hat w$ recovers the holes vs the default & full pools, App.~\ref{app:ci} & certified ($+14.5$, $p{=}7{\times}10^{-18}$; $+13.3$, $p{=}.0015$) \\
+$\hat w$ recovers the holes vs the default & full pools, App.~\ref{app:ci} & certified ($+14.5$, \mbox{$p{=}7{\times}10^{-18}$}; $+13.3$, \mbox{$p{=}.0015$}) \\
 closure gate at $\hat w$, five languages, $n{=}100$ & Tab.~\ref{tab:ci} & met on all five; non-inferior en+th; others wide \\
-$Q_{90}$ slack beats $c{+}16$ at scale & slack ablation, \S\ref{sec:autowindow} & certified ($+4.6$ $[+1.9,+7.0]$); vs $c{+}32$ ns \\
-Telugu residual at $\hat w$, full pool & App.~\ref{app:ci} & certified miss ($-5.7$ $[-7.8,-3.1]$) \\
-the residual is not a visibility failure & IF + oracle full pools & confirmed ($-3.4$; oracle $-5.1$, h2h $+0.6$ ns) \\
+$Q_{90}$ slack beats $c{+}16$ at scale & slack ablation, \S\ref{sec:autowindow} & certified ($+4.6$~$[+1.9,+7.0]$); vs $c{+}32$ ns \\
+Telugu residual at $\hat w$, full pool & App.~\ref{app:ci} & certified miss ($-5.7$~$[-7.8,-3.1]$) \\
+the residual is not a visibility failure & IF + oracle full pools & confirmed ($-3.4$; oracle $-5.1$, head-to-head $+0.6$ ns) \\
 the integer transfers to PyramidKV & App.~\ref{app:rivals} & significant ($+26$/$+31$, $n{=}100$) \\
 shipped-constant flip costs th/sw & \S\ref{sec:threshold}, $n{=}200$ & significant ($p{=}.022$/$.001$) \\
 an English instruction removes the damage & App.~\ref{app:xinstr} & ns at $n{=}100$ (registered branch) \\
 query-agnostic scorers lose everywhere & App.~\ref{app:rivals} & significant, English included \\
-the per-item oracle window beats $\hat w$ & oracle arm, App.~\ref{app:ci} & refuted at $n{=}669$ ($+0.6$, $[-1.2,+2.3]$) \\
-the same integer works at twice the prefill & 16k slice, App.~\ref{app:scale16k} & certified hole; gate met, recovery $p{=}.0023$ \\
+the per-item oracle window beats $\hat w$ & oracle arm, App.~\ref{app:ci} & refuted at $n{=}669$ ($+0.6$,~$[-1.2,+2.3]$) \\
+the same integer works at twice the prefill & 16k slice, App.~\ref{app:scale16k} & certified hole; gate met, recovery \mbox{$p{=}.0023$} \\
 the hole persists at 32B & App.~\ref{app:scale16k} & certified: bn $-12$; te $-10.2$ at the full pool, gate met at $\hat w$ \\
-the shipped refine layout is damaged & App.~\ref{app:wild} & ns (en $-3$; bn $-8$, $p{=}.057$) --- geometry only \\
+the shipped refine layout is damaged & App.~\ref{app:wild} & ns (en $-3$; bn $-8$, \mbox{$p{=}.057$}) --- geometry only \\
 \bottomrule
 \end{tabular}
 \end{table}
