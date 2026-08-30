@@ -368,7 +368,7 @@ sweep's) and pairs within that store.}
  & & & 32 & 56 & 64 & 88 & 120 & 176 \\
 \midrule
 en & 25 & 93 & ${+}2$ & ${+}1$ & ${+}0$ & ${+}1$ & ${-}1$ & ${+}1$ \\
-th & 45 & 85 & \blind{${-}6$} & ${-}4$ & ${+}0$ & $0$ & ${-}2$ & ${-}3$ \\
+th & 45 & 85 & \blind{${-}6$} & ${-}4$ & ${+}0$ & ${+}0$ & ${-}2$ & ${-}3$ \\
 sw & 47 & 56 & \blind{${-}7^{*}$} & ${-}4$ & ${-}3$ & ${-}2$ & ${-}4$ & ${-}3$ \\
 bn & 107 & 73 & \blind{${-}13^{*}$} & \blind{${-}15^{*}$} & \blind{${-}16^{*}$} & \blind{${-}21^{*}$} & ${-}8$ & ${-}3$ \\
 te & 167 & 56 & \blind{${-}19^{*}$} & \blind{${-}21^{*}$} & \blind{${-}19^{*}$} & \blind{${-}18^{*}$} & \blind{${-}14^{*}$} & ${-}13^{*}$ \\
@@ -431,8 +431,8 @@ measured it: both languages meet the $\pm 3$\,pp closure gate at their
 own $\hat w$ --- Thai $-1$\,pp, non-inferior by interval; Swahili
 $-3$\,pp at the boundary, interval wide (Appendix~\ref{app:ci}).
 A third handle points the same way: moving the instruction to the
-front of the prompt --- the question inside every window, press and
-budget untouched --- recovers Bengali by $13$\,pp and Telugu by
+front of the prompt (the question inside every window, press and
+budget untouched) recovers Bengali by $13$\,pp and Telugu by
 $14$\,pp on the same items (both $p{<}.02$; Table~\ref{tab:aw}) ---
 a lever on the mechanism, not a deployment recommendation.
 
@@ -561,7 +561,7 @@ short of the baseline ($-7$/$-6$\,pp; the direct comparison is
 settled at the full pool below). Across the eight-language grid, the
 languages the default window does not blind stay within $3$\,pp of
 baseline bar one marginal exception (Appendix~\ref{app:grids}): the
-gate is a statement about the languages it does.
+gate is a statement about the languages it does blind.
 Re-run on the entire validation pools (the preregistered
 everything-there-is rule, Appendix~\ref{app:ci}), Bengali
 holds the gate ($-1.8$, $n{=}113$, no discordant item beyond the
@@ -582,8 +582,8 @@ $c{+}16$, $-7.8$ at $c{+}32$, against $-5.7$), and the registered
 head-to-head separates the rule from the English-sized slack:
 $+4.6$\,pp over $c{+}16$ (55/24, $p{=}.0006$, CI $[+1.9,+7.0]$);
 over $c{+}32$ the point still favours $\hat w$, interval including
-zero ($+2.1$, $[-0.3,+4.2]$). Marker-only keeps the ordering, its
-$c{+}16$ head-to-head alone ns (Appendix~\ref{app:ci}); this
+zero ($+2.1$, $[-0.3,+4.2]$). Marker-only keeps the ordering; only the
+$c{+}16$ head-to-head goes ns (Appendix~\ref{app:ci}); this
 replaces an earlier unregistered $n{=}100$ pooling.
 
 \paragraph{Schema tails, and a construction we got wrong first.}
@@ -629,7 +629,7 @@ $\hat w$ recovers $+8.5$ and leaves $-1.6$ with zero inside the
 interval ($[-3.5,+0.4]$), against 4B's certified $-5.7$
 (Appendix~\ref{app:scale16k}). At twice the prefill nothing moves:
 16k Telugu loses $-15.0$ ($[-19.7,-5.7]$) at the default, and the
-SAME $\hat w{=}247$ --- its inputs are prefill-free --- meets the
+\emph{same} $\hat w{=}247$ --- its inputs are prefill-free --- meets the
 gate with a $+13.0$ recovery ($p{=}.0023$).
 
 \paragraph{What the residuals are not.}
@@ -745,7 +745,7 @@ because trailing instructions are not. Two quantities, both
 computable before any inference, decide the outcome: the trailing
 block $c$ and the slack beyond it. Setting
 $w = c + Q_{90}$ removes the blind mode, certifiably outperforms an
-English-sized slack at scale, leaves a residual that no oracle
+English-sized slack on the full pool, leaves a residual that no oracle
 visibility removes --- and that shrinks as the model grows --- and
 transfers unchanged to a second evictor: the integer belongs to the
 prompt, not the method. The lesson generalises --- our own decode cap
@@ -927,9 +927,9 @@ builds the instruction with the same padding routine the item builder
 uses and reports $c$ for the padded string, so the measured constant and
 the generated prompt cannot drift apart.
 
-$Q_{90}$ is produced by \texttt{measure\_q.py} as the 90th percentile of
-\texttt{len(tokenizer.encode(question))} on a split that excludes the 100
-evaluation items: XQuAD validation after index 100, and TyDiQA-GoldP
+\texttt{measure\_q.py} produces $Q_{90}$ as the 90th percentile of question
+token length, \texttt{len(tokenizer.\allowbreak encode(question))}, on a split that
+excludes the 100 evaluation items: XQuAD validation after index 100, and TyDiQA-GoldP
 train with every evaluation question id removed. The evaluation items
 themselves are never used to estimate it.
 
@@ -1496,7 +1496,7 @@ prose branch.
 \paragraph{16k prefill (Telugu, $n{=}100$, the same first-100
 qids).} The blind mode is prefill-independent, as the threshold
 account requires: at 16k the default window loses $-15.0$ (3/18,
-$[-19.7,-5.7]$, $p{=}.0015$) from a baseline of 54. The SAME
+$[-19.7,-5.7]$, $p{=}.0015$) from a baseline of 54. The \emph{same}
 $\hat w{=}247$ --- no re-measurement, both inputs are prefill-free
 --- meets the gate ($-2.0$, $[-6.6,+4.1]$) and recovers $+13.0$
 (15/2, $[+4.6,+16.5]$, $p{=}.0023$). The 8k-vs-16k magnitudes ($-19$
@@ -1915,7 +1915,7 @@ blind-English cells again), with the Bengali interval leaving room
 for a real effect. AutoWindow's output for this layout is a refusal
 --- $c$ is the entire post-question suffix, so no practical window
 clears it; the remedy is to protect or reorder, not to resize.
-Whether eviction harms an agent LOOP mid-trajectory remains untested
+Whether eviction harms an agent loop mid-trajectory remains untested
 --- the question at step $k$ is not the task at step $0$ --- and the
 T22-style templates stay static measurements.
 
