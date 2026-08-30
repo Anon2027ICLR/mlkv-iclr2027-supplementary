@@ -40,8 +40,8 @@ appears ($+14$\,pp over the default on the full 669-item Telugu pool,
 $+13$ on Bengali), closes the schema tails, and returns the shipped
 default where it suffices;
 on the full Telugu pool it still certifies a $-5.7$\,pp residual
-($[-7.8,-3.1]$). The slack is load-bearing: an English-sized 16 tokens
-leaves $-10.3$\,pp, a preregistered head-to-head of $+4.6$\,pp
+($[-7.8,-3.1]$). The slack must be question-sized, not English-sized:
+16 tokens leave $-10.3$\,pp, a preregistered head-to-head of $+4.6$\,pp
 ($[+1.9,+7.0]$) in the percentile's favour. The residual is not a
 visibility failure --- a per-item oracle window recovers only
 $0.6$\,pp of it --- and the integers transfer unchanged to a second
@@ -184,8 +184,9 @@ question falls inside that slice changes the \emph{ranking} of
 compression methods on English long-context benchmarks, and left a
 continuous measure of query sensitivity open, noting that the natural
 candidates require a forward pass. $V$
-fills that slot from the input side: SnapKV's accumulated attention and
-the estimated attention of \citet{devoto2025expected} are computed
+fills that slot from the input side: the accumulated attention of SnapKV
+and H2O \citep{zhang2023h2o} and the estimated attention of
+\citet{devoto2025expected} are computed
 from the model, $V$ from the tokenizer and the template alone.
 Expected Attention is the informative contrast: it removes the need to
 see the question by estimating future queries, and never reasons about
@@ -800,16 +801,16 @@ anonymized version history ships with the supplementary material, and the
 de-anonymized history becomes public with the code on publication.
 
 \section*{AI use statement}
-The author reviewed all AI-assisted content and takes full
+The authors reviewed all AI-assisted content and take full
 responsibility for every claim in this paper; this statement follows
 the categories of the ICLR AI policy. Large language models were used
 substantially and throughout this work, under three guardrails: every
-preregistration was reviewed, approved and committed by the author
+preregistration was reviewed, approved and committed by the authors
 before the corresponding run; no LLM judges any output in any reported
 metric; and every table cell is recomputed from the raw generation
 records by a committed audit script. Within those bounds, research
 ideation, experimental design and the preregistered predictions were
-developed by the author in dialogue with LLMs. Experiments were
+developed by the authors in dialogue with LLMs. Experiments were
 executed by LLM agents operating the experiment harness against the
 committed protocols, whose kill conditions bound what an agent could
 decide alone. The harness, the analysis scripts and the figures are
@@ -1136,7 +1137,11 @@ $c{=}I{+}s$ with $s{=}5$, and $Q_{90}$ is the held-out question-length
 percentile ($n{=}1090/2387/5563$ for en/bn/te; $Q_{50}$ is $12/46/54$ and
 $Q_{\max}$ is $36/141/170$). $Q_{90}$ was measured for the languages the
 AutoWindow arms use and for the two languages the $w{=}32$ flip touches
-in the sweep; Spanish and Vietnamese also have $c>32$ but are not swept.}
+in the sweep; Spanish and Vietnamese also have $c>32$ but are not swept.
+The character and whitespace-word counts of the same instructions (words
+omitted for the two scripts without word spaces) show that the token
+spread is the tokenizer's, not the translation's: Telugu is $1.15\times$
+English in characters and $8.1\times$ in tokens.}
 \label{tab:constants}
 \centering
 \small
@@ -1145,6 +1150,8 @@ in the sweep; Spanish and Vietnamese also have $c>32$ but are not swept.}
  & en & zh & es & vi & th & sw & bn & te \\
 \midrule
 $I$ & 20 & 24 & 30 & 34 & 40 & 42 & 102 & 162 \\
+$I$, characters & 98 & 41 & 126 & 112 & 93 & 104 & 102 & 113 \\
+$I$, words & 16 & --- & 19 & 26 & --- & 17 & 14 & 14 \\
 $c$ & 25 & 29 & 35 & 39 & 45 & 47 & 107 & 167 \\
 $c{+}16$ & 41 & 45 & 51 & 55 & 61 & 63 & 123 & 183 \\
 $Q_{90}$ & 18 & --- & --- & --- & 46 & 20 & 76 & 80 \\
