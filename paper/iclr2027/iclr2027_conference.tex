@@ -38,11 +38,11 @@ question-length percentile --- computed, not tuned. Preregistered and
 at matched retained cache, the rule removes the blind mode wherever it
 appears ($+14$\,pp over the default on the full 669-item Telugu pool,
 $+13$ on Bengali), closes the schema tails, and returns the shipped
-default where it suffices;
-on the full Telugu pool it still certifies a $-5.7$\,pp residual
-($[-7.8,-3.1]$). The slack must be question-sized, not English-sized:
-16 tokens leave $-10.3$\,pp, a preregistered head-to-head of $+4.6$\,pp
-($[+1.9,+7.0]$) in the percentile's favour. The residual is not a
+default where it suffices; on the full Telugu pool it still certifies
+a $-5.7$\,pp residual. The slack must be question-sized, not
+English-sized: on the same pool a preregistered head-to-head against
+an English-sized slack gives $+4.6$\,pp in the percentile's favour.
+The residual is not a
 visibility failure --- a per-item oracle window recovers only
 $0.6$\,pp of it --- and the integers transfer unchanged to a second
 evictor with the same window ($+26$/$+31$\,pp on its own baselines):
@@ -257,7 +257,10 @@ variant leaves every conclusion it re-scores unchanged
 the slack-ablation head-to-head keeps its ordering but not its
 individual significance under that scorer.
 Paired comparisons are two-sided McNemar tests, reported with their
-discordant counts (fixed/broken). Cells pair 100 items unless marked
+discordant counts (fixed/broken); stars mark uncorrected $p<.05$. The
+one grid that is a family of tests (Table~\ref{tab:cliff}, 25 tests) is
+Holm-corrected in Appendix~\ref{app:r2}, where five blind cells
+survive; no claim rests on a cell the correction removes. Cells pair 100 items unless marked
 otherwise (the full-pool re-runs, and the $n{=}200$ supporting
 comparisons pairing the same 100 questions at two context budgets).
 
@@ -607,33 +610,57 @@ gate with a $+13.0$ recovery ($p{=}.0023$).
 \paragraph{What the residuals are not.}
 Five cells miss the closure gate: Bengali at Gemma ($-6$), 8B and
 Llama ($-8$) and 32B ($-5$), and Telugu at the 4B full pool ($-5.7$,
-certified; the 32B pool holds the gate at $-1.6$). The diagnosis
-predates the later cells, which obey it. With the
-question last every window sees all of it by construction, and a
-preregistered instruction-first re-run of the entire Telugu pool
-certifies that eviction still costs $-3.4$\,pp there ($p{=}.0027$, CI
-$[-5.3,-1.2]$) --- within the registered $\pm3$\,pp of the $\hat w$
-residual --- with no concentration by gold position or question length
-(Fisher $p \ge .17$). A preregistered per-item oracle window ---
-$V_i{=}1$ exactly, no percentile leftover --- leaves $-5.1$
-($[-7.3,-2.4]$), indistinguishable from $\hat w$ ($+0.6$,
-$[-1.2,+2.3]$); its residual is depleted at the front gold position
-($10.7\%$ vs $33.3\%$, $p{=}.0001$) and concentrated mid-document
---- replicated at 32B (middle $46.6\%$ vs $33.3\%$, $p{=}.003$) ---
-the fingerprint of retrieval-difficulty eviction cost, which
-visibility, constant across positions, cannot produce. The missed cells agree in
-proportion-test form: each residual is as rich in fully visible
-questions as its pool ($89\%$ vs $91\%$ at the full Telugu pool, 8/8
-vs $88\%$ at 8B, 10/11 vs $88\%$ at Llama, all $p \ge .59$), and at
-Gemma the gap is a plateau from 48 to 64
-(Appendices~\ref{app:gemma}--\ref{app:llama}, \ref{app:ci}).
+certified; the 32B pool holds the gate at $-1.6$). None is, in the
+main, a visibility failure. With the question last every window sees all of
+it by construction, and a preregistered instruction-first re-run of
+the entire Telugu pool certifies that eviction still costs
+$-3.4$\,pp there ($[-5.3,-1.2]$), within the registered $\pm3$\,pp of
+the $\hat w$ residual. A preregistered per-item oracle window ---
+$V_i{=}1$ exactly --- leaves $-5.1$ ($[-7.3,-2.4]$), indistinguishable
+from $\hat w$ ($+0.6$, $[-1.2,+2.3]$); its residual is depleted at the
+front gold position and concentrated mid-document, replicated at 32B
+--- the fingerprint of retrieval-difficulty eviction cost, which
+visibility, constant across positions, cannot produce. Each missed
+cell is as rich in fully visible questions as its pool (all
+$p \ge .59$; Appendices~\ref{app:gemma}--\ref{app:llama}, \ref{app:ci}).
 Widening the window turns off the blind mode; it does not remove the
 ordinary cost of discarding three quarters of the cache.
 
 Nor is the integer a property of one method: dropped unchanged into
 PyramidKV \citep{cai2024pyramidkv}, which inherits the same window,
 it takes Bengali from $-28$ to $-2$ and Telugu from $-32$ to $-1$
-(own baselines; Appendix~\ref{app:rivals}).
+(own baselines; Appendix~\ref{app:rivals}). Table~\ref{tab:fixes} sets
+the rule beside the other remedies: each removes the blind mode; none
+removes the eviction cost at this ratio, oracle included.
+
+\begin{table}[!h]
+\caption{Which remedy removes what. Qwen3-4B, $r{=}0.75$, $\Delta$pp
+against each arm's own baseline; full-pool cells certified unless marked
+ns, $n{=}100$ cells within about $\pm 8$\,pp.}
+\label{tab:fixes}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{4.5cm}>{\raggedright\arraybackslash}p{2.6cm}@{}}
+\toprule
+remedy & removes & leaves & needs \\
+\midrule
+one English instruction ($c{=}25$) & the blind mode, by construction &
+partial visibility: bn $-3$, te $-4$ (ns, $n{=}100$) & a tail that can be
+English \\
+question last ($V{=}1$) & the blind mode, by construction & eviction
+cost: te $-3.4$ (full pool) & control of the layout \\
+$\hat w = c + Q_{90}$ & the blind mode: $+14$/$+13$ at the full pools &
+eviction cost: te $-5.7$; bn $-1.8$ at 4B, $-5$ to $-8$ on four other
+models & $c$ per prompt family, held-out $Q_{90}$ \\
+per-item oracle $c{+}|Q_i|$ & the blind mode; $V_i{=}1$ & te $-5.1$,
+tied with $\hat w$ ($+0.6$, ns) & a question parser at serving time \\
+one constant, $w{=}256$ & the blind mode at this ratio & te $-6.9$ (tied
+with $\hat w$); bn misses its gate; $-9$ on English at $r{=}0.9375$ &
+nothing; over-protects at high ratios \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % =====================================================================
 \section{Analysis}
@@ -686,40 +713,10 @@ Deploying the rule assumes the prompt family is known: one integer
 per trailing-block variant, so mixed traffic needs per-family
 measurement or the maximum over families. On the surveyed templates
 that maximum is the agent scaffold's $c{=}221$, $\hat w{=}239$ in
-English (priced in Table~\ref{tab:fixes}, last row). The table
-collects what each remedy
-removes and what it leaves: each removes the blind mode; none removes
-the eviction cost at this ratio, oracle included, so the lever left
-there is retaining more cache.
+English (priced in Table~\ref{tab:fixes}, last row). No window ---
+oracle included --- removes the eviction cost at this ratio; the lever
+left there is retaining more cache.
 
-\begin{table}[!h]
-\caption{Which remedy removes what. Qwen3-4B, $r{=}0.75$, $\Delta$pp
-against each arm's own baseline; full-pool cells certified unless marked
-ns, $n{=}100$ cells within about $\pm 8$\,pp.}
-\label{tab:fixes}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{4.5cm}>{\raggedright\arraybackslash}p{2.6cm}@{}}
-\toprule
-remedy & removes & leaves & needs \\
-\midrule
-one English instruction ($c{=}25$) & the blind mode, by construction &
-partial visibility: bn $-3$, te $-4$ (ns, $n{=}100$) & a tail that can be
-English \\
-question last ($V{=}1$) & the blind mode, by construction & eviction
-cost: te $-3.4$ (full pool) & control of the layout \\
-$\hat w = c + Q_{90}$ & the blind mode: $+14$/$+13$ at the full pools &
-eviction cost: te $-5.7$; bn $-1.8$ at 4B, $-5$ to $-8$ on four other
-models & $c$ per prompt family, held-out $Q_{90}$ \\
-per-item oracle $c{+}|Q_i|$ & the blind mode; $V_i{=}1$ & te $-5.1$,
-tied with $\hat w$ ($+0.6$, ns) & a question parser at serving time \\
-one constant, $w{=}256$ & the blind mode at this ratio & te $-6.9$ (tied
-with $\hat w$); bn misses its gate; $-9$ on English at $r{=}0.9375$ &
-nothing; over-protects at high ratios \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 Our items are constructed rather than drawn from a standard suite
 --- a deliberate trade: published suites vary question length,

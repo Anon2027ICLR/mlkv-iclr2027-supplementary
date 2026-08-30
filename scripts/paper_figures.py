@@ -169,7 +169,10 @@ def fig_layout():
 
 # ---------------------------------------------------------------------------
 def fig_triptych():
-    fig, axes = plt.subplots(1, 3, figsize=(5.5, 1.98))
+    # Panel (b) carries the causal claim, so it gets twice the width of
+    # (a) and (c); the figure height is unchanged.
+    fig, axes = plt.subplots(1, 3, figsize=(5.5, 1.98),
+                             gridspec_kw={"width_ratios": [1, 2, 1]})
 
     # (a) five languages against the window ---------------------------------
     ax = axes[0]
