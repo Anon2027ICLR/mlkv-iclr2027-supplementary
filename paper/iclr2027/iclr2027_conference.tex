@@ -23,42 +23,30 @@ Token-Denominated Observation Windows Are Not Language-Neutral}
 
 \begin{abstract}
 Observation-window evictors such as SnapKV score the key--value cache
-using only the last $w$ tokens of the prompt. We show that this integer
+from only the last $w$ tokens of the prompt. We show that this integer
 is a language-dependent threshold. In the common
-\texttt{passages} + \texttt{question} + \texttt{instruction} layout, an instruction
-longer than $w$ hides the question from the scorer: on Qwen3-4B the block
-of tokens after the question is 25 tokens in English but 107 in Bengali
-and 167 in Telugu, and the library default $w{=}64$ costs the latter two
-15 and 20 points of accuracy on the full validation pools while leaving
-English untouched. The exposure is shipped, not hypothetical: moving to
-the constant of 32 that one serving path ships blinds six of our eight
-languages and costs Thai and Swahili 4.5 and 6.5 points on matched
-items, and in a survey of 22 popular templates frozen before reading,
-a shipped refine template leaves exactly 64 tokens after the query and
-an agent scaffold 221. The failure is not linguistic. Padding an English instruction reproduces it, a
-tokenizer that shortens the Bengali instruction moves the threshold with
-it, and an English prompt carrying a JSON response schema leaves a
-trailing block of $166$ tokens --- one from Telugu's $167$ --- and is
-blinded in exactly the same way. Recovery needs question-sized
-slack: a window four tokens past the instruction recovers nothing. We
-therefore set $w = c + Q_{90}$ from the tokenizer, the chat template and
-a held-out question-length percentile. Preregistered and at matched
-retained cache, this removes the blind mode wherever it
-appears --- $+14$\,pp over the default on the full 669-item Telugu pool
-($p{<}10^{-17}$), $+13$ on Bengali --- closes the schema tails, returns
-the shipped default where it already suffices, and meets its
-$\pm 3$\,pp gate on all five evaluated languages at $n{=}100$; on the
-full pool, Telugu instead certifies a $-5.7$\,pp
-residual ($[-7.8,-3.1]$). The question-sized slack is load-bearing: on
-the same pool a 16-token slack leaves $-10.3$\,pp, a preregistered
-head-to-head of $+4.6$\,pp ($[+1.9,+7.0]$) in the percentile's favour.
-The same integers transfer unchanged to a
-second evictor with the same window ($+26$/$+31$\,pp on its own
-baselines), and the residual is not a visibility failure:
-with the question moved last, fully visible by construction, eviction
-still costs $-3.4$\,pp ($[-5.3,-1.2]$, $n{=}669$), and a per-item
-oracle window ($V_i{=}1$ exactly) recovers $0.6$\,pp of it
-($[-1.2,+2.3]$).
+\texttt{passages} + \texttt{question} + \texttt{instruction} layout, an
+instruction longer than $w$ hides the question from the scorer: on
+Qwen3-4B the block after the question is 25 tokens in English but 107 in
+Bengali and 167 in Telugu, and the library default $w{=}64$ costs them
+15 and 20 points on the full validation pools while leaving English
+untouched. The failure is not linguistic: padding an English
+instruction reproduces it, and a JSON response schema blinds English
+the same way. Recovery needs question-sized slack, so we set
+$w = c + Q_{90}$ from the tokenizer, the template and a held-out
+question-length percentile --- computed, not tuned. Preregistered and
+at matched retained cache, the rule removes the blind mode wherever it
+appears ($+14$\,pp over the default on the full 669-item Telugu pool,
+$+13$ on Bengali), closes the schema tails, and returns the shipped
+default where it suffices;
+on the full Telugu pool it still certifies a $-5.7$\,pp residual
+($[-7.8,-3.1]$). The slack is load-bearing: an English-sized 16 tokens
+leaves $-10.3$\,pp, a preregistered head-to-head of $+4.6$\,pp
+($[+1.9,+7.0]$) in the percentile's favour. The residual is not a
+visibility failure --- a per-item oracle window recovers only
+$0.6$\,pp of it --- and the integers transfer unchanged to a second
+evictor with the same window ($+26$/$+31$\,pp on its own baselines):
+the constant belongs to the prompt, not the method.
 \end{abstract}
 
 % =====================================================================
@@ -130,12 +118,12 @@ earlier version had broken by 23 points; and returns the shipped 64
 where that constant is already adequate. On the
 full 669-item Telugu pool the gate does not hold: $\hat w$ leaves
 $-5.7$\,pp ($[-7.8,-3.1]$) beside a $+14$\,pp recovery over the
-default, joining the Bengali misses at Gemma-3-4b-it ($-6$), Qwen3-8B,
-Llama-3.1-8B ($-8$) and Qwen3-32B ($-5$) --- and we show the residual
+default, joining the Bengali misses at Gemma-3-4b-it ($-6$), Qwen3-8B and
+Llama-3.1-8B (both $-8$) and Qwen3-32B ($-5$) --- and we show the residual
 is not, in the main, a visibility failure: with the question moved
 last (full visibility by construction) the full pool still pays
-$-3.4$\,pp ($[-5.3,-1.2]$), a per-item oracle window closes none of
-it, and the broken items are no poorer in fully visible questions
+$-3.4$\,pp ($[-5.3,-1.2]$), a per-item oracle window leaves $-5.1$
+of $\hat w$'s $-5.7$, and the broken items are no poorer in fully visible questions
 than their pool (Fisher $p{=}.62$).
 
 \paragraph{Contributions.}
@@ -746,7 +734,7 @@ computable before any inference, decide the outcome: the trailing
 block $c$ and the slack beyond it. Setting
 $w = c + Q_{90}$ removes the blind mode, certifiably outperforms an
 English-sized slack on the full pool, leaves a residual that no oracle
-visibility removes --- and that shrinks as the model grows --- and
+visibility removes --- and that, on Telugu, shrinks as the model grows --- and
 transfers unchanged to a second evictor: the integer belongs to the
 prompt, not the method. The lesson generalises --- our own decode cap
 chose which scoring branch judged each language
@@ -812,25 +800,26 @@ anonymized version history ships with the supplementary material, and the
 de-anonymized history becomes public with the code on publication.
 
 \section*{AI use statement}
-Large language models were used substantially and throughout this work,
-and this statement follows the categories of the ICLR AI policy.
-Research ideation, experimental design and the preregistered predictions
-were developed by the author in dialogue with LLMs; every
+The author reviewed all AI-assisted content and takes full
+responsibility for every claim in this paper; this statement follows
+the categories of the ICLR AI policy. Large language models were used
+substantially and throughout this work, under three guardrails: every
 preregistration was reviewed, approved and committed by the author
-before the corresponding run. Experiments were executed by LLM agents
-operating the experiment harness against those committed protocols,
-whose kill conditions bound what an agent could decide alone. The
-harness, the analysis scripts and the figures are code written with
-substantial LLM assistance; the paper's text was drafted and revised
-the same way. Interpretation of results was constrained by design
-rather than delegated: no LLM judges any output in any reported metric,
-every table cell is recomputed from the raw generation records by a
-committed audit script, and cross-checking between independent models
-during preparation surfaced and corrected errors, including fabricated
-bibliography entries and two internal miscounts, before submission. LLMs
-were not used to generate synthetic evaluation data; all items derive
-from XQuAD and TyDiQA-GoldP. The author reviewed all AI-assisted
-content and takes full responsibility for every claim in this paper.
+before the corresponding run; no LLM judges any output in any reported
+metric; and every table cell is recomputed from the raw generation
+records by a committed audit script. Within those bounds, research
+ideation, experimental design and the preregistered predictions were
+developed by the author in dialogue with LLMs. Experiments were
+executed by LLM agents operating the experiment harness against the
+committed protocols, whose kill conditions bound what an agent could
+decide alone. The harness, the analysis scripts and the figures are
+code written with substantial LLM assistance; the paper's text was
+drafted and revised the same way. Interpretation of results was
+constrained by design rather than delegated, and cross-checking between
+independent models during preparation surfaced and corrected errors,
+including fabricated bibliography entries and two internal miscounts,
+before submission. LLMs were not used to generate synthetic evaluation
+data; all items derive from XQuAD and TyDiQA-GoldP.
 
 \bibliography{iclr2027_conference}
 \bibliographystyle{iclr2027_conference}
@@ -1215,7 +1204,7 @@ pad & $c$ & $w{=}32$ & 56 & 80 & 104 & 144 \\
 \begin{table}[!t]
 \caption{The dose ladder. $n{=}100$ per rung, ratio $0.75$, paired
 against each language's own baseline; median $V$ is the per-item share
-of the question inside the window. The top rung of each block is that
+of the question inside the window. The last row of each block is that
 language's $\hat w = c{+}Q_{90}$.}
 \label{tab:dose}
 \centering
