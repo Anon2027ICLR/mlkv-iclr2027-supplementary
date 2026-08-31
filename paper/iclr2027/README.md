@@ -87,23 +87,23 @@ so their commit time does not precede the run.
 
 | preregister | commit | committed (UTC) | first generation (UTC) | commit precedes run |
 |---|---|---|---|---|
-| `iclr-autowin-q90-preregister.md` | `f3f635f` | 2026-08-17 07:28 | 2026-08-14 14:24 | no (later batch) |
-| `iclr-8b-preregister.md` | `f3f635f` | 2026-08-17 07:28 | 2026-08-15 04:14 | no (later batch) |
-| `iclr-schema-fix-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 01:20 | no (later batch) |
-| `iclr-gemma-q90-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 05:28 | yes |
-| `iclr-v-trace-preregister.md` | `78c0251` | 2026-08-17 01:29 | 2026-08-17 03:13 | yes |
-| `iclr-llama-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 09:50 | yes |
-| `iclr-instr-first-preregister.md` | `d2550b0` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
-| `iclr-agnostic-baseline-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
-| `iclr-ratio-sweep-preregister.md` | `78c18c5` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
-| `iclr-pyramidkv-preregister.md` | `74840de` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
-| `iclr-template-survey-preregister.md` | `813bcad` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
-| `iclr-constant-and-ranking-preregister.md` | `e287172` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
-| `iclr-depth-preregister.md` | `43049d1` | 2026-08-18 16:32 | 2026-08-18 23:54 | yes [^depth] |
-| `iclr-constant-depth-preregister.md` | `1690413` | 2026-08-19 10:33 | 2026-08-19 11:55 | yes [^const] |
+| `iclr-autowin-q90-preregister.md` | `efcae67` | 2026-08-17 07:28 | 2026-08-14 14:24 | no (later batch) |
+| `iclr-8b-preregister.md` | `efcae67` | 2026-08-17 07:28 | 2026-08-15 04:14 | no (later batch) |
+| `iclr-schema-fix-preregister.md` | `d41297c` | 2026-08-17 01:29 | 2026-08-17 01:20 | no (later batch) |
+| `iclr-gemma-q90-preregister.md` | `d41297c` | 2026-08-17 01:29 | 2026-08-17 05:28 | yes |
+| `iclr-v-trace-preregister.md` | `d41297c` | 2026-08-17 01:29 | 2026-08-17 03:13 | yes |
+| `iclr-llama-preregister.md` | `00bdf21` | 2026-08-17 09:00 | 2026-08-17 09:50 | yes |
+| `iclr-instr-first-preregister.md` | `00bdf21` | 2026-08-17 09:00 | 2026-08-17 10:57 | yes |
+| `iclr-agnostic-baseline-preregister.md` | `36d5dfb` | 2026-08-17 14:07 | 2026-08-17 15:47 | yes |
+| `iclr-ratio-sweep-preregister.md` | `36d5dfb` | 2026-08-17 14:07 | 2026-08-17 16:49 | yes |
+| `iclr-pyramidkv-preregister.md` | `0605495` | 2026-08-18 01:15 | 2026-08-18 01:27 | yes |
+| `iclr-template-survey-preregister.md` | `b4c7139` | 2026-08-18 | (no generations; locked before tokenizing) | yes |
+| `iclr-constant-and-ranking-preregister.md` | `5ab864d` | 2026-08-18 13:01 | 2026-08-18 13:54 | yes |
+| `iclr-depth-preregister.md` | `3148d72` | 2026-08-18 16:32 | 2026-08-18 23:54 | yes [^depth] |
+| `iclr-constant-depth-preregister.md` | `66b67b3` | 2026-08-19 10:33 | 2026-08-19 11:55 | yes [^const] |
 
-[^depth]: Two dated amendments, `8f3adf5` (the guard mis-specification) and
-`cfc95ce` (the mid-run harness cap), each committed before the rows it
+[^depth]: Two dated amendments, `95ef064` (the guard mis-specification) and
+`483787e` (the mid-run harness cap), each committed before the rows it
 governs. This registration also has an *external* timestamp, and it is
 narrower than the commit timestamp above: the anonymised push at
 2026-08-19T01:18:03Z precedes every Bengali row and the whole `[300:669]`
@@ -121,6 +121,11 @@ the anonymised push at 2026-08-19T11:07:07Z (`6819299`, reconstructable from
 the repository's public events feed) precedes the first generation by 48
 minutes and therefore every row in the store — the first registration in the
 campaign with complete external precedence.
+
+**Hashes.** The table above uses the hashes of *this* history. The
+preregistrations and readouts in `docs/` are locked artifacts, were not
+edited, and therefore cite the pre-anonymisation hashes;
+`docs/commit-map.md` maps between the two.
 
 The completed Bengali ladder (`v_trace_bn`, first generation 2026-08-17 14:36)
 runs against `iclr-v-trace-preregister.md`, already in the table above, and so

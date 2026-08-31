@@ -1,0 +1,56 @@
+[
+  {
+    "model": "Qwen/Qwen3-4B",
+    "lang": "en",
+    "n": 1090,
+    "Q50": 12,
+    "Q90": 18,
+    "Qmax": 36,
+    "source": "xquad.val[100:]"
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "lang": "th",
+    "n": 1090,
+    "Q50": 30,
+    "Q90": 46,
+    "Qmax": 85,
+    "source": "xquad.val[100:]"
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "lang": "sw",
+    "n": 2755,
+    "Q50": 15,
+    "Q90": 20,
+    "Qmax": 36,
+    "source": "tydi.train\\eval100"
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "lang": "bn",
+    "n": 2387,
+    "Q50": 46,
+    "Q90": 76,
+    "Qmax": 141,
+    "source": "tydi.train\\eval100"
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "lang": "te",
+    "n": 5563,
+    "Q50": 54,
+    "Q90": 80,
+    "Qmax": 170,
+    "source": "tydi.train\\eval100"
+  },
+  {
+    "model": "Qwen/Qwen3-4B",
+    "lang": "vi",
+    "n": 1090,
+    "Q50": 17,
+    "Q90": 26,
+    "Qmax": 46,
+    "source": "xquad.val[100:]"
+  }
+]

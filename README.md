@@ -1,12 +1,51 @@
 # mlkv — What Does KV-Cache Compression Break Across Languages?
 
-Experiment harness for the ICLR 2027 submission: measuring per-language damage of
-KV-cache compression (quantization, eviction) and weight PTQ in LLMs, with
-tokenizer fertility as the mechanism covariate.
+Supplementary material for the ICLR 2027 submission of the same name: the
+experiment harness, the preregistration and readout for every arm, the
+32 generation stores the paper's tables are computed from, and the
+anonymised version history of all three.
 
-- **Design doc** (preregistered predictions, matrix, stats plan, gates):
-  `../literature_review/notes/topics/experiment-design.md`
-- **Pilot runbook** (rent GPU → run → Gate-1 analysis): `docs/pilot-runbook.md`
+## Verify the paper in one command
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh    # if uv is not installed
+uv run python scripts/audit_paper_numbers.py       # 651 checks, 0 mismatches
+```
+
+That recomputes every table cell in the paper from the raw generations in
+`results/` and exits non-zero on any drift — no number in the paper is
+transcribed by hand. `uv run pytest` runs the unit tests, and
+`uv run --with matplotlib python scripts/paper_figures.py` redraws both
+figures from the same stores.
+
+## What is here
+
+- `src/mlkv/`, `tests/` — the harness: task construction, compression
+  configurations, scoring, drift detection.
+- `scripts/` — the analysis and the campaign runners.
+  `audit_paper_numbers.py` is the one that matters;
+  `paper/iclr2027/README.md` explains the rest.
+- `docs/iclr-*-preregister.md` / `docs/iclr-*-readout.md` — the predictions and
+  kill conditions for each arm, and what came back. Each preregistration was
+  committed before its run; `paper/iclr2027/README.md` tabulates which
+  timestamps precede their first generation and which do not.
+- `docs/commit-map.md` — the anonymised history renumbered every commit, and
+  the locked evidence documents cite the old hashes. This is the bridge.
+- `results/*.db` — the generation stores: one SQLite row per model output, with
+  the serving stack recorded per run. There are 32: the seventeen the
+  reproducibility statement names, plus `e3-final` and `e3_384`, which back the
+  decode-cap appendix table rather than a main-text cell and so are not in that
+  list. The audit needs all 32.
+- `paper/iclr2027/` — the LaTeX source, the figures, and the build recipe.
+
+## A word on "the reviewer"
+
+Several preregistrations and readouts answer numbered items from "the second
+review", "reviewer-3", and so on. Those were adversarial reviews of our own
+draft by large language models, run during preparation and numbered so the
+responses could be tracked; the AI use statement in the paper describes the
+practice. They are not reports from any venue: this work has not been
+submitted or reviewed anywhere.
 
 ## Setup
 
